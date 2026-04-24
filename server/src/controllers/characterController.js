@@ -92,3 +92,17 @@ exports.setReady = async (req, res) => {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
 }
+
+exports.getMyCharacter = async (req, res) => {
+  try {
+    const character = await prisma.character.findFirst({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: 'desc' },
+      include: { room: true }
+    })
+    if (!character) return res.status(404).json({ error: 'Nenhum personagem encontrado' })
+    res.json(character)
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}

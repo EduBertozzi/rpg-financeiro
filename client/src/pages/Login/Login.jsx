@@ -8,23 +8,35 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { setUser, setToken } = useGameStore()
+  const { setUser, setToken, setCharacter, setRoom } = useGameStore()
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  setError('')
+  setLoading(true)
+  try {
+    const { data } = await api.post('/auth/login', form)
+    setToken(data.token)
+    setUser(data.user)
+
+    // tenta buscar personagem existente
     try {
-      const { data } = await api.post('/auth/login', form)
-      setToken(data.token)
-      setUser(data.user)
+      const { data: charData } = await api.get('/characters/me', {
+        headers: { Authorization: `Bearer ${data.token}` }
+      })
+      setCharacter(charData)
+      setRoom(charData.room)
+      navigate('/map')
+    } catch {
+      // sem personagem, vai criar
       navigate('/character')
-    } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao fazer login')
-    } finally {
-      setLoading(false)
     }
+  } catch (err) {
+    setError(err.response?.data?.error || 'Erro ao fazer login')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-darker">
