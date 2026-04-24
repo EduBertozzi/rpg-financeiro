@@ -1,24 +1,17 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 
 export default function Admin() {
-  const navigate = useNavigate()
-  const { user, room, setRoom } = useGameStore()
+  const { room, setRoom } = useGameStore()
   const [roomData, setRoomData] = useState(null)
   const [leaderboard, setLeaderboard] = useState([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ text: '', type: '' })
   const [turnResult, setTurnResult] = useState(null)
 
-  useEffect(() => {
-    if (!room?.id) return
-    fetchRoom()
-    fetchLeaderboard()
-  }, [room?.id])
-
   const fetchRoom = async () => {
+    if (!room?.code) return
     try {
       const { data } = await api.get(`/rooms/${room.code}`)
       setRoomData(data)
@@ -28,6 +21,7 @@ export default function Admin() {
   }
 
   const fetchLeaderboard = async () => {
+    if (!room?.id) return
     try {
       const { data } = await api.get(`/rooms/${room.id}/leaderboard`)
       setLeaderboard(data)
@@ -35,6 +29,15 @@ export default function Admin() {
       console.error(err)
     }
   }
+
+useEffect(() => {
+    if (!room?.id) return
+    const load = async () => {
+      await Promise.all([fetchRoom(), fetchLeaderboard()])
+    }
+    load()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.id])
 
   const handleStart = async () => {
     setLoading(true)
