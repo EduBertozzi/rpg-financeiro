@@ -7,6 +7,8 @@ import Register from './pages/Register/Register'
 import CharacterCreation from './pages/CharacterCreation/CharacterCreation'
 import Map from './pages/Map/Map'
 import Bank from './pages/Bank/Bank'
+import Broker from './pages/Broker/Broker'
+
 
 function App() {
   const hydrate = useGameStore((state) => state.hydrate)
@@ -24,6 +26,7 @@ function App() {
         <Route path="*" element={<Navigate to="/login" />} />
         <Route path="/map" element={<Map />} />
         <Route path="/bank" element={<Bank />} />
+        <Route path="/broker" element={<Broker />} />
       </Routes>
     </BrowserRouter>
   )
