@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("player")
+  createdAt    DateTime @default(now())
+  rooms        Room[]   @relation("AdminRooms")
+  characters   Character[]
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  admin       User     @relation("AdminRooms", fields: [adminId], references: [id])
+  adminId     String
+  status      String   @default("waiting")
+  currentTurn Int      @default(0)
+  maxTurns    Int      @default(12)
+  createdAt   DateTime @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  characters  Character[]
+  assetPrices AssetPrice[]
+  leaderboard Leaderboard[]
+}
+
+model Character {
+  id            String   @id @default(uuid())
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String
+  room          Room     @relation(fields: [roomId], references: [id])
+  roomId        String
+  name          String
+  gender        String
+  avatarId      Int      @default(1)
+  course        String
+  gift          String
+  cash          Decimal  @default(7000)
+  monthlyIncome Decimal  @default(7000)
+  housingCost   Decimal  @default(1500)
+  foodCost      Decimal  @default(800)
+  utilitiesCost Decimal  @default(400)
+  transportCost Decimal  @default(300)
+  housingLevel  Int      @default(1)
+  isBankrupt    Boolean  @default(false)
+  overdraftDebt Decimal  @default(0)
+  loanDebt      Decimal  @default(0)
+  turnReady     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  skillPoints       CharacterSkillPoints?
+  unlockedSkills    CharacterSkill[]
+  fixedInvestments  FixedIncomeInvestment[]
+  positions         VariableIncomePosition[]
+  trades            TradeHistory[]
+  debentures        DebentureInvestment[]
+  eventLog          CharacterEventLog[]
+  snapshots         FinancialSnapshot[]
+  leaderboard       Leaderboard?
+
+  @@unique([userId, roomId])
+}
+
+model SkillNode {
+  id          Int    @id @default(autoincrement())
+  path        String
+  level       Int
+  name        String
+  description String
+  costPoints  Int    @default(1)
+  characters  CharacterSkill[]
+
+  @@unique([path, level])
+}
+
+model CharacterSkill {
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String
+  skillNode   SkillNode @relation(fields: [skillNodeId], references: [id])
+  skillNodeId Int
+  unlockedAt  Int
+
+  @@id([characterId, skillNodeId])
+}
+
+model CharacterSkillPoints {
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String    @id
+  totalPoints Int       @default(0)
+  usedPoints  Int       @default(0)
+  maxPoints   Int       @default(8)
+}
+
+model FixedIncomeInvestment {
+  id           String   @id @default(uuid())
+  character    Character @relation(fields: [characterId], references: [id])
+  characterId  String
+  amount       Decimal
+  monthlyRate  Decimal
+  investedAt   Int
+  redeemedAt   Int?
+  redeemedValue Decimal?
+  isEmergency  Boolean  @default(false)
+}
+
+model MarketAsset {
+  id         Int    @id @default(autoincrement())
+  ticker     String @unique
+  name       String
+  type       String
+  sector     String?
+  riskLevel  String
+  basePrice  Decimal
+  prices     AssetPrice[]
+  positions  VariableIncomePosition[]
+  trades     TradeHistory[]
+}
+
+model AssetPrice {
+  asset    MarketAsset @relation(fields: [assetId], references: [id])
+  assetId  Int
+  turn     Int
+  room     Room   @relation(fields: [roomId], references: [id])
+  roomId   String
+  price    Decimal
+
+  @@id([assetId, turn, roomId])
+}
+
+model VariableIncomePosition {
+  id          String      @id @default(uuid())
+  character   Character   @relation(fields: [characterId], references: [id])
+  characterId String
+  asset       MarketAsset @relation(fields: [assetId], references: [id])
+  assetId     Int
+  quantity    Int
+  avgPrice    Decimal
+  boughtAt    Int
+}
+
+model TradeHistory {
+  id          String      @id @default(uuid())
+  character   Character   @relation(fields: [characterId], references: [id])
+  characterId String
+  asset       MarketAsset @relation(fields: [assetId], references: [id])
+  assetId     Int
+  operation   String
+  quantity    Int
+  price       Decimal
+  total       Decimal
+  turn        Int
+  executedAt  DateTime    @default(now())
+}
+
+model Company {
+  id                  Int    @id @default(autoincrement())
+  name                String
+  description         String?
+  riskRating          String
+  riskLevel           String
+  annualRate          Decimal
+  defaultProbability  Decimal?
+  availableFromTurn   Int    @default(0)
+  debentures          DebentureInvestment[]
+}
+
+model DebentureInvestment {
+  id          String    @id @default(uuid())
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String
+  company     Company   @relation(fields: [companyId], references: [id])
+  companyId   Int
+  amount      Decimal
+  annualRate  Decimal
+  investedAt  Int
+  maturesAt   Int
+  status      String    @default("active")
+  returnedValue Decimal?
+}
+
+model CharacterEventLog {
+  id          String    @id @default(uuid())
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String
+  turn        Int
+  cashImpact  Decimal?
+  description String
+  loggedAt    DateTime  @default(now())
+}
+
+model FinancialSnapshot {
+  id             String    @id @default(uuid())
+  character      Character @relation(fields: [characterId], references: [id])
+  characterId    String
+  turn           Int
+  cash           Decimal
+  fixedIncome    Decimal   @default(0)
+  variableIncome Decimal   @default(0)
+  debentures     Decimal   @default(0)
+  totalAssets    Decimal
+  totalDebts     Decimal   @default(0)
+  netWorth       Decimal
+  incomeTaxPaid  Decimal   @default(0)
+  snappedAt      DateTime  @default(now())
+
+  @@unique([characterId, turn])
+}
+
+model Leaderboard {
+  room        Room      @relation(fields: [roomId], references: [id])
+  roomId      String
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String    @unique
+  finalRank   Int?
+  netWorth    Decimal?
+  updatedAt   DateTime  @default(now())
+
+  @@id([roomId, characterId])
+}
