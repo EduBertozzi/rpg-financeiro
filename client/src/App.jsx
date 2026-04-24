@@ -8,7 +8,7 @@ import CharacterCreation from './pages/CharacterCreation/CharacterCreation'
 import Map from './pages/Map/Map'
 import Bank from './pages/Bank/Bank'
 import Broker from './pages/Broker/Broker'
-
+import Companies from './pages/Companies/Companies'
 
 function App() {
   const hydrate = useGameStore((state) => state.hydrate)
@@ -27,6 +27,7 @@ function App() {
         <Route path="/map" element={<Map />} />
         <Route path="/bank" element={<Bank />} />
         <Route path="/broker" element={<Broker />} />
+        <Route path="/companies" element={<Companies />} />
       </Routes>
     </BrowserRouter>
   )
