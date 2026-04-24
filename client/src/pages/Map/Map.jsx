@@ -42,7 +42,7 @@ const BUILDINGS = [
 
 export default function Map() {
   const navigate = useNavigate()
-  const { character, room, logout } = useGameStore()
+  const { character, room, user, logout } = useGameStore()
 
   const totalCosts = character
     ? Number(character.housingCost) +
@@ -77,6 +77,14 @@ export default function Map() {
               <p className="text-xs text-gray-400">Mês</p>
               <p className="text-primary font-bold">{room?.currentTurn ?? 0}/12</p>
             </div>
+            {user?.role === 'admin' && (
+              <button
+                onClick={() => navigate('/admin')}
+                className="px-3 py-1 text-xs text-yellow-400 border border-yellow-700 rounded-lg hover:bg-yellow-900/20 transition-colors"
+              >
+                Admin
+              </button>
+            )}
             <button
               onClick={logout}
               className="px-3 py-1 text-xs text-gray-400 hover:text-white border border-border rounded-lg transition-colors"
@@ -90,7 +98,6 @@ export default function Map() {
       {/* Mapa */}
       <div className="max-w-5xl mx-auto p-8">
 
-        {/* Alerta reserva de emergência */}
         {character && Number(character.cash) < totalCosts * 3 && (
           <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 rounded-xl text-red-400 text-sm flex items-center gap-3">
             <span className="text-xl">⚠️</span>
@@ -104,7 +111,6 @@ export default function Map() {
         <h2 className="text-2xl font-bold text-white mb-2">Cidade de Santa Rita</h2>
         <p className="text-gray-400 text-sm mb-8">Clique em um local para interagir</p>
 
-        {/* Grid de prédios */}
         <div className="grid grid-cols-2 gap-6 mb-8">
           {BUILDINGS.map(building => (
             <button
@@ -120,7 +126,6 @@ export default function Map() {
           ))}
         </div>
 
-        {/* Painel de status */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-1">Salário Mensal</p>
@@ -142,7 +147,6 @@ export default function Map() {
           </div>
         </div>
 
-        {/* Botão finalizar mês */}
         <div className="mt-6 flex justify-end">
           <button
             className="px-8 py-3 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl transition-colors"

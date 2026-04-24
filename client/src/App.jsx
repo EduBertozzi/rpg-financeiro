@@ -10,6 +10,7 @@ import Bank from './pages/Bank/Bank'
 import Broker from './pages/Broker/Broker'
 import Companies from './pages/Companies/Companies'
 import SkillTree from './pages/SkillTree/SkillTree'
+import Admin from './pages/Admin/Admin'
 
 function App() {
   const hydrate = useGameStore((state) => state.hydrate)
@@ -30,6 +31,7 @@ function App() {
         <Route path="/broker" element={<Broker />} />
         <Route path="/companies" element={<Companies />} />
         <Route path="/skills" element={<SkillTree />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   )
