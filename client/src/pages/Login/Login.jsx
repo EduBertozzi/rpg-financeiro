@@ -18,7 +18,7 @@ export default function Login() {
       const { data } = await api.post('/auth/login', form)
       setToken(data.token)
       setUser(data.user)
-      navigate('/map')
+      navigate('/character')
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao fazer login')
     } finally {
