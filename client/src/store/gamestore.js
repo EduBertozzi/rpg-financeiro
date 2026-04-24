@@ -15,6 +15,7 @@ const useGameStore = create(
       setRoom: (room) => set({ room }),
 
       logout: () => {
+        localStorage.removeItem('token')
         set({ user: null, token: null, character: null, room: null })
       },
 
@@ -22,7 +23,7 @@ const useGameStore = create(
     }),
     {
       name: 'rpg-storage',
-      partialState: (state) => ({
+      partialize: (state) => ({
         user: state.user,
         token: state.token,
         character: state.character,
