@@ -27,7 +27,34 @@ app.get('/', (req, res) => res.json({ message: 'RPG Financeiro API rodando!' }))
 // socket
 io.on('connection', (socket) => {
   console.log('Jogador conectado:', socket.id)
-  socket.on('disconnect', () => console.log('Jogador desconectado:', socket.id))
+
+  socket.on('room:join', ({ roomId, characterId }) => {
+    socket.join(roomId)
+    socket.data.roomId = roomId
+    socket.data.characterId = characterId
+    socket.to(roomId).emit('room:player-joined', { characterId })
+    console.log(`${characterId} entrou na sala ${roomId}`)
+  })
+
+  socket.on('player:ready', ({ characterId, roomId }) => {
+    socket.to(roomId).emit('room:player-ready', { characterId })
+  })
+
+  socket.on('admin:next-turn', async ({ roomId }) => {
+    try {
+      const { processTurn } = require('./utils/turnEngine')
+      io.to(roomId).emit('turn:processing')
+      const result = await processTurn(roomId)
+      io.to(roomId).emit('turn:result', result)
+      if (result.isFinished) io.to(roomId).emit('room:finished', result)
+    } catch (err) {
+      socket.emit('turn:error', { error: err.message })
+    }
+  })
+
+  socket.on('disconnect', () => {
+    console.log('Jogador desconectado:', socket.id)
+  })
 })
 
 const PORT = process.env.PORT || 3001
