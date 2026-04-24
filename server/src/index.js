@@ -18,6 +18,7 @@ app.use(express.json())
 app.use('/api/v1/auth', require('./routes/auth'))
 app.use('/api/v1/rooms', require('./routes/rooms'))
 app.use('/api/v1/characters', require('./routes/characters'))
+app.use('/api/v1/skills', require('./routes/skills'))
 
 app.get('/', (req, res) => res.json({ message: 'RPG Financeiro API rodando!' }))
 
