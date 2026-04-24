@@ -7,11 +7,16 @@ require('dotenv').config()
 const app = express()
 const httpServer = http.createServer(app)
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.FRONTEND_URL
+].filter(Boolean)
+
 const io = new Server(httpServer, {
-  cors: { origin: 'http://localhost:5173', methods: ['GET', 'POST'] }
+  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] }
 })
 
-app.use(cors({ origin: 'http://localhost:5173' }))
+app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
 
 // rotas
