@@ -52,15 +52,15 @@ export default function Map() {
       Number(character.transportCost)
     : 0
 
-  const handleFinishMonth = async () => {
-    try {
-      await api.post(`/characters/${character.id}/ready`)
-      setCharacter({ ...character, turnReady: true })
-    } catch (err) {
-      console.error(err)
-      alert('Erro ao finalizar mês!')
-    }
+ const handleFinishMonth = async () => {
+  try {
+    await api.patch(`/characters/${character.id}/ready`)
+    setCharacter({ ...character, turnReady: true })
+  } catch (err) {
+    console.error(err)
+    alert('Erro ao finalizar mês!')
   }
+}
 
   return (
     <div className="min-h-screen bg-darker text-white">
