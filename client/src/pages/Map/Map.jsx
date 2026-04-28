@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
+import socket from '../../services/socket'
 
 const BUILDINGS = [
   {
@@ -43,7 +45,7 @@ const BUILDINGS = [
 
 export default function Map() {
   const navigate = useNavigate()
-  const { character, room, user, logout, setCharacter } = useGameStore()
+  const { character, room, user, logout, setCharacter, setRoom } = useGameStore()
 
   const totalCosts = character
     ? Number(character.housingCost) +
@@ -52,15 +54,45 @@ export default function Map() {
       Number(character.transportCost)
     : 0
 
- const handleFinishMonth = async () => {
-  try {
-    await api.patch(`/characters/${character.id}/ready`)
-    setCharacter({ ...character, turnReady: true })
-  } catch (err) {
-    console.error(err)
-    alert('Erro ao finalizar mês!')
+  useEffect(() => {
+    if (!character?.id || !room?.id) return
+
+    socket.connect()
+    socket.emit('room:join', { roomId: room.id, characterId: character.id })
+
+    socket.on('turn:result', (data) => {
+      setRoom({ ...room, currentTurn: data.turn })
+      setCharacter({ ...character, turnReady: false })
+      if (data.dilemma) navigate('/dilemma')
+    })
+
+    socket.on('room:finished', () => {
+      navigate('/finished')
+    })
+
+    return () => {
+      socket.off('turn:result')
+      socket.off('room:finished')
+      socket.disconnect()
+    }
+  }, [character?.id, room?.id])
+
+  useEffect(() => {
+    if (!room?.code) return
+    api.get(`/rooms/${room.code}`)
+      .then(({ data }) => setRoom(data))
+      .catch(console.error)
+  }, [room?.code])
+
+  const handleFinishMonth = async () => {
+    try {
+      await api.patch(`/characters/${character.id}/ready`)
+      setCharacter({ ...character, turnReady: true })
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao finalizar mês!')
+    }
   }
-}
 
   return (
     <div className="min-h-screen bg-darker text-white">
@@ -160,21 +192,22 @@ export default function Map() {
             </p>
           </div>
         </div>
-          <div className="mt-6 flex justify-end gap-3">
-  <button
-    className="px-6 py-3 bg-yellow-700 hover:bg-yellow-600 text-white font-bold rounded-xl transition-colors"
-    onClick={() => navigate('/dilemma')}
-  >
-    ⚡ Ver Dilema
-  </button>
-  <button
-    className="px-8 py-3 bg-primary hover:bg-blue-600 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
-    onClick={handleFinishMonth}
-    disabled={character?.turnReady}
-  >
-    {character?.turnReady ? '✓ Mês finalizado!' : 'Finalizar Mês →'}
-  </button>
-</div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            className="px-6 py-3 bg-yellow-700 hover:bg-yellow-600 text-white font-bold rounded-xl transition-colors"
+            onClick={() => navigate('/dilemma')}
+          >
+            ⚡ Ver Dilema
+          </button>
+          <button
+            className="px-8 py-3 bg-primary hover:bg-blue-600 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
+            onClick={handleFinishMonth}
+            disabled={character?.turnReady}
+          >
+            {character?.turnReady ? '✓ Mês finalizado!' : 'Finalizar Mês →'}
+          </button>
+        </div>
 
       </div>
     </div>
