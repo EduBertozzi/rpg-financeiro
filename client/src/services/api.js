@@ -5,8 +5,15 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  try {
+    const storage = localStorage.getItem('rpg-storage')
+    if (storage) {
+      const { state } = JSON.parse(storage)
+      if (state?.token) config.headers.Authorization = `Bearer ${state.token}`
+    }
+  } catch (e) {
+    console.error('Erro ao ler token:', e)
+  }
   return config
 })
 
@@ -14,7 +21,7 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
+      localStorage.removeItem('rpg-storage')
       window.location.href = '/login'
     }
     return Promise.reject(error)
