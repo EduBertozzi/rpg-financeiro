@@ -54,28 +54,34 @@ export default function Map() {
       Number(character.transportCost)
     : 0
 
-  useEffect(() => {
-    if (!character?.id || !room?.id) return
+ useEffect(() => {
+  if (!character?.id || !room?.id) return
 
-    socket.connect()
-    socket.emit('room:join', { roomId: room.id, characterId: character.id })
+  console.log('Tentando conectar socket...', room.id)
+  socket.connect()
+  socket.emit('room:join', { roomId: room.id, characterId: character.id })
+  console.log('Socket conectado:', socket.connected)
 
-    socket.on('turn:result', (data) => {
-      setRoom({ ...room, currentTurn: data.turn })
-      setCharacter({ ...character, turnReady: false })
-      if (data.dilemma) navigate('/dilemma')
-    })
+  socket.on('turn:result', (data) => {
+    console.log('Turno recebido!', data)
+    setRoom({ ...room, currentTurn: data.turn })
+    setCharacter({ ...character, turnReady: false })
+    if (data.dilemma) navigate('/dilemma')
+  })
 
-    socket.on('room:finished', () => {
-      navigate('/finished')
-    })
+  socket.on('connect', () => console.log('Socket conectou!'))
+  socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
 
-    return () => {
-      socket.off('turn:result')
-      socket.off('room:finished')
-      socket.disconnect()
-    }
-  }, [character?.id, room?.id])
+  socket.on('room:finished', () => navigate('/finished'))
+
+  return () => {
+    socket.off('turn:result')
+    socket.off('room:finished')
+    socket.off('connect')
+    socket.off('connect_error')
+    socket.disconnect()
+  }
+}, [character?.id, room?.id])
 
   useEffect(() => {
     if (!room?.code) return
