@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
@@ -46,6 +46,11 @@ const BUILDINGS = [
 export default function Map() {
   const navigate = useNavigate()
   const { character, room, user, logout, setCharacter, setRoom } = useGameStore()
+  const characterRef = useRef(character)
+  const roomRef = useRef(room)
+
+  useEffect(() => { characterRef.current = character }, [character])
+  useEffect(() => { roomRef.current = room }, [room])
 
   const totalCosts = character
     ? Number(character.housingCost) +
@@ -54,41 +59,41 @@ export default function Map() {
       Number(character.transportCost)
     : 0
 
- useEffect(() => {
-  if (!character?.id || !room?.id) return
+  useEffect(() => {
+    if (!character?.id || !room?.id) return
 
-  console.log('Tentando conectar socket...', room.id)
-  socket.connect()
+    socket.connect()
 
-  socket.on('connect', () => {
-    console.log('Socket conectou! Entrando na sala...')
-    socket.emit('room:join', { roomId: room.id, characterId: character.id })
-  })
+    socket.on('connect', () => {
+      socket.emit('room:join', { roomId: roomRef.current.id, characterId: characterRef.current.id })
+    })
 
-  socket.on('turn:result', (data) => {
-    console.log('Turno recebido!', data)
-    setRoom({ ...room, currentTurn: data.turn })
-    setCharacter({ ...character, turnReady: false })
-    if (data.dilemma) navigate('/dilemma')
-  })
+    socket.on('turn:result', (data) => {
+      console.log('Turno recebido!', data)
+      setRoom({ ...roomRef.current, currentTurn: data.turn })
+      setCharacter({ ...characterRef.current, turnReady: false })
+      if (data.dilemma) navigate('/dilemma')
+    })
 
-  socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
-  socket.on('room:finished', () => navigate('/finished'))
+    socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
+    socket.on('room:finished', () => navigate('/finished'))
 
-  return () => {
-    socket.off('connect')
-    socket.off('turn:result')
-    socket.off('room:finished')
-    socket.off('connect_error')
-    socket.disconnect()
-  }
-}, [character?.id, room?.id])
+    return () => {
+      socket.off('connect')
+      socket.off('turn:result')
+      socket.off('room:finished')
+      socket.off('connect_error')
+      socket.disconnect()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character?.id, room?.id])
 
   useEffect(() => {
     if (!room?.code) return
     api.get(`/rooms/${room.code}`)
       .then(({ data }) => setRoom(data))
       .catch(console.error)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room?.code])
 
   const handleFinishMonth = async () => {
@@ -104,7 +109,6 @@ export default function Map() {
   return (
     <div className="min-h-screen bg-darker text-white">
 
-      {/* Header */}
       <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">RPG Financeiro</h1>
@@ -148,7 +152,6 @@ export default function Map() {
         )}
       </div>
 
-      {/* Mapa */}
       <div className="max-w-5xl mx-auto p-8">
 
         {character && Number(character.cash) < totalCosts * 3 && (
