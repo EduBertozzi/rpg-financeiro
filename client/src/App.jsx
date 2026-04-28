@@ -25,13 +25,13 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/character" element={<CharacterCreation />} />
-        <Route path="*" element={<Navigate to="/login" />} />
         <Route path="/map" element={<Map />} />
         <Route path="/bank" element={<Bank />} />
         <Route path="/broker" element={<Broker />} />
         <Route path="/companies" element={<Companies />} />
         <Route path="/skills" element={<SkillTree />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
   )
