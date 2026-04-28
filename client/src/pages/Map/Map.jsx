@@ -160,6 +160,21 @@ export default function Map() {
             </p>
           </div>
         </div>
+          <div className="mt-6 flex justify-end gap-3">
+  <button
+    className="px-6 py-3 bg-yellow-700 hover:bg-yellow-600 text-white font-bold rounded-xl transition-colors"
+    onClick={() => navigate('/dilemma')}
+  >
+    Ver Dilema
+  </button>
+  <button
+    className="px-8 py-3 bg-primary hover:bg-blue-600 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
+    onClick={handleFinishMonth}
+    disabled={character?.turnReady}
+  >
+    {character?.turnReady ? '✓ Mês finalizado!' : 'Finalizar Mês →'}
+  </button>
+</div>
 
         <div className="mt-6 flex justify-end">
           <button

@@ -11,6 +11,7 @@ import Broker from './pages/Broker/Broker'
 import Companies from './pages/Companies/Companies'
 import SkillTree from './pages/SkillTree/SkillTree'
 import Admin from './pages/Admin/Admin'
+import Dilemma from './pages/Dilemma/Dilemma'
 
 function App() {
   const hydrate = useGameStore((state) => state.hydrate)
@@ -31,6 +32,7 @@ function App() {
         <Route path="/companies" element={<Companies />} />
         <Route path="/skills" element={<SkillTree />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/dilemma" element={<Dilemma />} />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
