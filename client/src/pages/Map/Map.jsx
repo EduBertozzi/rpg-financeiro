@@ -86,9 +86,12 @@ export default function Map() {
               </button>
             )}
             <button
-              onClick={logout}
-              className="px-3 py-1 text-xs text-gray-400 hover:text-white border border-border rounded-lg transition-colors"
-            >
+              onClick={() => {
+                logout()
+                  navigate('/login')
+                }}
+                     className="px-3 py-1 text-xs text-gray-400 hover:text-white border border-border rounded-lg transition-colors"
+                >
               Sair
             </button>
           </div>
