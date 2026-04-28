@@ -13,8 +13,10 @@ const allowedOrigins = [
 ].filter(Boolean)
 
 const io = new Server(httpServer, {
-  cors: { origin: allowedOrigins, methods: ['GET', 'POST'] }
+  cors: { origin: true, methods: ['GET', 'POST'] }
 })
+
+app.use(cors({ origin: true }))
 
 app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
