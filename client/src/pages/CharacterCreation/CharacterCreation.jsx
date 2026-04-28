@@ -53,29 +53,33 @@ export default function CharacterCreation() {
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async () => {
-    setError('')
-    setLoading(true)
-    try {
-      // busca a sala pelo código
-      const { data: room } = await api.get(`/rooms/${form.roomCode}`)
-      setRoom(room)
+  setError('')
+  setLoading(true)
+  try {
+    const { data: room } = await api.get(`/rooms/${form.roomCode}`)
+    
+    const { data: character } = await api.post('/characters', {
+      roomId: room.id,
+      name: form.name,
+      gender: form.gender,
+      course: form.course,
+      gift: form.gift
+    })
 
-      // cria o personagem
-      const { data: character } = await api.post('/characters', {
-        roomId: room.id,
-        name: form.name,
-        gender: form.gender,
-        course: form.course,
-        gift: form.gift
-      })
-      setCharacter(character)
-      navigate('/map')
-    } catch (err) {
-      setError(err.response?.data?.error || 'Erro ao criar personagem')
-    } finally {
-      setLoading(false)
-    }
+    // busca o personagem completo com a sala inclusa
+    const { data: fullCharacter } = await api.get(`/characters/${character.id}`)
+    
+    setRoom(room)
+    setCharacter(fullCharacter)
+
+    // pequeno delay pra garantir que o estado foi salvo antes de navegar
+    setTimeout(() => navigate('/map'), 100)
+  } catch (err) {
+    setError(err.response?.data?.error || 'Erro ao criar personagem')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen bg-darker flex items-center justify-center p-4">
