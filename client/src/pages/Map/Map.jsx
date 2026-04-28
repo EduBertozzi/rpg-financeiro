@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
 import socket from '../../services/socket'
+import GameHeader from '../../components/GameHeader'
 
 const BUILDINGS = [
   {
@@ -45,7 +46,7 @@ const BUILDINGS = [
 
 export default function Map() {
   const navigate = useNavigate()
-  const { character, room, user, logout, setCharacter, setRoom } = useGameStore()
+  const { character, room, setCharacter, setRoom } = useGameStore()
   const characterRef = useRef(character)
   const roomRef = useRef(room)
 
@@ -59,19 +60,45 @@ export default function Map() {
       Number(character.transportCost)
     : 0
 
+  // busca sala atualizada ao carregar
+  useEffect(() => {
+    if (!room?.code) return
+    api.get(`/rooms/${room.code}`)
+      .then(({ data }) => setRoom(data))
+      .catch(console.error)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.code])
+
+  // busca personagem atualizado ao carregar
+  useEffect(() => {
+    if (!character?.id) return
+    api.get(`/characters/${character.id}`)
+      .then(({ data }) => setCharacter(data))
+      .catch(console.error)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character?.id])
+
+  // socket
   useEffect(() => {
     if (!character?.id || !room?.id) return
 
     socket.connect()
 
     socket.on('connect', () => {
-      socket.emit('room:join', { roomId: roomRef.current.id, characterId: characterRef.current.id })
+      socket.emit('room:join', {
+        roomId: roomRef.current.id,
+        characterId: characterRef.current.id
+      })
     })
 
-    socket.on('turn:result', (data) => {
-      console.log('Turno recebido!', data)
+    socket.on('turn:result', async (data) => {
       setRoom({ ...roomRef.current, currentTurn: data.turn })
-      setCharacter({ ...characterRef.current, turnReady: false })
+      try {
+        const { data: charData } = await api.get(`/characters/${characterRef.current.id}`)
+        setCharacter(charData)
+      } catch {
+        setCharacter({ ...characterRef.current, turnReady: false })
+      }
       if (data.dilemma) navigate('/dilemma')
     })
 
@@ -88,14 +115,6 @@ export default function Map() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [character?.id, room?.id])
 
-  useEffect(() => {
-    if (!room?.code) return
-    api.get(`/rooms/${room.code}`)
-      .then(({ data }) => setRoom(data))
-      .catch(console.error)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room?.code])
-
   const handleFinishMonth = async () => {
     try {
       await api.patch(`/characters/${character.id}/ready`)
@@ -108,49 +127,7 @@ export default function Map() {
 
   return (
     <div className="min-h-screen bg-darker text-white">
-
-      <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-white">RPG Financeiro</h1>
-          <p className="text-xs text-gray-400">INATEL — Santa Rita do Sapucaí</p>
-        </div>
-
-        {character && (
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-xs text-gray-400">Personagem</p>
-              <p className="text-white font-semibold">{character.name}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-400">Caixa</p>
-              <p className="text-green-400 font-bold">
-                R$ {Number(character.cash).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-400">Mês</p>
-              <p className="text-primary font-bold">{room?.currentTurn ?? 0}/12</p>
-            </div>
-            {user?.role === 'admin' && (
-              <button
-                onClick={() => navigate('/admin')}
-                className="px-3 py-1 text-xs text-yellow-400 border border-yellow-700 rounded-lg hover:bg-yellow-900/20 transition-colors"
-              >
-                Admin
-              </button>
-            )}
-            <button
-              onClick={() => {
-                logout()
-                navigate('/login')
-              }}
-              className="px-3 py-1 text-xs text-gray-400 hover:text-white border border-border rounded-lg transition-colors"
-            >
-              Sair
-            </button>
-          </div>
-        )}
-      </div>
+      <GameHeader />
 
       <div className="max-w-5xl mx-auto p-8">
 
