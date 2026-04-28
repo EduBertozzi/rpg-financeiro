@@ -59,8 +59,11 @@ export default function Map() {
 
   console.log('Tentando conectar socket...', room.id)
   socket.connect()
-  socket.emit('room:join', { roomId: room.id, characterId: character.id })
-  console.log('Socket conectado:', socket.connected)
+
+  socket.on('connect', () => {
+    console.log('Socket conectou! Entrando na sala...')
+    socket.emit('room:join', { roomId: room.id, characterId: character.id })
+  })
 
   socket.on('turn:result', (data) => {
     console.log('Turno recebido!', data)
@@ -69,15 +72,13 @@ export default function Map() {
     if (data.dilemma) navigate('/dilemma')
   })
 
-  socket.on('connect', () => console.log('Socket conectou!'))
   socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
-
   socket.on('room:finished', () => navigate('/finished'))
 
   return () => {
+    socket.off('connect')
     socket.off('turn:result')
     socket.off('room:finished')
-    socket.off('connect')
     socket.off('connect_error')
     socket.disconnect()
   }
