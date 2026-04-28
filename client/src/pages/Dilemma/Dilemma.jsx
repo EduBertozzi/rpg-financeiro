@@ -5,7 +5,7 @@ import useGameStore from '../../store/gameStore'
 
 export default function Dilemma() {
   const navigate = useNavigate()
-  const { character, room } = useGameStore()
+  const { character, room, setRoom } = useGameStore()
   const [dilemma, setDilemma] = useState(null)
   const [loading, setLoading] = useState(true)
   const [choosing, setChoosing] = useState(false)
@@ -34,6 +34,17 @@ export default function Dilemma() {
     }
   }
 
+  const handleBack = async () => {
+    try {
+      const { data } = await api.get(`/rooms/${room.code}`)
+      setRoom(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      navigate('/map')
+    }
+  }
+
   if (loading) return (
     <div className="min-h-screen bg-darker flex items-center justify-center">
       <p className="text-gray-400">Carregando dilema...</p>
@@ -45,7 +56,7 @@ export default function Dilemma() {
       <div className="text-center">
         <p className="text-gray-400 mb-4">Nenhum dilema este mês.</p>
         <button
-          onClick={() => navigate('/map')}
+          onClick={handleBack}
           className="px-6 py-3 bg-primary text-white rounded-lg"
         >
           Voltar ao Mapa
@@ -105,7 +116,7 @@ export default function Dilemma() {
               )}
               <p className="text-yellow-400 text-sm">+1 ponto de habilidade ganho!</p>
               <button
-                onClick={() => navigate('/map')}
+                onClick={handleBack}
                 className="px-8 py-3 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl transition-colors"
               >
                 Voltar ao Mapa
