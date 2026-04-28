@@ -26,10 +26,19 @@ const handleSubmit = async (e) => {
       })
       setCharacter(charData)
       setRoom(charData.room)
-      navigate('/map')
+
+      // se for admin vai pro painel
+      if (data.user.role === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/map')
+      }
     } catch {
-      // sem personagem, vai criar
-      navigate('/character')
+      if (data.user.role === 'admin') {
+        navigate('/admin')
+      } else {
+        navigate('/character')
+      }
     }
   } catch (err) {
     setError(err.response?.data?.error || 'Erro ao fazer login')

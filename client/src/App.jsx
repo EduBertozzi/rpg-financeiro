@@ -15,6 +15,7 @@ import Dilemma from './pages/Dilemma/Dilemma'
 
 function App() {
   const hydrate = useGameStore((state) => state.hydrate)
+  const user = useGameStore((state) => state.user)
 
   useEffect(() => {
     hydrate()
@@ -31,7 +32,11 @@ function App() {
         <Route path="/broker" element={<Broker />} />
         <Route path="/companies" element={<Companies />} />
         <Route path="/skills" element={<SkillTree />} />
-        <Route path="/admin" element={<Admin />} />
+        <Route path="/admin" element={
+  user?.role === 'admin'
+    ? <Admin />
+    : <Navigate to="/login" />
+} />
         <Route path="/dilemma" element={<Dilemma />} />
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
