@@ -32,6 +32,16 @@ exports.chooseDilemma = async (req, res) => {
     const { id: characterId, dilemmaId } = req.params
     const turn = parseInt(dilemmaId)
 
+    // verifica se já respondeu esse dilema
+    const alreadyAnswered = await prisma.characterEventLog.findFirst({
+      where: {
+        characterId,
+        turn,
+        description: { startsWith: 'Dilema' }
+      }
+    })
+    if (alreadyAnswered) return res.status(400).json({ error: 'Dilema já respondido' })
+
     const dilemma = DILEMMAS[turn]
     if (!dilemma) return res.status(404).json({ error: 'Dilema não encontrado' })
 
@@ -51,7 +61,7 @@ exports.chooseDilemma = async (req, res) => {
         where: { id: characterId },
         data: { cash: { increment: cashImpact } }
       })
-      resultMessage = `Você recebeu R$ ${cashImpact}!`
+      resultMessage = cashImpact > 0 ? `Você recebeu R$ ${cashImpact}!` : `Você pagou R$ ${Math.abs(cashImpact)}.`
     }
 
     if (option.effectType === 'inheritance') {
@@ -91,7 +101,6 @@ exports.chooseDilemma = async (req, res) => {
       }
     })
 
-    // ganha 1 ponto de habilidade por resolver dilema
     await prisma.characterSkillPoints.update({
       where: { characterId },
       data: { totalPoints: { increment: 1 } }
