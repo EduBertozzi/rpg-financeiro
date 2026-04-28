@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import useGameStore from '../../store/gameStore'
+import api from '../../services/api'
 
 const BUILDINGS = [
   {
@@ -42,7 +43,7 @@ const BUILDINGS = [
 
 export default function Map() {
   const navigate = useNavigate()
-  const { character, room, user, logout } = useGameStore()
+  const { character, room, user, logout, setCharacter } = useGameStore()
 
   const totalCosts = character
     ? Number(character.housingCost) +
@@ -50,6 +51,16 @@ export default function Map() {
       Number(character.utilitiesCost) +
       Number(character.transportCost)
     : 0
+
+  const handleFinishMonth = async () => {
+    try {
+      await api.post(`/characters/${character.id}/ready`)
+      setCharacter({ ...character, turnReady: true })
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao finalizar mês!')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-darker text-white">
@@ -88,10 +99,10 @@ export default function Map() {
             <button
               onClick={() => {
                 logout()
-                  navigate('/login')
-                }}
-                     className="px-3 py-1 text-xs text-gray-400 hover:text-white border border-border rounded-lg transition-colors"
-                >
+                navigate('/login')
+              }}
+              className="px-3 py-1 text-xs text-gray-400 hover:text-white border border-border rounded-lg transition-colors"
+            >
               Sair
             </button>
           </div>
@@ -152,10 +163,11 @@ export default function Map() {
 
         <div className="mt-6 flex justify-end">
           <button
-            className="px-8 py-3 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl transition-colors"
-            onClick={() => alert('Finalizar mês — em breve!')}
+            className="px-8 py-3 bg-primary hover:bg-blue-600 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
+            onClick={handleFinishMonth}
+            disabled={character?.turnReady}
           >
-            Finalizar Mês →
+            {character?.turnReady ? '✓ Mês finalizado!' : 'Finalizar Mês →'}
           </button>
         </div>
 
