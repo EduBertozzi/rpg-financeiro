@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
+import socket from '../../services/socket'
 
 export default function Admin() {
   const { room, setRoom } = useGameStore()
@@ -30,12 +31,17 @@ export default function Admin() {
     }
   }
 
-useEffect(() => {
+  useEffect(() => {
     if (!room?.id) return
     const load = async () => {
       await Promise.all([fetchRoom(), fetchLeaderboard()])
     }
     load()
+
+    socket.connect()
+    socket.emit('room:join', { roomId: room.id, characterId: 'admin' })
+
+    return () => socket.disconnect()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room?.id])
 
@@ -63,6 +69,7 @@ useEffect(() => {
       setTurnResult(data)
       setRoom({ ...room, currentTurn: data.turn })
       setMessage({ text: `Turno ${data.turn} processado!`, type: 'success' })
+      socket.emit('turn:broadcast', { roomId: room.id, result: data })
       fetchRoom()
       fetchLeaderboard()
     } catch (err) {
@@ -79,7 +86,6 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-darker text-white">
 
-      {/* Header */}
       <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold">🛡️ Painel Admin</h1>
@@ -105,7 +111,6 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Status da sala */}
         <div className="grid grid-cols-4 gap-4">
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-1">Status</p>
@@ -133,7 +138,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Controles */}
         <div className="bg-card border border-border rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Controles</h2>
           <div className="flex gap-3">
@@ -151,9 +155,7 @@ useEffect(() => {
                 onClick={handleNextTurn}
                 disabled={loading}
                 className={`px-6 py-3 font-semibold rounded-lg transition-colors text-white ${
-                  allReady
-                    ? 'bg-primary hover:bg-blue-600'
-                    : 'bg-gray-700 hover:bg-gray-600'
+                  allReady ? 'bg-primary hover:bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'
                 } disabled:opacity-50`}
               >
                 {loading ? 'Processando...' : `⏭ Processar Turno ${(roomData?.currentTurn ?? 0) + 1}`}
@@ -173,7 +175,6 @@ useEffect(() => {
           )}
         </div>
 
-        {/* Lista de jogadores */}
         <div className="bg-card border border-border rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Jogadores na Sala</h2>
           {totalPlayers === 0 ? (
@@ -192,18 +193,15 @@ useEffect(() => {
           )}
         </div>
 
-        {/* Resultado do último turno */}
         {turnResult && (
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Resultado do Turno {turnResult.turn}</h2>
-
             {turnResult.dilemma && (
               <div className="mb-4 p-4 bg-yellow-900/20 border border-yellow-700 rounded-lg">
                 <p className="text-yellow-400 font-semibold mb-1">⚡ Dilema do mês: {turnResult.dilemma.title}</p>
                 <p className="text-gray-300 text-sm">{turnResult.dilemma.description}</p>
               </div>
             )}
-
             <div className="space-y-2">
               {turnResult.results?.map(r => (
                 <div key={r.characterId} className="flex items-center justify-between p-3 bg-dark rounded-lg border border-border">
@@ -225,7 +223,6 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Leaderboard */}
         {leaderboard.length > 0 && (
           <div className="bg-card border border-border rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">🏆 Leaderboard</h2>

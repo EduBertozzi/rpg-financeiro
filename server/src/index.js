@@ -59,6 +59,10 @@ io.on('connection', (socket) => {
     }
   })
 
+  socket.on('turn:broadcast', ({ roomId, result }) => {
+  io.to(roomId).emit('turn:result', result)
+})
+
   socket.on('disconnect', () => {
     console.log('Jogador desconectado:', socket.id)
   })
