@@ -1,37 +1,16 @@
-const express = require('express')
+// src/index.js — só cuida do servidor HTTP e Socket.io
 const http = require('http')
 const { Server } = require('socket.io')
-const cors = require('cors')
 require('dotenv').config()
 
-const app = express()
-const httpServer = http.createServer(app)
+const app = require('./app')
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  process.env.FRONTEND_URL
-].filter(Boolean)
+const httpServer = http.createServer(app)
 
 const io = new Server(httpServer, {
   cors: { origin: true, methods: ['GET', 'POST'] }
 })
 
-app.use(cors({ origin: true }))
-
-app.use(cors({ origin: allowedOrigins }))
-app.use(express.json())
-
-// rotas
-app.use('/api/v1/auth', require('./routes/auth'))
-app.use('/api/v1/rooms', require('./routes/rooms'))
-app.use('/api/v1/characters', require('./routes/characters'))
-app.use('/api/v1/skills', require('./routes/skills'))
-app.use('/api/v1/investments', require('./routes/investments'))
-app.use('/api/v1', require('./routes/turns'))
-
-app.get('/', (req, res) => res.json({ message: 'RPG Financeiro API rodando!' }))
-
-// socket
 io.on('connection', (socket) => {
   console.log('Jogador conectado:', socket.id)
 
@@ -40,7 +19,6 @@ io.on('connection', (socket) => {
     socket.data.roomId = roomId
     socket.data.characterId = characterId
     socket.to(roomId).emit('room:player-joined', { characterId })
-    console.log(`${characterId} entrou na sala ${roomId}`)
   })
 
   socket.on('player:ready', ({ characterId, roomId }) => {
@@ -60,8 +38,8 @@ io.on('connection', (socket) => {
   })
 
   socket.on('turn:broadcast', ({ roomId, result }) => {
-  io.to(roomId).emit('turn:result', result)
-})
+    io.to(roomId).emit('turn:result', result)
+  })
 
   socket.on('disconnect', () => {
     console.log('Jogador desconectado:', socket.id)
