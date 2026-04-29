@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
+import GameHeader from '../../components/GameHeader'
 
 export default function Bank() {
-  const navigate = useNavigate()
   const { character, setCharacter } = useGameStore()
   const [investments, setInvestments] = useState([])
   const [amount, setAmount] = useState('')
@@ -13,7 +12,7 @@ export default function Bank() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-useEffect(() => {
+  useEffect(() => {
     if (!character?.id) return
     api.get(`/investments/fixed/${character.id}`)
       .then(({ data }) => setInvestments(data))
@@ -35,13 +34,9 @@ useEffect(() => {
     setSuccess('')
     if (!amount || Number(amount) <= 0) return setError('Digite um valor válido')
     if (Number(amount) > Number(character.cash)) return setError('Saldo insuficiente')
-
     setLoading(true)
     try {
-      await api.post(`/investments/fixed/${character.id}`, {
-        amount: Number(amount),
-        isEmergency
-      })
+      await api.post(`/investments/fixed/${character.id}`, { amount: Number(amount), isEmergency })
       setSuccess('Investimento realizado com sucesso!')
       setAmount('')
       const { data } = await api.get(`/characters/${character.id}`)
@@ -75,17 +70,17 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-darker text-white">
-      <div className="bg-card border-b border-border px-6 py-4 flex items-center gap-4">
-        <button onClick={() => navigate('/map')} className="text-gray-400 hover:text-white transition-colors">
-          ← Voltar
-        </button>
-        <div>
-          <h1 className="text-xl font-bold">🏦 Banco</h1>
-          <p className="text-xs text-gray-400">Renda Fixa e Reserva de Emergência</p>
-        </div>
-      </div>
+      <GameHeader />
 
       <div className="max-w-4xl mx-auto p-8 space-y-6">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-2xl">🏦</span>
+          <div>
+            <h1 className="text-xl font-bold">Banco</h1>
+            <p className="text-xs text-gray-400">Renda Fixa e Reserva de Emergência</p>
+          </div>
+        </div>
+
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-1">Saldo em Caixa</p>
