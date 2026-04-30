@@ -303,4 +303,4 @@ k6 run k6/full-game.test.js   # 15 usuários — cenários simultâneos
 
 ## Licença
 
-MIT
+MIT 
