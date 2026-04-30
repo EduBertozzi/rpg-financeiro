@@ -12,10 +12,23 @@ import Companies from './pages/Companies/Companies'
 import SkillTree from './pages/SkillTree/SkillTree'
 import Admin from './pages/Admin/Admin'
 import Dilemma from './pages/Dilemma/Dilemma'
+import Finished from './pages/Finished/Finished'
+
+function ProtectedRoute({ children }) {
+  const user = useGameStore((state) => state.user)
+  if (!user) return <Navigate to="/login" replace />
+  return children
+}
+
+function AdminRoute({ children }) {
+  const user = useGameStore((state) => state.user)
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== 'admin') return <Navigate to="/login" replace />
+  return children
+}
 
 function App() {
   const hydrate = useGameStore((state) => state.hydrate)
-  const user = useGameStore((state) => state.user)
 
   useEffect(() => {
     hydrate()
@@ -26,19 +39,19 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/character" element={<CharacterCreation />} />
-        <Route path="/map" element={<Map />} />
-        <Route path="/bank" element={<Bank />} />
-        <Route path="/broker" element={<Broker />} />
-        <Route path="/companies" element={<Companies />} />
-        <Route path="/skills" element={<SkillTree />} />
-        <Route path="/admin" element={
-  user?.role === 'admin'
-    ? <Admin />
-    : <Navigate to="/login" />
-} />
-        <Route path="/dilemma" element={<Dilemma />} />
-        <Route path="*" element={<Navigate to="/login" />} />
+
+        <Route path="/character" element={<ProtectedRoute><CharacterCreation /></ProtectedRoute>} />
+        <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
+        <Route path="/bank" element={<ProtectedRoute><Bank /></ProtectedRoute>} />
+        <Route path="/broker" element={<ProtectedRoute><Broker /></ProtectedRoute>} />
+        <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
+        <Route path="/skills" element={<ProtectedRoute><SkillTree /></ProtectedRoute>} />
+        <Route path="/dilemma" element={<ProtectedRoute><Dilemma /></ProtectedRoute>} />
+        <Route path="/finished" element={<ProtectedRoute><Finished /></ProtectedRoute>} />
+
+        <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   )
