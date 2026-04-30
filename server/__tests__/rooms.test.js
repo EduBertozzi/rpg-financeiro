@@ -1,4 +1,6 @@
 // __tests__/rooms.test.js
+process.env.JWT_SECRET = 'test-secret'
+
 const request = require('supertest')
 const app = require('../src/app')
 const { prismaMock } = require('@prisma/client')
