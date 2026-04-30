@@ -1,0 +1,48 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'server/**'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'server/**'
+
+jobs:
+  test:
+    name: Jest + Supertest
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Rodar testes
+        run: npm test
+
+      - name: Relatório de cobertura
+        run: npm run test:coverage
+
+      - name: Upload cobertura
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: server/coverage/
+          retention-days: 7
