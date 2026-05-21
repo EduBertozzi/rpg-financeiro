@@ -54,12 +54,12 @@ export default function Login() {
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] animate-float pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] animate-float pointer-events-none" style={{ animationDelay: '2s' }}></div>
 
-      {/* Cartão principal de Login com Glassmorphism */}
-      <div className="relative w-full max-w-md p-10 bg-[#0B0D17]/60 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)] z-10 animate-fade-in-up">
+      {/* Cartão principal de Login com Glassmorphism Realista */}
+      <div className="relative w-full max-w-md p-10 bg-white/[0.03] backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] z-10 animate-fade-in-up ring-1 ring-white/5">
         
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-2 tracking-tight">INATEL</h1>
-          <p className="text-sm text-gray-400 font-medium tracking-wide uppercase">Simulador Financeiro</p>
+          <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-2 tracking-tighter drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]">INATEL</h1>
+          <p className="text-xs text-gray-400 font-semibold tracking-[0.2em] uppercase">Simulador Financeiro</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -69,7 +69,7 @@ export default function Login() {
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="w-full px-4 py-3 bg-[#121420]/80 border border-white/5 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+              className="w-full px-4 py-3.5 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all shadow-inner"
               placeholder="seu@email.com"
               required
             />
@@ -82,7 +82,7 @@ export default function Login() {
                 type={showPassword ? "text" : "password"}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full px-4 py-3 bg-[#121420]/80 border border-white/5 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all pr-12"
+                className="w-full px-4 py-3.5 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 transition-all pr-12 shadow-inner"
                 placeholder="••••••••"
                 required
               />
@@ -115,7 +115,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 mt-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
+            className="w-full py-4 mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:-translate-y-0.5 tracking-wide"
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
