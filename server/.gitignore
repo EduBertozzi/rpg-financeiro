@@ -3,3 +3,10 @@ node_modules
 .env
 
 /src/generated/prisma
+
+# SQLite database files
+*.db
+*.db-journal
+
+# OS files
+.DS_Store

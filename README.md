@@ -17,7 +17,7 @@ Jogo de simulação financeira multiplayer em tempo real desenvolvido para o INA
 
 **Backend**
 - Node.js + Express 5
-- PostgreSQL + Prisma ORM
+- SQLite + Prisma ORM
 - Socket.io
 - JWT (autenticação)
 - bcryptjs
@@ -30,7 +30,7 @@ Jogo de simulação financeira multiplayer em tempo real desenvolvido para o INA
 **Deploy**
 - Frontend: Vercel
 - Backend: Railway
-- Banco de dados: PostgreSQL (Railway)
+- Banco de dados: SQLite (Arquivo local dev.db)
 
 ---
 
@@ -99,7 +99,6 @@ Cada turno mensal inclui:
 
 ### Pré-requisitos
 - Node.js 18+
-- PostgreSQL
 - npm
 
 ### Backend
@@ -144,7 +143,7 @@ Acesse `http://localhost:5173`
 
 ### Backend (`server/.env`)
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/rpg_financeiro
+DATABASE_URL="file:./dev.db"
 JWT_SECRET=seu_jwt_secret
 FRONTEND_URL=http://localhost:5173
 PORT=3001

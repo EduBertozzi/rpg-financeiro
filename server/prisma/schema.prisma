@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -45,12 +45,12 @@ model Character {
   avatarId      Int      @default(1)
   course        String
   gift          String
-  cash          Decimal  @default(7000)
-  monthlyIncome Decimal  @default(7000)
+  cash          Decimal  @default(6000)
+  monthlyIncome Decimal  @default(6000)
   housingCost   Decimal  @default(1500)
-  foodCost      Decimal  @default(800)
-  utilitiesCost Decimal  @default(400)
-  transportCost Decimal  @default(300)
+  foodCost      Decimal  @default(1000)
+  utilitiesCost Decimal  @default(250)
+  transportCost Decimal  @default(250)
   housingLevel  Int      @default(1)
   isBankrupt    Boolean  @default(false)
   overdraftDebt Decimal  @default(0)
@@ -106,6 +106,7 @@ model FixedIncomeInvestment {
   character    Character @relation(fields: [characterId], references: [id])
   characterId  String
   amount       Decimal
+  type         String
   monthlyRate  Decimal
   investedAt   Int
   redeemedAt   Int?

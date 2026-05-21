@@ -11,7 +11,6 @@ import Broker from './pages/Broker/Broker'
 import Companies from './pages/Companies/Companies'
 import SkillTree from './pages/SkillTree/SkillTree'
 import Admin from './pages/Admin/Admin'
-import Dilemma from './pages/Dilemma/Dilemma'
 import Finished from './pages/Finished/Finished'
 
 function ProtectedRoute({ children }) {
@@ -46,7 +45,7 @@ function App() {
         <Route path="/broker" element={<ProtectedRoute><Broker /></ProtectedRoute>} />
         <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
         <Route path="/skills" element={<ProtectedRoute><SkillTree /></ProtectedRoute>} />
-        <Route path="/dilemma" element={<ProtectedRoute><Dilemma /></ProtectedRoute>} />
+
         <Route path="/finished" element={<ProtectedRoute><Finished /></ProtectedRoute>} />
 
         <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />

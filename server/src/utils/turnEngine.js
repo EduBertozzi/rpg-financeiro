@@ -18,100 +18,88 @@ const EVENTS = [
 
 const DILEMMAS = [
   null, // turno 0
-  {     // turno 1
-    title: 'Reserva ou Investimento?',
-    description: 'Você acabou de receber seu primeiro salário. Ainda não tem reserva de emergência, mas uma aplicação em renda variável está rendendo muito bem esse mês.',
+  {     // turno 1 - Janeiro
+    title: 'Aniversário do seu amigo',
+    description: 'É aniversário do seu melhor amigo e você precisa comprar um presente e rachar a conta da comemoração.',
     options: [
-      { label: 'A', text: 'Guarda R$ 3.000 em renda fixa como reserva de emergência.', effectType: 'immediate_cash', effectValue: 0, probability: 1.0 },
-      { label: 'B', text: 'Aplica R$ 3.000 em renda variável buscando mais retorno.', effectType: 'immediate_cash', effectValue: 300, probability: 0.5 },
+      { label: 'A', text: 'Participar da comemoração (- R$ 100)', effectType: 'immediate_cash', effectValue: -100, probability: 1.0 }
     ]
   },
-  {     // turno 2
-    title: 'Cartão de Crédito',
-    description: 'Seu cartão de crédito tem limite de R$ 5.000. Um amigo te convida para uma viagem que custa exatamente esse valor. Você não tem esse dinheiro em caixa agora.',
+  {     // turno 2 - Fevereiro
+    title: 'Jantar com amigos',
+    description: 'A galera marcou um jantar naquele restaurante novo que acabou de abrir na cidade.',
     options: [
-      { label: 'A', text: 'Recusa a viagem e mantém o cartão quitado.', effectType: 'none', effectValue: 0, probability: 1.0 },
-      { label: 'B', text: 'Vai na viagem e parcela no cartão (juros de 12% ao mês).', effectType: 'immediate_cash', effectValue: -600, probability: 1.0 },
+      { label: 'A', text: 'Ir ao jantar (- R$ 150)', effectType: 'immediate_cash', effectValue: -150, probability: 1.0 }
     ]
   },
-  {     // turno 3
-    title: 'Proposta de Emprego',
-    description: 'Uma empresa concorrente te oferece um salário 30% maior, mas você teria que abrir mão do seu plano de saúde atual e pagar do próprio bolso.',
+  {     // turno 3 - Março
+    title: 'Carnaval',
+    description: 'Chegou o Carnaval! Bloquinhos, fantasias e muita curtição.',
     options: [
-      { label: 'A', text: 'Aceita a proposta (+R$ 2.100/mês, mas +R$ 800/mês de plano de saúde).', effectType: 'income_change', effectValue: 1300, probability: 1.0 },
-      { label: 'B', text: 'Recusa e mantém a estabilidade atual.', effectType: 'none', effectValue: 0, probability: 1.0 },
+      { label: 'A', text: 'Pular carnaval (- R$ 300)', effectType: 'immediate_cash', effectValue: -300, probability: 1.0 }
     ]
   },
-  {     // turno 4
-    title: 'O Amigo Caloteiro',
-    description: 'Um amigo está desesperado e pede R$ 1.000 emprestados para pagar o aluguel, prometendo devolver com juros em 3 meses.',
+  {     // turno 4 - Abril
+    title: 'Páscoa',
+    description: 'Época de comprar ovos de Páscoa e chocolates para a família.',
     options: [
-      { label: 'A', text: 'Empresta a grana.', effectType: 'loan_friend', effectValue: -1000, probability: 0.5 },
-      { label: 'B', text: 'Declina educadamente.', effectType: 'none', effectValue: 0, probability: 1.0 },
+      { label: 'A', text: 'Comprar chocolates (- R$ 100)', effectType: 'immediate_cash', effectValue: -100, probability: 1.0 }
     ]
   },
-  {     // turno 5
-    title: 'Carro Próprio',
-    description: 'Você está cansado de transporte público. Pode financiar um carro em 48x de R$ 900, mas isso vai comprometer parte do seu orçamento mensal.',
+  {     // turno 5 - Maio
+    title: 'Festa da cidade',
+    description: 'A cidade está de aniversário e tem shows e barracas de comida na praça principal.',
     options: [
-      { label: 'A', text: 'Financia o carro (-R$ 900/mês por 4 meses restantes do jogo).', effectType: 'immediate_cash', effectValue: -3600, probability: 1.0 },
-      { label: 'B', text: 'Continua no transporte público e investe a diferença.', effectType: 'none', effectValue: 0, probability: 1.0 },
+      { label: 'A', text: 'Aproveitar a festa (- R$ 80)', effectType: 'immediate_cash', effectValue: -80, probability: 1.0 }
     ]
   },
-  {     // turno 6
-    title: 'Previdência Privada',
-    description: 'Um gerente de banco te oferece um plano de previdência privada com taxa de administração de 3% ao ano. Você poderia aplicar o mesmo valor em renda fixa com taxa menor.',
+  {     // turno 6 - Junho
+    title: 'Festa junina do bairro',
+    description: 'Quentão, pipoca e quadrilha! A festa junina do seu bairro já começou.',
     options: [
-      { label: 'A', text: 'Contrata o plano de previdência (-R$ 500/mês, retorno de longo prazo).', effectType: 'immediate_cash', effectValue: 200, probability: 1.0 },
-      { label: 'B', text: 'Aplica em renda fixa por conta própria com taxa menor.', effectType: 'immediate_cash', effectValue: 350, probability: 1.0 },
+      { label: 'A', text: 'Comer as comidas típicas (- R$ 50)', effectType: 'immediate_cash', effectValue: -50, probability: 1.0 }
     ]
   },
-  {     // turno 7
-    title: 'Upgrade de Vida',
-    description: 'Você recebeu um aumento e sente que merece um apartamento melhor. O novo aluguel custaria R$ 800 a mais por mês.',
+  {     // turno 7 - Julho
+    title: 'Férias',
+    description: 'Mês de férias! Você planejou uma viagem para descansar.',
     options: [
-      { label: 'A', text: 'Muda para o apartamento melhor (+R$ 800/mês de custo fixo).', effectType: 'cost_change', effectValue: 800, probability: 1.0 },
-      { label: 'B', text: 'Mantém o atual e investe a diferença.', effectType: 'none', effectValue: 0, probability: 1.0 },
+      { label: 'A', text: 'Viajar (- R$ 1.500)', effectType: 'immediate_cash', effectValue: -1500, probability: 1.0 }
     ]
   },
-  {     // turno 8
-    title: 'Dica Quente na Bolsa',
-    description: 'Um colega de trabalho diz ter uma informação privilegiada sobre uma ação que vai disparar. Ele sugere que você invista R$ 3.000 agora.',
+  {     // turno 8 - Agosto
+    title: 'Show do Michael Jackson',
+    description: 'Um cover oficial incrível (ou um holograma?) do Rei do Pop vai se apresentar perto daqui.',
     options: [
-      { label: 'A', text: 'Investe R$ 3.000 na dica do colega.', effectType: 'immediate_cash', effectValue: 3000, probability: 0.3 },
-      { label: 'B', text: 'Ignora a dica e mantém sua estratégia.', effectType: 'none', effectValue: 0, probability: 1.0 },
+      { label: 'A', text: 'Comprar ingresso (- R$ 400)', effectType: 'immediate_cash', effectValue: -400, probability: 1.0 }
     ]
   },
-  {     // turno 9
-    title: 'Herança',
-    description: 'Você recebeu uma herança do seu tio. Para recebê-la, precisa pagar o inventário que custa R$ 2.000.',
+  {     // turno 9 - Setembro
+    title: 'Hacktown',
+    description: 'O maior festival de inovação, tecnologia e criatividade de Santa Rita do Sapucaí!',
     options: [
-      { label: 'A', text: 'Paga o inventário e recebe R$ 8.000 líquidos.', effectType: 'inheritance', effectValue: 6000, probability: 1.0 },
-      { label: 'B', text: 'Abre mão da herança para não ter trabalho.', effectType: 'none', effectValue: 0, probability: 1.0 },
+      { label: 'A', text: 'Ir ao Hacktown (- R$ 600)', effectType: 'immediate_cash', effectValue: -600, probability: 1.0 }
     ]
   },
-  {     // turno 10
-    title: 'Consórcio',
-    description: 'Você foi contemplado em um consórcio imobiliário. Pode usar a carta de crédito agora ou vender para outra pessoa com ágio de R$ 4.000.',
+  {     // turno 10 - Outubro
+    title: 'Rock in Rio',
+    description: 'Festival de música gigante! A viagem e os ingressos não são baratos.',
     options: [
-      { label: 'A', text: 'Usa a carta de crédito para comprar um imóvel.', effectType: 'none', effectValue: 0, probability: 1.0 },
-      { label: 'B', text: 'Vende a carta com ágio e embolsa R$ 4.000.', effectType: 'immediate_cash', effectValue: 4000, probability: 1.0 },
+      { label: 'A', text: 'Ir ao Rock in Rio (- R$ 800)', effectType: 'immediate_cash', effectValue: -800, probability: 1.0 }
     ]
   },
-  {     // turno 11
-    title: 'Declaração do IR',
-    description: 'Você percebeu que pode deduzir gastos com saúde e educação no IR, mas precisa organizar os comprovantes agora.',
+  {     // turno 11 - Novembro
+    title: 'Black Friday',
+    description: 'Muitas promoções! Você acabou não resistindo e trocou de celular ou TV.',
     options: [
-      { label: 'A', text: 'Organiza tudo e declara corretamente — recebe restituição de R$ 1.200.', effectType: 'immediate_cash', effectValue: 1200, probability: 1.0 },
-      { label: 'B', text: 'Declara sem as deduções para economizar tempo.', effectType: 'none', effectValue: 0, probability: 1.0 },
+      { label: 'A', text: 'Aproveitar promoções (- R$ 1.000)', effectType: 'immediate_cash', effectValue: -1000, probability: 1.0 }
     ]
   },
-  {     // turno 12
-    title: 'Resgate Final',
-    description: 'Último mês! Você pode resgatar todos os seus investimentos agora ou manter aplicado até o fim do ciclo para maximizar o rendimento.',
+  {     // turno 12 - Dezembro
+    title: 'Natal e Ano Novo',
+    description: 'Festas de fim de ano, presentes, ceia e viagem de réveillon.',
     options: [
-      { label: 'A', text: 'Resgata tudo e garante o valor atual.', effectType: 'none', effectValue: 0, probability: 1.0 },
-      { label: 'B', text: 'Mantém aplicado até o último momento.', effectType: 'immediate_cash', effectValue: 500, probability: 0.7 },
+      { label: 'A', text: 'Comemorar festas (- R$ 500)', effectType: 'immediate_cash', effectValue: -500, probability: 1.0 }
     ]
   },
 ]
@@ -204,7 +192,23 @@ async function generateAssetPrices(roomId, turn) {
 
     // variação aleatória baseada no nível de risco
     const volatility = asset.riskLevel === 'low' ? 0.03 : asset.riskLevel === 'medium' ? 0.07 : 0.15
-    const change = (Math.random() * 2 - 1) * volatility
+    let change = (Math.random() * 2 - 1) * volatility
+
+    // Eventos específicos para ações (Historinhas)
+    if (asset.ticker === 'VALE3' && turn === 3) {
+      change += 0.40 // Valoriza 40%
+    } else if (asset.ticker === 'PETR4' && turn === 10) {
+      change -= 0.35 // Cai 35% por evento político (eleição)
+    } else if (asset.ticker === 'ECOP4' && turn === 5) {
+      change += 0.25 // Valoriza por incentivo verde
+    } else if (asset.ticker === 'TECH3' && turn === 7) {
+      change -= 0.20 // Cai por balanço ruim
+    } else if (asset.ticker === 'SAUD3' && turn === 8) {
+      change += 0.30 // Valoriza por nova patente médica
+    } else if (asset.ticker === 'CONS4' && turn === 4) {
+      change -= 0.15 // Cai por crise imobiliária
+    }
+
     const newPrice = Math.max(basePrice * (1 + change), 0.01)
 
     await prisma.assetPrice.upsert({

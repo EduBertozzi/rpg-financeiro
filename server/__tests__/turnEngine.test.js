@@ -107,9 +107,9 @@ describe('processTurn', () => {
 
     const result = await processTurn('room-1')
 
-    // turn=1 → nextTurn=2 → DILEMMAS[2] = Cartão de Crédito
+    // turn=1 → nextTurn=2 → DILEMMAS[2] = Jantar com amigos
     expect(result.dilemma).not.toBeNull()
-    expect(result.dilemma.title).toBe('Cartão de Crédito')
+    expect(result.dilemma.title).toBe('Jantar com amigos')
   })
 
   it('lança erro se sala não encontrada', async () => {

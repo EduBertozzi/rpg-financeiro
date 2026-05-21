@@ -22,6 +22,20 @@ export default function Admin() {
     }
   }
 
+  const handleCreateRoom = async () => {
+    setLoading(true)
+    try {
+      const { data } = await api.post('/rooms', { maxTurns: 12 })
+      setRoom(data)
+      setNewRoomCode('')
+      window.location.reload()
+    } catch (err) {
+      alert('Erro ao criar sala!')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const fetchLeaderboard = async () => {
     if (!room?.id) return
     try {
@@ -104,32 +118,41 @@ export default function Admin() {
         </div>
       </div>
 
-      <div className="bg-yellow-900/20 border-b border-yellow-700 px-6 py-3 flex items-center gap-3">
-  <p className="text-yellow-400 text-sm font-medium">Trocar de sala:</p>
-  <input
-    type="text"
-    value={newRoomCode}
-    onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
-    className="px-3 py-1 bg-dark border border-border rounded-lg text-white text-sm font-mono w-32 focus:outline-none focus:border-primary"
-    placeholder="Código"
-    maxLength={6}
-  />
-  <button
-    onClick={async () => {
-      try {
-        const { data } = await api.get(`/rooms/${newRoomCode}`)
-        setRoom(data)
-        setNewRoomCode('')
-        window.location.reload()
-      } catch {
-        alert('Sala não encontrada!')
-      }
-    }}
-    className="px-3 py-1 bg-primary text-white text-sm rounded-lg"
-  >
-    Entrar
-  </button>
-</div>
+      <div className="bg-yellow-900/20 border-b border-yellow-700 px-6 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <p className="text-yellow-400 text-sm font-medium">Acessar sala existente:</p>
+          <input
+            type="text"
+            value={newRoomCode}
+            onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
+            className="px-3 py-1 bg-dark border border-border rounded-lg text-white text-sm font-mono w-32 focus:outline-none focus:border-primary"
+            placeholder="Código"
+            maxLength={6}
+          />
+          <button
+            onClick={async () => {
+              try {
+                const { data } = await api.get(`/rooms/${newRoomCode}`)
+                setRoom(data)
+                setNewRoomCode('')
+                window.location.reload()
+              } catch {
+                alert('Sala não encontrada!')
+              }
+            }}
+            className="px-3 py-1 bg-primary text-white text-sm rounded-lg"
+          >
+            Entrar
+          </button>
+        </div>
+        <button
+          onClick={handleCreateRoom}
+          disabled={loading}
+          className="px-4 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm font-bold rounded-lg transition-colors shadow-lg"
+        >
+          {loading ? 'Criando...' : '➕ Criar Nova Sala'}
+        </button>
+      </div>
 
       <div className="max-w-5xl mx-auto p-8 space-y-6">
 

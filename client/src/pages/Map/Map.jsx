@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
 import socket from '../../services/socket'
 import GameHeader from '../../components/GameHeader'
+import DilemmaModal from '../../components/DilemmaModal'
 
 const BUILDINGS = [
   {
@@ -16,13 +17,13 @@ const BUILDINGS = [
     route: '/bank'
   },
   {
-    id: 'broker',
-    name: 'Corretora',
-    description: 'Ações e Fundos Imobiliários',
-    icon: '📈',
-    color: 'from-green-900 to-green-700',
-    border: 'border-green-500',
-    route: '/broker'
+    id: 'leisure',
+    name: 'Lazer',
+    description: 'Eventos mensais obrigatórios',
+    icon: '🎉',
+    color: 'from-pink-900 to-pink-700',
+    border: 'border-pink-500',
+    route: 'modal_dilemma'
   },
   {
     id: 'companies',
@@ -49,6 +50,7 @@ export default function Map() {
   const { character, room, setCharacter, setRoom } = useGameStore()
   const characterRef = useRef(character)
   const roomRef = useRef(room)
+  const [showDilemmaModal, setShowDilemmaModal] = useState(false)
 
   useEffect(() => { characterRef.current = character }, [character])
   useEffect(() => { roomRef.current = room }, [room])
@@ -99,7 +101,7 @@ export default function Map() {
       } catch {
         setCharacter({ ...characterRef.current, turnReady: false })
       }
-      if (data.dilemma) navigate('/dilemma')
+      if (data.dilemma) setShowDilemmaModal(true)
     })
 
     socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
@@ -116,12 +118,31 @@ export default function Map() {
   }, [character?.id, room?.id])
 
   const handleFinishMonth = async () => {
+    if (room?.currentTurn > 0) {
+      const hasDoneLeisure = character?.eventLog?.some(log => log.turn === room.currentTurn && log.description.startsWith('Dilema'))
+      if (!hasDoneLeisure) {
+        alert('Você precisa ir ao Lazer antes de finalizar o mês!')
+        return
+      }
+    }
+
     try {
       await api.patch(`/characters/${character.id}/ready`)
       setCharacter({ ...character, turnReady: true })
     } catch (err) {
       console.error(err)
       alert('Erro ao finalizar mês!')
+    }
+  }
+
+  const handleDilemmaComplete = async () => {
+    setShowDilemmaModal(false)
+    // Atualiza o personagem para pegar o novo saldo e log de evento
+    try {
+      const { data } = await api.get(`/characters/${character.id}`)
+      setCharacter(data)
+    } catch (err) {
+      console.error(err)
     }
   }
 
@@ -148,7 +169,13 @@ export default function Map() {
           {BUILDINGS.map(building => (
             <button
               key={building.id}
-              onClick={() => navigate(building.route)}
+              onClick={() => {
+                if (building.route === 'modal_dilemma') {
+                  setShowDilemmaModal(true)
+                } else {
+                  navigate(building.route)
+                }
+              }}
               className={`relative p-6 bg-gradient-to-br ${building.color} border ${building.border} rounded-2xl text-left hover:scale-105 transition-all duration-200 shadow-lg`}
             >
               <div className="text-5xl mb-4">{building.icon}</div>
@@ -166,11 +193,17 @@ export default function Map() {
               R$ {Number(character?.monthlyIncome ?? 7000).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
           </div>
-          <div className="bg-card border border-border rounded-xl p-4">
-            <p className="text-xs text-gray-400 mb-1">Custos Fixos</p>
+          <div className="bg-card border border-border rounded-xl p-4 group relative">
+            <p className="text-xs text-gray-400 mb-1">Custos Fixos <span className="cursor-help" title="Ver detalhes">ℹ️</span></p>
             <p className="text-red-400 font-bold text-lg">
               R$ {totalCosts.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </p>
+            <div className="hidden group-hover:block absolute top-full left-0 mt-2 w-64 p-3 bg-darker border border-border rounded-lg shadow-xl z-50 text-xs space-y-1">
+              <div className="flex justify-between"><span>Jorge (Aluguel)</span><span>R$ {Number(character?.housingCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between"><span>Mercadinho (Alimentação)</span><span>R$ {Number(character?.foodCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between"><span>Hidroluz (Água/Luz)</span><span>R$ {Number(character?.utilitiesCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+              <div className="flex justify-between"><span>InaNet (Internet/Telefonia)</span><span>R$ {Number(character?.transportCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+            </div>
           </div>
           <div className="bg-card border border-border rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-1">Sobra por Mês</p>
@@ -182,12 +215,6 @@ export default function Map() {
 
         <div className="mt-6 flex justify-end gap-3">
           <button
-            className="px-6 py-3 bg-yellow-700 hover:bg-yellow-600 text-white font-bold rounded-xl transition-colors"
-            onClick={() => navigate('/dilemma')}
-          >
-            ⚡ Ver Dilema
-          </button>
-          <button
             className="px-8 py-3 bg-primary hover:bg-blue-600 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
             onClick={handleFinishMonth}
             disabled={character?.turnReady}
@@ -197,6 +224,13 @@ export default function Map() {
         </div>
 
       </div>
+
+      {showDilemmaModal && (
+        <DilemmaModal 
+          onClose={() => setShowDilemmaModal(false)}
+          onComplete={handleDilemmaComplete}
+        />
+      )}
     </div>
   )
 }

@@ -37,9 +37,9 @@ exports.createCharacter = async (req, res) => {
         course,
         gift,
         housingCost:   mods.housingCost   ? 1500 * mods.housingCost   : 1500,
-        foodCost:      mods.foodCost       ? 800  * mods.foodCost       : 800,
-        utilitiesCost: mods.utilitiesCost  ? 400  * mods.utilitiesCost  : 400,
-        transportCost: mods.transportCost  ? 300  * mods.transportCost  : 300,
+        foodCost:      mods.foodCost       ? 1000 * mods.foodCost       : 1000,
+        utilitiesCost: mods.utilitiesCost  ? 250  * mods.utilitiesCost  : 250,
+        transportCost: mods.transportCost  ? 250  * mods.transportCost  : 250,
       }
     })
 
@@ -63,7 +63,8 @@ exports.getCharacter = async (req, res) => {
         fixedInvestments: { where: { redeemedAt: null } },
         positions: { include: { asset: true } },
         debentures: { where: { status: 'active' } },
-        snapshots: { orderBy: { turn: 'asc' } }
+        snapshots: { orderBy: { turn: 'asc' } },
+        eventLog: true
       }
     })
 

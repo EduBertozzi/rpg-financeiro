@@ -7,9 +7,19 @@ export default function GameHeader() {
 
   return (
     <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-50">
-      <div>
-        <h1 className="text-xl font-bold text-white">RPG Financeiro</h1>
-        <p className="text-xs text-gray-400">INATEL — Santa Rita do Sapucaí</p>
+      <div className="flex items-center gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-white">RPG Financeiro</h1>
+          <p className="text-xs text-gray-400">INATEL — Santa Rita do Sapucaí</p>
+        </div>
+        {window.location.pathname !== '/map' && window.location.pathname !== '/login' && window.location.pathname !== '/register' && (
+          <button
+            onClick={() => navigate('/map')}
+            className="px-3 py-1.5 ml-4 bg-gray-800 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition-colors border border-gray-600"
+          >
+            ← Voltar ao Mapa
+          </button>
+        )}
       </div>
 
       {character && (

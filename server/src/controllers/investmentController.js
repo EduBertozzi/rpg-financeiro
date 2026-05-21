@@ -1,7 +1,22 @@
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 
-const SELIC_MONTHLY = 0.0075 // 0,75% ao mês (simulado)
+const SELIC_ANNUAL = 0.105 // 10.5% a.a simulado
+const CDI_ANNUAL = 0.104 // 10.4% a.a simulado
+
+function getMonthlyRate(type) {
+  let annualRate = 0
+  switch (type) {
+    case 'POUPANCA': annualRate = 0.065; break;
+    case 'CDB': annualRate = CDI_ANNUAL * 1.06; break;
+    case 'TESOURO_SELIC': annualRate = SELIC_ANNUAL + 0.006; break;
+    case 'TESOURO_PRE': annualRate = 0.135; break;
+    case 'LCI': annualRate = CDI_ANNUAL * 1.08; break;
+    case 'LCA': annualRate = SELIC_ANNUAL + 0.026; break;
+    default: annualRate = SELIC_ANNUAL; break;
+  }
+  return Math.pow(1 + annualRate, 1 / 12) - 1
+}
 
 // ── RENDA FIXA ────────────────────────────────────────────────────────────────
 
@@ -18,7 +33,7 @@ exports.getFixedIncome = async (req, res) => {
 
 exports.investFixed = async (req, res) => {
   try {
-    const { amount, isEmergency = false } = req.body
+    const { amount, type = 'POUPANCA', isEmergency = false } = req.body
     const character = await prisma.character.findUnique({
       where: { id: req.params.id },
       include: { room: true }
@@ -29,12 +44,15 @@ exports.investFixed = async (req, res) => {
     if (amount <= 0) return res.status(400).json({ error: 'Valor inválido' })
     if (Number(character.cash) < amount) return res.status(422).json({ error: 'Saldo insuficiente' })
 
+    const monthlyRate = getMonthlyRate(type)
+
     const [investment] = await prisma.$transaction([
       prisma.fixedIncomeInvestment.create({
         data: {
           characterId: character.id,
           amount,
-          monthlyRate: SELIC_MONTHLY,
+          type,
+          monthlyRate,
           investedAt: character.room.currentTurn,
           isEmergency
         }

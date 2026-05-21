@@ -31,11 +31,14 @@ async function seed() {
 
   await prisma.marketAsset.createMany({
     data: [
-      { ticker: 'INVI3', name: 'InvestTech Soluções', type: 'stock', sector: 'Tecnologia', riskLevel: 'low',    basePrice: 18.50 },
-      { ticker: 'VALE4', name: 'ValeMais Energia',    type: 'stock', sector: 'Energia',    riskLevel: 'medium', basePrice: 32.00 },
-      { ticker: 'STRT3', name: 'StartUp Veloz',       type: 'stock', sector: 'Logística',  riskLevel: 'high',   basePrice: 8.20  },
-      { ticker: 'INFT11', name: 'INATEL FII',         type: 'fii',   sector: 'Imóveis',    riskLevel: 'low',    basePrice: 105.00 },
-      { ticker: 'TECH11', name: 'TechFundo FII',      type: 'fii',   sector: 'Tecnologia', riskLevel: 'medium', basePrice: 88.00  },
+      { ticker: 'VALE3', name: 'Vale', type: 'stock', sector: 'Mineração', riskLevel: 'medium', basePrice: 83.79 },
+      { ticker: 'PETR4', name: 'Petrobras', type: 'stock', sector: 'Energia', riskLevel: 'high', basePrice: 45.22 },
+      { ticker: 'AMER3', name: 'Americanas', type: 'stock', sector: 'Varejo', riskLevel: 'high', basePrice: 5.29 },
+      { ticker: 'ABEV3', name: 'Ambev', type: 'stock', sector: 'Bebidas', riskLevel: 'low', basePrice: 15.90 },
+      { ticker: 'ECOP4', name: 'EcoPlanet', type: 'stock', sector: 'Sustentabilidade', riskLevel: 'medium', basePrice: 12.50 },
+      { ticker: 'TECH3', name: 'TechFuture', type: 'stock', sector: 'Tecnologia', riskLevel: 'high', basePrice: 55.00 },
+      { ticker: 'SAUD3', name: 'SaúdeMais', type: 'stock', sector: 'Saúde', riskLevel: 'low', basePrice: 30.20 },
+      { ticker: 'CONS4', name: 'ConstruBem', type: 'stock', sector: 'Construção', riskLevel: 'medium', basePrice: 22.10 },
     ]
   })
 
@@ -45,9 +48,7 @@ async function seed() {
 
   await prisma.company.createMany({
     data: [
-      { name: 'InvestTech Soluções', description: 'Empresa consolidada de tecnologia financeira.', riskRating: 'AAA', riskLevel: 'low',    annualRate: 0.095, defaultProbability: 0.005 },
-      { name: 'ValeMais Energia',    description: 'Empresa de energia renovável em expansão.',     riskRating: 'BBB', riskLevel: 'medium', annualRate: 0.145, defaultProbability: 0.035 },
-      { name: 'StartUp Veloz',       description: 'Startup de logística com alto potencial.',      riskRating: 'CCC', riskLevel: 'high',   annualRate: 0.220, defaultProbability: 0.120 },
+      { name: 'Milhas Fácil', description: 'Empresa de programas de fidelidade e milhas.', riskRating: 'BBB', riskLevel: 'medium', annualRate: 0.18, defaultProbability: 0.05 },
     ]
   })
 
