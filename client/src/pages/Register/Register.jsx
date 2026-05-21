@@ -46,11 +46,11 @@ export default function Register() {
       </div>
 
       {/* Cartão principal com Glassmorphism Realista */}
-      <div className="relative w-full max-w-md p-10 bg-white/[0.03] backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] z-10 animate-fade-in-up ring-1 ring-white/5">
+      <div className="relative w-full max-w-md p-10 bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] z-10 animate-fade-in-up ring-1 ring-white/5">
         
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-white mb-2 tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Criar Conta</h1>
-          <p className="text-xs text-gray-400 font-semibold tracking-[0.2em] uppercase">INATEL — Simulador Financeiro</p>
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold text-white mb-3 tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Criar Conta</h1>
+          <p className="text-xs text-gray-400 font-semibold tracking-[0.25em] uppercase">INATEL — Simulador Financeiro</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -118,7 +118,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:-translate-y-0.5 tracking-wide"
+            className="w-full py-4 mt-4 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:shadow-[0_0_30px_rgba(168,85,247,0.5)] hover:-translate-y-0.5 tracking-[0.15em] uppercase text-sm"
           >
             {loading ? 'Criando conta...' : 'Criar conta'}
           </button>
