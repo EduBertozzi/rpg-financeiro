@@ -8,8 +8,13 @@ export default function Register() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const navigate = useNavigate()
   const { setUser, setToken } = useGameStore()
+
+  const handleMouseMove = (e) => {
+    setMousePos({ x: e.clientX, y: e.clientY })
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -28,13 +33,34 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
-      {/* Elementos de fundo dinâmicos (Orbes de luz) */}
-      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] animate-float pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] animate-float pointer-events-none" style={{ animationDelay: '2s' }}></div>
+    <div 
+      className="min-h-screen relative flex items-center justify-center overflow-hidden bg-[#0B0D17]"
+      onMouseMove={handleMouseMove}
+    >
+      {/* Grid 3D em Perspectiva (Cyber Floor) */}
+      <div className="absolute inset-0 z-0 perspective-grid opacity-30"></div>
+
+      {/* Lanterna de Mouse (Spotlight) */}
+      <div 
+        className="pointer-events-none absolute inset-0 z-10 transition-opacity duration-300"
+        style={{
+          background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(168,85,247,0.15), transparent 40%)`
+        }}
+      />
+
+      {/* Partículas Flutuantes de Poeira Estelar */}
+      <div className="absolute w-1 h-1 bg-white rounded-full blur-[1px] top-[20%] left-[15%] animate-float pointer-events-none z-10" style={{ animationDelay: '0s' }}></div>
+      <div className="absolute w-2 h-2 bg-purple-400 rounded-full blur-[2px] top-[60%] left-[10%] animate-float pointer-events-none z-10" style={{ animationDelay: '1s' }}></div>
+      <div className="absolute w-1.5 h-1.5 bg-blue-300 rounded-full blur-[1px] top-[80%] left-[85%] animate-float pointer-events-none z-10" style={{ animationDelay: '2.5s' }}></div>
+      <div className="absolute w-2.5 h-2.5 bg-white rounded-full blur-[2px] top-[30%] left-[80%] animate-float pointer-events-none z-10" style={{ animationDelay: '1.5s' }}></div>
+      <div className="absolute w-3 h-3 bg-blue-500 rounded-full blur-[2px] top-[10%] left-[70%] animate-float pointer-events-none z-10" style={{ animationDelay: '0.5s' }}></div>
+
+      {/* Elementos de fundo dinâmicos (Orbes de luz grandes) */}
+      <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] animate-float pointer-events-none z-0"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] animate-float pointer-events-none z-0" style={{ animationDelay: '2s' }}></div>
 
       {/* Ticker da Bolsa passando no fundo */}
-      <div className="absolute top-[40%] left-0 w-full overflow-hidden whitespace-nowrap opacity-10 pointer-events-none select-none -rotate-2 transform-gpu">
+      <div className="absolute top-[40%] left-0 w-full overflow-hidden whitespace-nowrap opacity-10 pointer-events-none select-none -rotate-2 transform-gpu z-0">
         <div className="flex w-max animate-marquee text-5xl font-extrabold text-white tracking-widest gap-16">
           <span className="flex gap-16">
             PETR4 <span className="text-green-500">▲ 2.4%</span> • VALE3 <span className="text-red-500">▼ 1.2%</span> • MGLU3 <span className="text-green-500">▲ 5.7%</span> • ITUB4 <span className="text-green-500">▲ 0.8%</span> • WEGE3 <span className="text-red-500">▼ 0.3%</span> • BBDC4 <span className="text-green-500">▲ 1.5%</span> • INTL3 <span className="text-green-500">▲ 8.9%</span> • RENT3 <span className="text-red-500">▼ 2.1%</span> • BBAS3 <span className="text-green-500">▲ 1.1%</span>
@@ -46,7 +72,7 @@ export default function Register() {
       </div>
 
       {/* Cartão principal com Glassmorphism Realista */}
-      <div className="relative w-full max-w-md p-10 bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] z-10 animate-fade-in-up ring-1 ring-white/5">
+      <div className="relative w-full max-w-md p-10 bg-white/[0.04] backdrop-blur-xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] z-20 animate-fade-in-up ring-1 ring-white/5">
         
         <div className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-white mb-3 tracking-tight drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">Criar Conta</h1>
