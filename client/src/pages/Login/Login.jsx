@@ -69,13 +69,6 @@ export default function Login() {
         }}
       />
 
-      {/* Partículas Flutuantes de Poeira Estelar */}
-      <div className="absolute w-1 h-1 bg-white rounded-full blur-[1px] top-[20%] left-[15%] animate-float pointer-events-none z-10" style={{ animationDelay: '0s' }}></div>
-      <div className="absolute w-2 h-2 bg-purple-400 rounded-full blur-[2px] top-[60%] left-[10%] animate-float pointer-events-none z-10" style={{ animationDelay: '1s' }}></div>
-      <div className="absolute w-1.5 h-1.5 bg-blue-300 rounded-full blur-[1px] top-[80%] left-[85%] animate-float pointer-events-none z-10" style={{ animationDelay: '2.5s' }}></div>
-      <div className="absolute w-2.5 h-2.5 bg-white rounded-full blur-[2px] top-[30%] left-[80%] animate-float pointer-events-none z-10" style={{ animationDelay: '1.5s' }}></div>
-      <div className="absolute w-3 h-3 bg-blue-500 rounded-full blur-[2px] top-[10%] left-[70%] animate-float pointer-events-none z-10" style={{ animationDelay: '0.5s' }}></div>
-
       {/* Elementos de fundo dinâmicos (Orbes de luz grandes) */}
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] animate-float pointer-events-none z-0"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] animate-float pointer-events-none z-0" style={{ animationDelay: '2s' }}></div>
