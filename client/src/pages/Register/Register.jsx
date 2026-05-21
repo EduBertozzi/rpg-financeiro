@@ -145,7 +145,7 @@ export default function Register() {
 
         <p className="text-center text-gray-400 text-sm mt-8">
           Já tem conta?{' '}
-          <Link to="/login" className="text-blue-400 hover:text-blue-300 hover:underline font-medium transition-colors">
+          <Link to="/login" className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 hover:from-blue-300 hover:to-purple-300 transition-all drop-shadow-[0_0_8px_rgba(168,85,247,0.3)]">
             Entrar
           </Link>
         </p>
