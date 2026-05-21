@@ -59,7 +59,7 @@ export default function Login() {
         
         <div className="text-center mb-10">
           <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 mb-2 tracking-tight">INATEL</h1>
-          <p className="text-sm text-gray-400 font-medium tracking-wide uppercase">Financial Simulator</p>
+          <p className="text-sm text-gray-400 font-medium tracking-wide uppercase">Simulador Financeiro</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -115,7 +115,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 mt-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5"
+            className="w-full py-3.5 mt-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-purple-500/30 hover:-translate-y-0.5"
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
