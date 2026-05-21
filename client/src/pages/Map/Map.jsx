@@ -166,7 +166,7 @@ export default function Map() {
         <p className="text-gray-400 text-sm mb-8">Clique em um local para interagir</p>
 
         <div className="grid grid-cols-2 gap-6 mb-8">
-          {BUILDINGS.map(building => (
+          {BUILDINGS.map((building, index) => (
             <button
               key={building.id}
               onClick={() => {
@@ -178,7 +178,7 @@ export default function Map() {
               }}
               className={`relative p-6 bg-gradient-to-br ${building.color} border ${building.border} rounded-2xl text-left transition-all duration-300 hover:scale-105 hover:animate-glow hover:-translate-y-1 shadow-lg`}
             >
-              <div className="text-5xl mb-4 animate-float" style={{ animationDelay: `${Math.random()}s` }}>{building.icon}</div>
+              <div className="text-5xl mb-4 animate-float" style={{ animationDelay: `${index * 0.5}s` }}>{building.icon}</div>
               <h3 className="text-xl font-bold text-white mb-1">{building.name}</h3>
               <p className="text-sm text-gray-300">{building.description}</p>
               <div className="absolute top-4 right-4 text-gray-400 text-xs">›</div>
