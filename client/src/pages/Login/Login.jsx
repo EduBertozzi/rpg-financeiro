@@ -54,6 +54,18 @@ export default function Login() {
       <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] animate-float pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] animate-float pointer-events-none" style={{ animationDelay: '2s' }}></div>
 
+      {/* Ticker da Bolsa passando no fundo */}
+      <div className="absolute top-[40%] left-0 w-full overflow-hidden whitespace-nowrap opacity-10 pointer-events-none select-none -rotate-2 transform-gpu">
+        <div className="flex w-max animate-marquee text-5xl font-extrabold text-white tracking-widest gap-16">
+          <span className="flex gap-16">
+            PETR4 <span className="text-green-500">▲ 2.4%</span> • VALE3 <span className="text-red-500">▼ 1.2%</span> • MGLU3 <span className="text-green-500">▲ 5.7%</span> • ITUB4 <span className="text-green-500">▲ 0.8%</span> • WEGE3 <span className="text-red-500">▼ 0.3%</span> • BBDC4 <span className="text-green-500">▲ 1.5%</span> • INTL3 <span className="text-green-500">▲ 8.9%</span> • RENT3 <span className="text-red-500">▼ 2.1%</span> • BBAS3 <span className="text-green-500">▲ 1.1%</span>
+          </span>
+          <span className="flex gap-16">
+            PETR4 <span className="text-green-500">▲ 2.4%</span> • VALE3 <span className="text-red-500">▼ 1.2%</span> • MGLU3 <span className="text-green-500">▲ 5.7%</span> • ITUB4 <span className="text-green-500">▲ 0.8%</span> • WEGE3 <span className="text-red-500">▼ 0.3%</span> • BBDC4 <span className="text-green-500">▲ 1.5%</span> • INTL3 <span className="text-green-500">▲ 8.9%</span> • RENT3 <span className="text-red-500">▼ 2.1%</span> • BBAS3 <span className="text-green-500">▲ 1.1%</span>
+          </span>
+        </div>
+      </div>
+
       {/* Cartão principal de Login com Glassmorphism Realista */}
       <div className="relative w-full max-w-md p-10 bg-white/[0.03] backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] z-10 animate-fade-in-up ring-1 ring-white/5">
         
