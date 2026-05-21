@@ -176,9 +176,9 @@ export default function Map() {
                   navigate(building.route)
                 }
               }}
-              className={`relative p-6 bg-gradient-to-br ${building.color} border ${building.border} rounded-2xl text-left hover:scale-105 transition-all duration-200 shadow-lg`}
+              className={`relative p-6 bg-gradient-to-br ${building.color} border ${building.border} rounded-2xl text-left transition-all duration-300 hover:scale-105 hover:animate-glow hover:-translate-y-1 shadow-lg`}
             >
-              <div className="text-5xl mb-4">{building.icon}</div>
+              <div className="text-5xl mb-4 animate-float" style={{ animationDelay: `${Math.random()}s` }}>{building.icon}</div>
               <h3 className="text-xl font-bold text-white mb-1">{building.name}</h3>
               <p className="text-sm text-gray-300">{building.description}</p>
               <div className="absolute top-4 right-4 text-gray-400 text-xs">›</div>
@@ -215,7 +215,11 @@ export default function Map() {
 
         <div className="mt-6 flex justify-end gap-3">
           <button
-            className="px-8 py-3 bg-primary hover:bg-blue-600 disabled:opacity-50 text-white font-bold rounded-xl transition-colors"
+            className={`px-8 py-3 font-bold rounded-xl transition-all duration-300 ${
+              character?.turnReady 
+                ? 'bg-green-600/50 text-green-200 cursor-not-allowed border border-green-500/30' 
+                : 'bg-primary hover:bg-blue-500 text-white shadow-lg hover:shadow-blue-500/50 hover:-translate-y-1'
+            }`}
             onClick={handleFinishMonth}
             disabled={character?.turnReady}
           >

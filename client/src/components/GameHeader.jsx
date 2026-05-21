@@ -6,7 +6,7 @@ export default function GameHeader() {
   const { character, room, user, logout } = useGameStore()
 
   return (
-    <div className="bg-card border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+    <div className="bg-[#121420]/70 backdrop-blur-xl border-b border-white/5 px-6 py-4 flex items-center justify-between sticky top-0 z-50 shadow-lg">
       <div className="flex items-center gap-4">
         <div>
           <h1 className="text-xl font-bold text-white">RPG Financeiro</h1>
