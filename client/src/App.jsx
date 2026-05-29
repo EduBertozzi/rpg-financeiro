@@ -13,25 +13,41 @@ import SkillTree from './pages/SkillTree/SkillTree'
 import Admin from './pages/Admin/Admin'
 import Finished from './pages/Finished/Finished'
 
+import { applyAvatarTheme } from './data/avatarTheme'
+
 function ProtectedRoute({ children }) {
   const user = useGameStore((state) => state.user)
+
   if (!user) return <Navigate to="/login" replace />
+
   return children
 }
 
 function AdminRoute({ children }) {
   const user = useGameStore((state) => state.user)
+
   if (!user) return <Navigate to="/login" replace />
   if (user.role !== 'admin') return <Navigate to="/login" replace />
+
   return children
 }
 
 function App() {
   const hydrate = useGameStore((state) => state.hydrate)
+  const character = useGameStore((state) => state.character)
 
   useEffect(() => {
     hydrate()
   }, [hydrate])
+
+  useEffect(() => {
+    if (character?.avatarId) {
+      applyAvatarTheme(character.avatarId)
+      return
+    }
+
+    applyAvatarTheme(1)
+  }, [character?.avatarId])
 
   return (
     <BrowserRouter>
@@ -39,16 +55,77 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
-        <Route path="/character" element={<ProtectedRoute><CharacterCreation /></ProtectedRoute>} />
-        <Route path="/map" element={<ProtectedRoute><Map /></ProtectedRoute>} />
-        <Route path="/bank" element={<ProtectedRoute><Bank /></ProtectedRoute>} />
-        <Route path="/broker" element={<ProtectedRoute><Broker /></ProtectedRoute>} />
-        <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
-        <Route path="/skills" element={<ProtectedRoute><SkillTree /></ProtectedRoute>} />
+        <Route
+          path="/character"
+          element={
+            <ProtectedRoute>
+              <CharacterCreation />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/finished" element={<ProtectedRoute><Finished /></ProtectedRoute>} />
+        <Route
+          path="/map"
+          element={
+            <ProtectedRoute>
+              <Map />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+        <Route
+          path="/bank"
+          element={
+            <ProtectedRoute>
+              <Bank />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/broker"
+          element={
+            <ProtectedRoute>
+              <Broker />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/companies"
+          element={
+            <ProtectedRoute>
+              <Companies />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/skills"
+          element={
+            <ProtectedRoute>
+              <SkillTree />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/finished"
+          element={
+            <ProtectedRoute>
+              <Finished />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <Admin />
+            </AdminRoute>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

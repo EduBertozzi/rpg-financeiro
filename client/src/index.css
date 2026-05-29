@@ -2,18 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --theme-primary: #3B82F6;
+  --theme-secondary: #7CB8FF;
+  --theme-bg: #07111F;
+  --theme-surface: #101B2E;
+  --theme-surface-soft: #17233A;
+  --theme-border: #2B3B57;
+  --theme-text: #F8FAFC;
+  --theme-muted: #93A4BD;
+  --theme-glow: rgba(59, 130, 246, 0.45);
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html {
+  background: var(--theme-bg);
+}
+
 body {
-  background: radial-gradient(circle at top right, #1F2235, #121420);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--theme-primary) 28%, transparent), transparent 34%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--theme-secondary) 20%, transparent), transparent 32%),
+    var(--theme-bg);
   background-attachment: fixed;
-  color: #E8E8E8;
+  color: var(--theme-text);
   font-family: 'Outfit', sans-serif;
   min-height: 100vh;
+  transition:
+    background 220ms ease,
+    color 220ms ease;
 }
 
 ::-webkit-scrollbar {
@@ -21,22 +43,22 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1A1A2E;
+  background: var(--theme-surface);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2C5F8A;
+  background: var(--theme-primary);
   border-radius: 3px;
 }
 
-/* Efeito de Grid 3D em Perspectiva */
 .perspective-grid {
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 60px 60px;
   transform: perspective(600px) rotateX(60deg) translateY(100px) scale(2.5);
   transform-origin: bottom;
-  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
-  mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%);
+  mask-image: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%);
   pointer-events: none;
 }

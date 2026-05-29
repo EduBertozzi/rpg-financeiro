@@ -1,17 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {
       colors: {
-        primary: '#4A90D9',
-        dark: '#121420',
-        darker: '#0B0D17',
-        card: '#1B1E31',
-        border: '#2A304D',
+        primary: 'var(--theme-primary)',
+        secondary: 'var(--theme-secondary)',
+        dark: 'var(--theme-bg)',
+        darker: 'var(--theme-bg)',
+        card: 'var(--theme-surface)',
+        border: 'var(--theme-border)',
       },
       fontFamily: {
         sans: ['Outfit', 'sans-serif'],
@@ -32,14 +33,14 @@ export default {
           '50%': { transform: 'translateY(-5px)' },
         },
         glow: {
-          '0%': { boxShadow: '0 0 5px rgba(74, 144, 217, 0.2)' },
-          '100%': { boxShadow: '0 0 20px rgba(74, 144, 217, 0.6)' },
+          '0%': { boxShadow: '0 0 5px var(--theme-glow)' },
+          '100%': { boxShadow: '0 0 20px var(--theme-glow)' },
         },
         marquee: {
           '0%': { transform: 'translateX(0%)' },
           '100%': { transform: 'translateX(-50%)' },
-        }
-      }
+        },
+      },
     },
   },
   plugins: [],
