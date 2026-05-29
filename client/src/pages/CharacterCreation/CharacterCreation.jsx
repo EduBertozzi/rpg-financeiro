@@ -169,13 +169,13 @@ export default function CharacterCreation() {
                   <div>
                     <h2 className="text-2xl font-black">Sua Identidade</h2>
                     <p className="mt-1 text-sm text-gray-400">
-                      Escolha seu avatar, nome, curso e sala para começar.
+                      Defina seu estilo de jogo, nome, curso e sala para começar.
                     </p>
                   </div>
 
                   <div>
                     <label className="mb-3 block text-sm font-semibold text-gray-300">
-                      Escolha seu avatar
+                      Escolha seu arquétipo
                     </label>
 
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -198,9 +198,9 @@ export default function CharacterCreation() {
                           >
                             <Avatar
                               id={avatar.id}
-                              size={64}
+                              size={76}
                               selected={selected}
-                              className="h-16 w-16"
+                              className="h-[76px] w-[76px]"
                             />
 
                             <span className="mt-2 text-center text-xs font-bold text-white">
@@ -212,7 +212,7 @@ export default function CharacterCreation() {
                             </span>
 
                             {selected && (
-                              <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full bg-primary text-xs font-black text-white">
+                              <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full border border-white/20 bg-[var(--theme-primary)] text-xs font-black text-white shadow-[0_0_12px_var(--theme-glow)]">
                                 ✓
                               </span>
                             )}
