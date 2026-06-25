@@ -29,8 +29,8 @@ Jogo de simulação financeira multiplayer em tempo real desenvolvido para o INA
 
 **Deploy**
 - Frontend: Vercel
-- Backend: Railway
-- Banco de dados: SQLite (Arquivo local dev.db)
+- Backend: Render (processo Node sempre ativo, necessário para Socket.io)
+- Banco de dados: SQLite hospedado no Turso (libSQL), acessado via Prisma Driver Adapter
 
 ---
 
@@ -144,16 +144,55 @@ Acesse `http://localhost:5173`
 ### Backend (`server/.env`)
 ```env
 DATABASE_URL="file:./dev.db"
+TURSO_DATABASE_URL=
+TURSO_AUTH_TOKEN=
 JWT_SECRET=seu_jwt_secret
 FRONTEND_URL=http://localhost:5173
 PORT=3001
 ```
+
+- `DATABASE_URL` é usada apenas em desenvolvimento local e pelo `prisma migrate dev` (arquivo sqlite local).
+- `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` são usadas em produção: o Prisma Client se conecta ao Turso via driver adapter (`src/lib/prisma.js`), ignorando `DATABASE_URL` quando definidas.
 
 ### Frontend (`client/.env`)
 ```env
 VITE_API_URL=http://localhost:3001/api/v1
 VITE_SOCKET_URL=http://localhost:3001
 ```
+
+---
+
+## Deploy em produção (Vercel + Render + Turso)
+
+A Vercel hospeda apenas o **frontend** (arquivos estáticos). O backend usa Socket.io com conexões persistentes e por isso não roda em funções serverless — ele vai para o **Render** (free tier, processo sempre ativo). O banco SQLite não pode viver no disco da Vercel/Render porque o sistema de arquivos é efêmero, então usamos o **Turso**, que é SQLite hospedado e acessado por rede.
+
+### 1. Criar o banco no Turso
+```bash
+# instalar a CLI: https://docs.turso.tech/cli/installation
+turso auth login
+turso db create rpg-financeiro
+turso db tokens create rpg-financeiro   # gera o TURSO_AUTH_TOKEN
+turso db show rpg-financeiro --url      # gera o TURSO_DATABASE_URL
+```
+
+### 2. Aplicar as migrations no Turso
+Com `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN` exportados no ambiente:
+```bash
+cd server
+npm install
+npm run migrate:turso
+node src/utils/seed.js   # popular skill tree / dados iniciais
+```
+
+### 3. Backend no Render
+- Criar um "Web Service" apontando para a pasta `server/`
+- Build command: `npm install && npx prisma generate`
+- Start command: `npm start`
+- Variáveis de ambiente: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `JWT_SECRET`, `FRONTEND_URL` (URL do seu domínio Vercel), `PORT` (Render injeta automaticamente)
+
+### 4. Frontend na Vercel
+- Apontar o projeto para a pasta `client/`
+- Variáveis de ambiente: `VITE_API_URL` e `VITE_SOCKET_URL` apontando para a URL pública do Render (ex: `https://seu-backend.onrender.com`)
 
 ---
 

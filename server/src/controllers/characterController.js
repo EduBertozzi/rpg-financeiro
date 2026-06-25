@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../lib/prisma')
 
 const GIFT_MODIFIERS = {
   frugal:  { housingCost: 0.85, foodCost: 0.85, utilitiesCost: 0.85, transportCost: 0.85 },

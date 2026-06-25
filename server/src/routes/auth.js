@@ -1,7 +1,6 @@
 const router = require('express').Router()
 const { register, login } = require('../controllers/authController')
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../lib/prisma')
 
 router.post('/register', register)
 router.post('/login', login)

@@ -1,6 +1,5 @@
 const { processTurn, DILEMMAS } = require('../utils/turnEngine')
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../lib/prisma')
 
 exports.nextTurn = async (req, res) => {
   try {
