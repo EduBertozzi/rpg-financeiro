@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../lib/prisma')
 
 const SELIC_ANNUAL = 0.105 // 10.5% a.a simulado
 const CDI_ANNUAL = 0.104 // 10.4% a.a simulado
