@@ -84,6 +84,12 @@ function Icon({ name, className = 'h-5 w-5' }) {
         <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 .9-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6.9z" />
       </svg>
     ),
+    back: (
+      <svg {...commonProps}>
+        <path d="M19 12H5" />
+        <path d="M11 18l-6-6 6-6" />
+      </svg>
+    ),
     wallet: (
       <svg {...commonProps}>
         <path d="M19 7V6a2 2 0 0 0-2-2H5a3 3 0 0 0 0 6h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H5a3 3 0 0 1-3-3V7" />
@@ -253,6 +259,24 @@ export default function GameHeader() {
           />
         </div>
       </button>
+
+      {path !== '/map' && (
+        <button
+          type="button"
+          onClick={() => navigate('/map')}
+          title="Voltar ao Mapa"
+          aria-label="Voltar ao Mapa"
+          className={[
+            'fixed left-[86px] top-5 z-50',
+            'grid h-[42px] w-[42px] place-items-center rounded-full border border-white/15 bg-[var(--theme-bg)]/70',
+            'shadow-[0_0_20px_rgba(0,0,0,0.4)] backdrop-blur-xl text-gray-300',
+            'transition-all duration-200 hover:scale-105 hover:border-primary/60 hover:text-white active:scale-95 cursor-pointer',
+            open ? 'pointer-events-none opacity-0' : 'opacity-100',
+          ].join(' ')}
+        >
+          <Icon name="back" className="h-5 w-5" />
+        </button>
+      )}
 
       {open && (
         <button
