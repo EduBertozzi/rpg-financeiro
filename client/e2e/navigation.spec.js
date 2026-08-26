@@ -25,12 +25,6 @@ test.describe('Navegação', () => {
     await expect(page.getByRole('heading', { name: 'Corretora' })).toBeVisible()
   })
 
-  test('navega para empresas', async ({ page }) => {
-    await page.goto('/companies')
-    await expect(page).toHaveURL('/companies')
-    await expect(page.getByRole('heading', { name: 'Empresas' })).toBeVisible()
-  })
-
   test('navega para skill tree', async ({ page }) => {
     await page.goto('/skills')
     await expect(page).toHaveURL('/skills')

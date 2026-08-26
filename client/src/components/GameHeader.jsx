@@ -50,16 +50,6 @@ function Icon({ name, className = 'h-5 w-5' }) {
         <path d="M15 7h3v3" />
       </svg>
     ),
-    companies: (
-      <svg {...commonProps}>
-        <path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
-        <path d="M16 8h2a2 2 0 0 1 2 2v11" />
-        <path d="M8 7h4" />
-        <path d="M8 11h4" />
-        <path d="M8 15h4" />
-        <path d="M9 21v-4h2v4" />
-      </svg>
-    ),
     skills: (
       <svg {...commonProps}>
         <path d="M12 2l2.2 6.1L20 10.3l-5.1 3.6.2 6.1L12 15.9 8.9 20l.2-6.1L4 10.3l5.8-2.2L12 2z" />
@@ -209,12 +199,6 @@ export default function GameHeader() {
       path: '/broker',
       icon: 'broker',
       description: 'Investimentos e risco',
-    },
-    {
-      label: 'Empresas',
-      path: '/companies',
-      icon: 'companies',
-      description: 'Dívidas, negócios e carreira',
     },
     {
       label: 'Skills',

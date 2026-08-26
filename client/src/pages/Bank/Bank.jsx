@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import GameHeader from '../../components/GameHeader'
+import CompaniesPanel from './CompaniesPanel'
 
 const FIXED_OPTIONS = [
   { value: 'POUPANCA', label: 'Poupança (6,5% a.a.)' },
@@ -15,7 +16,7 @@ const FIXED_OPTIONS = [
 export default function Bank() {
   const { character, room, setCharacter } = useGameStore()
   
-  const [mainTab, setMainTab] = useState('fixed') // 'fixed' | 'variable'
+  const [mainTab, setMainTab] = useState('fixed') // 'fixed' | 'variable' | 'companies'
   const [marketTab, setMarketTab] = useState('market')
   
   const [investments, setInvestments] = useState([])
@@ -140,7 +141,7 @@ export default function Bank() {
           <span className="text-2xl">🏦</span>
           <div>
             <h1 className="text-xl font-bold">Banco</h1>
-            <p className="text-xs text-gray-400">Renda Fixa e Ações</p>
+            <p className="text-xs text-gray-400">Renda Fixa, Ações e Empresas</p>
           </div>
         </div>
 
@@ -151,11 +152,17 @@ export default function Bank() {
           >
             Renda Fixa
           </button>
-          <button 
-            onClick={() => { setMainTab('variable'); setMessage({text:'',type:''}) }} 
+          <button
+            onClick={() => { setMainTab('variable'); setMessage({text:'',type:''}) }}
             className={`pb-2 px-4 font-bold transition-colors ${mainTab === 'variable' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
           >
             Ações e FIIs (Corretora)
+          </button>
+          <button
+            onClick={() => { setMainTab('companies'); setMessage({text:'',type:''}) }}
+            className={`pb-2 px-4 font-bold transition-colors ${mainTab === 'companies' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
+          >
+            Empresas
           </button>
         </div>
 
@@ -357,6 +364,9 @@ export default function Bank() {
             )}
           </div>
         )}
+
+        {/* --- ABA EMPRESAS --- */}
+        {mainTab === 'companies' && <CompaniesPanel />}
 
       </div>
     </div>

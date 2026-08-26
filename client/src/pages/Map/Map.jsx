@@ -5,14 +5,22 @@ import api from '../../services/api'
 import socket from '../../services/socket'
 import GameHeader from '../../components/GameHeader'
 import DilemmaModal from '../../components/DilemmaModal'
+import BillModal from '../../components/BillModal'
 import bankArt from '../../assets/buildings/bank.png'
 import leisureArt from '../../assets/buildings/leisure.png'
-import companiesArt from '../../assets/buildings/companies.png'
 import universityArt from '../../assets/buildings/university.png'
+import mercadinhoArt from '../../assets/buildings/mercadinho.png'
+import utilitiesArt from '../../assets/buildings/utilities.png'
+import internetArt from '../../assets/buildings/internet.png'
 
 const IconArrow = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="M5 12h14M13 6l6 6-6 6" />
+  </svg>
+)
+const IconCheck = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="m5 13 4 4L19 7" />
   </svg>
 )
 
@@ -20,7 +28,7 @@ const BUILDINGS = [
   {
     id: 'bank',
     name: 'Banco',
-    desc: 'Renda Fixa e Dashboard Financeiro',
+    desc: 'Renda Fixa, Ações e Empresas',
     art: bankArt,
     glow: 'rgba(59,130,246,0.55)',
     ring: 'group-hover:border-blue-400/60',
@@ -36,25 +44,49 @@ const BUILDINGS = [
     ring: 'group-hover:border-pink-400/60',
     badge: 'text-pink-300 bg-pink-500/10 border-pink-400/30',
     route: 'modal_dilemma',
+    requiredPrefix: 'Dilema',
   },
   {
-    id: 'companies',
-    name: 'Empresas',
-    desc: 'Investimento em Debêntures',
-    art: companiesArt,
-    glow: 'rgba(168,85,247,0.55)',
-    ring: 'group-hover:border-purple-400/60',
-    badge: 'text-purple-300 bg-purple-500/10 border-purple-400/30',
-    route: '/companies',
+    id: 'mercadinho',
+    name: 'Mercadinho',
+    desc: 'Compras do mês',
+    art: mercadinhoArt,
+    glow: 'rgba(34,197,94,0.55)',
+    ring: 'group-hover:border-green-400/60',
+    badge: 'text-green-300 bg-green-500/10 border-green-400/30',
+    route: 'modal_bill_food',
+    requiredPrefix: 'Conta: Mercadinho',
+  },
+  {
+    id: 'utilities',
+    name: 'Água e Luz',
+    desc: 'Conta mensal fixa',
+    art: utilitiesArt,
+    glow: 'rgba(234,179,8,0.55)',
+    ring: 'group-hover:border-yellow-400/60',
+    badge: 'text-yellow-300 bg-yellow-500/10 border-yellow-400/30',
+    route: 'modal_bill_utilities',
+    requiredPrefix: 'Conta: Água e Luz',
+  },
+  {
+    id: 'internet',
+    name: 'Internet e Celular',
+    desc: 'Conta mensal fixa',
+    art: internetArt,
+    glow: 'rgba(34,211,238,0.55)',
+    ring: 'group-hover:border-cyan-400/60',
+    badge: 'text-cyan-300 bg-cyan-500/10 border-cyan-400/30',
+    route: 'modal_bill_transport',
+    requiredPrefix: 'Conta: Internet e Celular',
   },
   {
     id: 'university',
     name: 'Universidade',
     desc: 'Árvore de Habilidades',
     art: universityArt,
-    glow: 'rgba(234,179,8,0.55)',
-    ring: 'group-hover:border-yellow-400/60',
-    badge: 'text-yellow-300 bg-yellow-500/10 border-yellow-400/30',
+    glow: 'rgba(168,85,247,0.55)',
+    ring: 'group-hover:border-purple-400/60',
+    badge: 'text-purple-300 bg-purple-500/10 border-purple-400/30',
     route: '/skills',
   },
 ]
@@ -65,6 +97,7 @@ export default function Map() {
   const characterRef = useRef(character)
   const roomRef = useRef(room)
   const [showDilemmaModal, setShowDilemmaModal] = useState(false)
+  const [activeBill, setActiveBill] = useState(null)
 
   useEffect(() => {
     characterRef.current = character
@@ -137,14 +170,15 @@ export default function Map() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [character?.id, room?.id])
 
+  const isActionDone = (prefix) =>
+    character?.eventLog?.some((log) => log.turn === room?.currentTurn && log.description.startsWith(prefix))
+
   const handleFinishMonth = async () => {
     if (room?.currentTurn > 0) {
-      const hasDoneLeisure = character?.eventLog?.some(
-        (log) => log.turn === room.currentTurn && log.description.startsWith('Dilema')
-      )
+      const missing = BUILDINGS.filter((b) => b.requiredPrefix && !isActionDone(b.requiredPrefix))
 
-      if (!hasDoneLeisure) {
-        alert('Você precisa ir ao Lazer antes de finalizar o mês!')
+      if (missing.length > 0) {
+        alert(`Você precisa completar antes de finalizar o mês: ${missing.map((b) => b.name).join(', ')}`)
         return
       }
     }
@@ -169,13 +203,26 @@ export default function Map() {
     }
   }
 
+  const handleBillComplete = async () => {
+    setActiveBill(null)
+
+    try {
+      const { data } = await api.get(`/characters/${character.id}`)
+      setCharacter(data)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const handleBuilding = (b) => {
     if (b.route === 'modal_dilemma') setShowDilemmaModal(true)
+    else if (b.route.startsWith('modal_bill_')) setActiveBill(b.route.replace('modal_bill_', ''))
     else navigate(b.route)
   }
 
   const currentTurn = room?.currentTurn ?? 0
   const lowReserve = character && Number(character.cash) < totalCosts * 3
+  const activeBillBuilding = BUILDINGS.find((b) => b.route === `modal_bill_${activeBill}`)
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[var(--theme-bg)] text-white">
@@ -269,44 +316,53 @@ export default function Map() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06),transparent_45%)]" />
 
             <div className="relative grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {BUILDINGS.map((b, index) => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => handleBuilding(b)}
-                  className={`group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] text-left transition-all duration-300 hover:-translate-y-1.5 cursor-pointer active:scale-[0.98] ${b.ring} animate-fade-in-up`}
-                  style={{ animationDelay: `${index * 0.08}s` }}
-                >
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                    style={{ boxShadow: `inset 0 0 70px ${b.glow}` }}
-                  />
-
-                  <div className="relative flex h-48 items-center justify-center overflow-hidden bg-black/20">
+              {BUILDINGS.map((b, index) => {
+                const done = b.requiredPrefix && isActionDone(b.requiredPrefix)
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => handleBuilding(b)}
+                    className={`group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] text-left transition-all duration-300 hover:-translate-y-1.5 cursor-pointer active:scale-[0.98] ${b.ring} animate-fade-in-up`}
+                    style={{ animationDelay: `${index * 0.08}s` }}
+                  >
                     <div
-                      className="absolute inset-0 opacity-60 transition-opacity duration-300 group-hover:opacity-90"
-                      style={{ background: `radial-gradient(circle at 50% 40%, ${b.glow}, transparent 65%)` }}
+                      className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                      style={{ boxShadow: `inset 0 0 70px ${b.glow}` }}
                     />
-                    <img
-                      src={b.art}
-                      alt=""
-                      className="relative h-40 w-40 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1"
-                    />
-                  </div>
 
-                  <div className="relative flex flex-1 items-center justify-between gap-3 p-5">
-                    <div className="min-w-0">
-                      <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${b.badge}`}>
-                        Distrito
-                      </span>
-                      <h4 className="mt-1.5 text-lg font-black text-white">{b.name}</h4>
-                      <p className="mt-0.5 text-sm text-gray-400">{b.desc}</p>
+                    <div className="relative flex h-48 items-center justify-center overflow-hidden bg-black/20">
+                      <div
+                        className="absolute inset-0 opacity-60 transition-opacity duration-300 group-hover:opacity-90"
+                        style={{ background: `radial-gradient(circle at 50% 40%, ${b.glow}, transparent 65%)` }}
+                      />
+                      <img
+                        src={b.art}
+                        alt=""
+                        className="relative h-40 w-40 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1"
+                      />
                     </div>
 
-                    <IconArrow className="h-5 w-5 shrink-0 text-gray-600 transition-all group-hover:translate-x-1 group-hover:text-white" />
-                  </div>
-                </button>
-              ))}
+                    <div className="relative flex flex-1 items-center justify-between gap-3 p-5">
+                      <div className="min-w-0">
+                        {done ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-green-300 bg-green-500/10 border-green-400/30">
+                            <IconCheck className="h-3 w-3" /> Concluído
+                          </span>
+                        ) : (
+                          <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${b.badge}`}>
+                            {b.requiredPrefix ? 'Obrigatório' : 'Distrito'}
+                          </span>
+                        )}
+                        <h4 className="mt-1.5 text-lg font-black text-white">{b.name}</h4>
+                        <p className="mt-0.5 text-sm text-gray-400">{b.desc}</p>
+                      </div>
+
+                      <IconArrow className="h-5 w-5 shrink-0 text-gray-600 transition-all group-hover:translate-x-1 group-hover:text-white" />
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
@@ -316,6 +372,15 @@ export default function Map() {
         <DilemmaModal
           onClose={() => setShowDilemmaModal(false)}
           onComplete={handleDilemmaComplete}
+        />
+      )}
+
+      {activeBill && activeBillBuilding && (
+        <BillModal
+          type={activeBill}
+          label={activeBillBuilding.name}
+          onClose={() => setActiveBill(null)}
+          onComplete={handleBillComplete}
         />
       )}
     </div>

@@ -8,7 +8,6 @@ import CharacterCreation from './pages/CharacterCreation/CharacterCreation'
 import Map from './pages/Map/Map'
 import Bank from './pages/Bank/Bank'
 import Broker from './pages/Broker/Broker'
-import Companies from './pages/Companies/Companies'
 import SkillTree from './pages/SkillTree/SkillTree'
 import Admin from './pages/Admin/Admin'
 import Finished from './pages/Finished/Finished'
@@ -87,15 +86,6 @@ function App() {
           element={
             <ProtectedRoute>
               <Broker />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/companies"
-          element={
-            <ProtectedRoute>
-              <Companies />
             </ProtectedRoute>
           }
         />
