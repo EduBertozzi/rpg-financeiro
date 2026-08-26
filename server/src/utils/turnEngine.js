@@ -108,10 +108,10 @@ function pickEvent() {
 }
 
 async function applyFixedCosts(character) {
-  const totalCosts = Number(character.housingCost) +
-    Number(character.foodCost) +
-    Number(character.utilitiesCost) +
-    Number(character.transportCost)
+  // foodCost, utilitiesCost e transportCost agora são pagos manualmente pelo
+  // jogador durante o mês (Mercadinho, Água e Luz, Internet e Celular — ver
+  // billController.js); só o aluguel continua sendo descontado automaticamente.
+  const totalCosts = Number(character.housingCost)
 
   let newCash = Number(character.cash) - totalCosts
   let overdraftDebt = Number(character.overdraftDebt)
