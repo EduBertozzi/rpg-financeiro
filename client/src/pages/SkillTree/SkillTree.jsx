@@ -3,10 +3,82 @@ import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import GameHeader from '../../components/GameHeader'
 
+const IconCpu = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <rect x="7" y="7" width="10" height="10" rx="1.5" />
+    <rect x="3" y="10" width="2" height="4" rx="0.5" fill="currentColor" stroke="none" />
+    <rect x="19" y="10" width="2" height="4" rx="0.5" fill="currentColor" stroke="none" />
+    <rect x="10" y="3" width="4" height="2" rx="0.5" fill="currentColor" stroke="none" />
+    <rect x="10" y="19" width="4" height="2" rx="0.5" fill="currentColor" stroke="none" />
+    <path d="M10 10h4v4h-4z" />
+  </svg>
+)
+const IconUsers = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <circle cx="9" cy="8" r="3" />
+    <path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5" />
+    <path d="M16 8.2a3 3 0 1 1 .5 5.9" />
+    <path d="M15 14.6c2.6.4 4 2.2 4 5.4" />
+  </svg>
+)
+const IconChart = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+  </svg>
+)
+const IconLock = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <rect x="5" y="10.5" width="14" height="9.5" rx="1.5" />
+    <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+  </svg>
+)
+const IconStar = (p) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" {...p}>
+    <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6-5.9-3.3-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8L12 2.5z" />
+  </svg>
+)
+const IconCheck = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="m5 13 4 4L19 7" />
+  </svg>
+)
+const IconBolt = (p) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" {...p}>
+    <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
+  </svg>
+)
+
 const PATH_CONFIG = {
-  technical:     { label: 'Raciocínio Lógico e Técnico',       icon: '⚙️', color: 'border-blue-500',   bg: 'bg-blue-900/20',   badge: 'bg-blue-900/40 text-blue-400 border-blue-700' },
-  communication: { label: 'Comunicação e Trabalho em Equipe',   icon: '🤝', color: 'border-green-500',  bg: 'bg-green-900/20',  badge: 'bg-green-900/40 text-green-400 border-green-700' },
-  management:    { label: 'Gestão e Visão de Negócio',          icon: '📊', color: 'border-purple-500', bg: 'bg-purple-900/20', badge: 'bg-purple-900/40 text-purple-400 border-purple-700' },
+  technical: {
+    label: 'Raciocínio Lógico e Técnico',
+    Icon: IconCpu,
+    text: 'text-blue-300',
+    ring: 'border-blue-500/40',
+    line: 'from-blue-500 to-blue-400',
+    unlockedBg: 'bg-blue-500/10 border-blue-400/50',
+    badge: 'bg-blue-500/15 text-blue-300 border-blue-400/30',
+    glow: 'rgba(59,130,246,0.35)',
+  },
+  communication: {
+    label: 'Comunicação e Trabalho em Equipe',
+    Icon: IconUsers,
+    text: 'text-green-300',
+    ring: 'border-green-500/40',
+    line: 'from-green-500 to-green-400',
+    unlockedBg: 'bg-green-500/10 border-green-400/50',
+    badge: 'bg-green-500/15 text-green-300 border-green-400/30',
+    glow: 'rgba(34,197,94,0.35)',
+  },
+  management: {
+    label: 'Gestão e Visão de Negócio',
+    Icon: IconChart,
+    text: 'text-purple-300',
+    ring: 'border-purple-500/40',
+    line: 'from-purple-500 to-purple-400',
+    unlockedBg: 'bg-purple-500/10 border-purple-400/50',
+    badge: 'bg-purple-500/15 text-purple-300 border-purple-400/30',
+    glow: 'rgba(168,85,247,0.35)',
+  },
 }
 
 export default function SkillTree() {
@@ -54,83 +126,132 @@ export default function SkillTree() {
   }
 
   const remainingPoints = mySkills.totalPoints - mySkills.usedPoints
+  const progressPct = mySkills.maxPoints ? (mySkills.usedPoints / mySkills.maxPoints) * 100 : 0
 
   return (
-    <div className="min-h-screen bg-darker text-white">
-      <GameHeader />
+    <div className="relative min-h-screen overflow-hidden bg-[var(--theme-bg)] text-white">
+      <div className="absolute inset-0 z-0 perspective-grid opacity-15" />
+      <div className="pointer-events-none absolute left-[-10%] top-[-15%] z-0 h-[460px] w-[460px] animate-float rounded-full bg-[var(--theme-primary)]/15 blur-[110px]" />
+      <div
+        className="pointer-events-none absolute bottom-[-15%] right-[-10%] z-0 h-[460px] w-[460px] animate-float rounded-full bg-[var(--theme-secondary)]/15 blur-[110px]"
+        style={{ animationDelay: '2s' }}
+      />
 
-      <div className="max-w-6xl mx-auto p-8 space-y-6">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">🎓</span>
-          <div>
-            <h1 className="text-xl font-bold">Universidade</h1>
-            <p className="text-xs text-gray-400">Árvore de Habilidades</p>
-          </div>
-        </div>
+      <div className="relative z-10">
+        <GameHeader />
 
-        <div className="bg-card border border-border rounded-xl p-4">
-          <div className="flex justify-between text-sm mb-2">
-            <span className="text-gray-400">Progresso de pontos</span>
-            <span className="text-yellow-400">{mySkills.usedPoints}/{mySkills.maxPoints} pontos usados · {remainingPoints} disponíveis</span>
-          </div>
-          <div className="w-full bg-dark rounded-full h-2">
-            <div className="bg-yellow-500 h-2 rounded-full transition-all" style={{ width: `${(mySkills.usedPoints / mySkills.maxPoints) * 100}%` }} />
-          </div>
-          <p className="text-xs text-gray-500 mt-2">Você tem {mySkills.maxPoints} pontos no total — impossível completar toda a árvore. Escolha sua estratégia!</p>
-        </div>
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
 
-        {message.text && (
-          <div className={`p-3 rounded-lg text-sm ${message.type === 'error' ? 'bg-red-900/30 border border-red-500/50 text-red-400' : 'bg-green-900/30 border border-green-500/50 text-green-400'}`}>
-            {message.text}
+          <div className="mb-6 flex items-center gap-3 pl-20 sm:pl-0">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-primary/40 bg-primary/15 shadow-[0_0_18px_var(--theme-glow)]">
+              <IconBolt className="h-5 w-5 text-[var(--theme-secondary)]" />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">Universidade</p>
+              <h2 className="mt-0.5 text-2xl font-black tracking-tight">Árvore de Habilidades</h2>
+            </div>
           </div>
-        )}
 
-        <div className="grid grid-cols-3 gap-6">
-          {['technical', 'communication', 'management'].map(path => {
-            const config = PATH_CONFIG[path]
-            const skills = allSkills.filter(s => s.path === path).sort((a, b) => a.level - b.level)
-            return (
-              <div key={path} className={`bg-card border ${config.color} rounded-xl p-5`}>
-                <div className="text-center mb-5">
-                  <div className="text-3xl mb-2">{config.icon}</div>
-                  <h3 className="text-white font-semibold text-sm">{config.label}</h3>
-                </div>
-                <div className="space-y-3">
-                  {skills.map((skill, idx) => {
-                    const unlocked = isUnlocked(skill.id)
-                    const canDo = canUnlock(skill)
-                    const cost = character?.gift === 'smart' ? Math.ceil(skill.costPoints * 0.8) : skill.costPoints
-                    return (
-                      <div key={skill.id}>
-                        {idx > 0 && (
-                          <div className="flex justify-center my-1">
-                            <div className={`w-0.5 h-4 ${unlocked ? 'bg-yellow-500' : 'bg-gray-700'}`} />
-                          </div>
-                        )}
-                        <div className={`rounded-lg p-3 border transition-all ${unlocked ? `${config.bg} ${config.color}` : canDo ? 'bg-dark border-gray-500 hover:border-gray-300' : 'bg-dark border-gray-700 opacity-50'}`}>
-                          <div className="flex items-start justify-between mb-1">
-                            <div className="flex items-center gap-1">
-                              {unlocked && <span className="text-yellow-400 text-xs">★</span>}
-                              <span className="text-white text-xs font-semibold">Nível {skill.level}</span>
+          <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.035] p-5 backdrop-blur-xl">
+            <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-2 text-sm">
+              <span className="font-medium text-gray-400">Progresso de pontos</span>
+              <span className="font-semibold tabular-nums text-[var(--theme-secondary)]">
+                {mySkills.usedPoints}/{mySkills.maxPoints} usados · {remainingPoints} disponíveis
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-white/5" role="progressbar" aria-valuenow={mySkills.usedPoints} aria-valuemin={0} aria-valuemax={mySkills.maxPoints}>
+              <div
+                className="h-2 rounded-full bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-[0_0_10px_var(--theme-glow)] transition-all duration-500"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <p className="mt-2.5 text-xs text-gray-500">Você tem {mySkills.maxPoints} pontos no total — impossível completar toda a árvore. Escolha sua estratégia!</p>
+          </div>
+
+          {message.text && (
+            <div className={`mb-6 flex items-center gap-2.5 rounded-xl border p-3.5 text-sm ${message.type === 'error' ? 'border-red-500/50 bg-red-900/30 text-red-300' : 'border-green-500/50 bg-green-900/30 text-green-300'}`}>
+              {message.type === 'error' ? <IconLock className="h-4 w-4 shrink-0" /> : <IconCheck className="h-4 w-4 shrink-0" />}
+              {message.text}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {['technical', 'communication', 'management'].map((path, colIdx) => {
+              const config = PATH_CONFIG[path]
+              const skills = allSkills.filter(s => s.path === path).sort((a, b) => a.level - b.level)
+              return (
+                <div
+                  key={path}
+                  className={`relative overflow-hidden rounded-3xl border ${config.ring} bg-white/[0.035] p-5 backdrop-blur-xl animate-fade-in-up`}
+                  style={{ animationDelay: `${colIdx * 0.08}s` }}
+                >
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-0 h-32 opacity-40"
+                    style={{ background: `radial-gradient(circle at 50% 0%, ${config.glow}, transparent 70%)` }}
+                  />
+
+                  <div className="relative mb-6 flex flex-col items-center gap-2 text-center">
+                    <div className={`grid h-12 w-12 place-items-center rounded-2xl border ${config.ring} bg-black/20`}>
+                      <config.Icon className={`h-6 w-6 ${config.text}`} />
+                    </div>
+                    <h3 className="text-sm font-bold leading-snug text-white">{config.label}</h3>
+                  </div>
+
+                  <div className="relative flex flex-col items-stretch">
+                    {skills.map((skill, idx) => {
+                      const unlocked = isUnlocked(skill.id)
+                      const canDo = canUnlock(skill)
+                      const cost = character?.gift === 'smart' ? Math.ceil(skill.costPoints * 0.8) : skill.costPoints
+                      return (
+                        <div key={skill.id}>
+                          {idx > 0 && (
+                            <div className="flex justify-center">
+                              <div className={`h-5 w-0.5 ${unlocked ? `bg-gradient-to-b ${config.line}` : 'bg-white/10'}`} />
                             </div>
-                            <span className={`text-xs px-1.5 py-0.5 rounded border ${config.badge}`}>{cost} pt{cost > 1 ? 's' : ''}</span>
-                          </div>
-                          <p className="text-white text-xs font-medium mb-1">{skill.name}</p>
-                          <p className="text-gray-400 text-xs leading-relaxed">{skill.description}</p>
-                          {canDo && !unlocked && (
-                            <button onClick={() => handleUnlock(skill.id)} disabled={loading} className="mt-2 w-full py-1 bg-yellow-600 hover:bg-yellow-500 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors">
-                              Desbloquear ({cost} pt{cost > 1 ? 's' : ''})
-                            </button>
                           )}
-                          {unlocked && <div className="mt-2 text-center text-xs text-yellow-400">✓ Desbloqueado</div>}
+                          <div
+                            className={`rounded-2xl border p-3.5 transition-all duration-200 ${unlocked
+                                ? config.unlockedBg
+                                : canDo
+                                  ? 'border-white/20 bg-white/[0.04] hover:-translate-y-0.5 hover:border-white/40'
+                                  : 'border-white/5 bg-white/[0.02] opacity-55'
+                              }`}
+                          >
+                            <div className="mb-1.5 flex items-start justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${unlocked ? `${config.badge} border-transparent` : 'border-white/15 text-gray-500'}`}>
+                                  {unlocked ? <IconStar className="h-3 w-3" /> : !canDo ? <IconLock className="h-3 w-3" /> : <span className="text-[10px] font-bold">{skill.level}</span>}
+                                </span>
+                                <span className="text-xs font-semibold text-white">Nível {skill.level}</span>
+                              </div>
+                              <span className={`rounded-full border px-1.5 py-0.5 text-[11px] font-medium ${config.badge}`}>{cost} pt{cost > 1 ? 's' : ''}</span>
+                            </div>
+                            <p className="mb-1 text-xs font-semibold text-white">{skill.name}</p>
+                            <p className="text-xs leading-relaxed text-gray-400">{skill.description}</p>
+                            {canDo && !unlocked && (
+                              <button
+                                type="button"
+                                onClick={() => handleUnlock(skill.id)}
+                                disabled={loading}
+                                className="mt-3 w-full cursor-pointer rounded-xl bg-primary py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                Desbloquear ({cost} pt{cost > 1 ? 's' : ''})
+                              </button>
+                            )}
+                            {unlocked && (
+                              <div className={`mt-3 flex items-center justify-center gap-1 text-xs font-semibold ${config.text}`}>
+                                <IconCheck className="h-3.5 w-3.5" /> Desbloqueado
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
