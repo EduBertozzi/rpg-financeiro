@@ -143,6 +143,19 @@ export default function Map() {
   }, [room?.code])
 
   useEffect(() => {
+    if (!room?.code || room.status !== 'waiting') return
+
+    const interval = setInterval(() => {
+      api.get(`/rooms/${room.code}`)
+        .then(({ data }) => setRoom(data))
+        .catch(console.error)
+    }, 4000)
+
+    return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room?.code, room?.status])
+
+  useEffect(() => {
     if (!character?.id) return
 
     api.get(`/characters/${character.id}`)
@@ -240,6 +253,7 @@ export default function Map() {
   }
 
   const currentTurn = room?.currentTurn ?? 0
+  const isWaiting = room?.status === 'waiting'
   const activeBillBuilding = BUILDINGS.find((b) => b.route === `modal_bill_${activeBill}`)
 
   return (
@@ -261,47 +275,69 @@ export default function Map() {
             </p>
           </div>
 
-          <div className="flex flex-col items-end gap-3">
-            <div className="text-right">
-              <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
-                Mês <span className="text-[var(--theme-secondary)]">{currentTurn}</span> / 12
-              </p>
+          {!isWaiting && (
+            <div className="flex flex-col items-end gap-3">
+              <div className="text-right">
+                <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
+                  Mês <span className="text-[var(--theme-secondary)]">{currentTurn}</span> / 12
+                </p>
 
-              <div className="flex w-48 gap-1">
-                {Array.from({ length: 12 }).map((_, i) => {
-                  const m = i + 1
-                  const active = m === currentTurn
-                  const done = m < currentTurn
+                <div className="flex w-48 gap-1">
+                  {Array.from({ length: 12 }).map((_, i) => {
+                    const m = i + 1
+                    const active = m === currentTurn
+                    const done = m < currentTurn
 
-                  return (
-                    <div
-                      key={m}
-                      className={`h-2 flex-1 rounded-full transition-all duration-500 ${active
-                          ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-[0_0_8px_var(--theme-glow)]'
-                          : done
-                            ? 'bg-primary/70'
-                            : 'bg-white/10'
-                        }`}
-                    />
-                  )
-                })}
+                    return (
+                      <div
+                        key={m}
+                        className={`h-2 flex-1 rounded-full transition-all duration-500 ${active
+                            ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-[0_0_8px_var(--theme-glow)]'
+                            : done
+                              ? 'bg-primary/70'
+                              : 'bg-white/10'
+                          }`}
+                      />
+                    )
+                  })}
+                </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleFinishMonth}
-              disabled={character?.turnReady}
-              className={`rounded-2xl border px-5 py-2.5 text-sm font-black transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
-                  ? 'border-green-500/30 bg-green-600/15 text-green-300'
-                  : 'border-primary/40 bg-primary/15 text-white shadow-[0_0_18px_var(--theme-glow)] hover:bg-primary/25 hover:border-primary/70 hover:shadow-[0_0_28px_var(--theme-glow)] hover:-translate-y-0.5'
-                }`}
-            >
-              {character?.turnReady ? 'Mês finalizado' : 'Encerrar mês'}
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={handleFinishMonth}
+                disabled={character?.turnReady}
+                className={`rounded-2xl border px-5 py-2.5 text-sm font-black transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
+                    ? 'border-green-500/30 bg-green-600/15 text-green-300'
+                    : 'border-primary/40 bg-primary/15 text-white shadow-[0_0_18px_var(--theme-glow)] hover:bg-primary/25 hover:border-primary/70 hover:shadow-[0_0_28px_var(--theme-glow)] hover:-translate-y-0.5'
+                  }`}
+              >
+                {character?.turnReady ? 'Mês finalizado' : 'Encerrar mês'}
+              </button>
+            </div>
+          )}
         </div>
 
+        {isWaiting ? (
+          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-b from-[var(--theme-surface)]/80 to-black/30 p-10 text-center shadow-[0_18px_70px_rgba(0,0,0,0.55)] ring-1 ring-white/5 animate-fade-in-up sm:p-16">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06),transparent_45%)]" />
+            <div className="relative mx-auto max-w-md">
+              <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-300">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 animate-pulse">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 3" />
+                </svg>
+              </span>
+              <h3 className="mt-4 text-xl font-black text-white">Aguardando início da partida</h3>
+              <p className="mt-2 text-sm text-gray-400">
+                O administrador ainda não iniciou a sala. Assim que a partida começar, a cidade fica disponível e o mês 1 tem início automaticamente.
+              </p>
+              <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-muted)]">
+                Sala {room?.code}
+              </p>
+            </div>
+          </div>
+        ) : (
         <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-b from-[var(--theme-surface)]/80 to-black/30 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.55)] ring-1 ring-white/5 animate-fade-in-up sm:p-8">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06),transparent_45%)]" />
 
@@ -355,6 +391,7 @@ export default function Map() {
             })}
           </div>
         </div>
+        )}
       </div>
 
       <aside className="mt-6 hidden xl:mt-0 xl:block xl:w-72 xl:shrink-0">

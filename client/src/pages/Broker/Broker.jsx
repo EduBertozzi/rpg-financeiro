@@ -113,7 +113,7 @@ export default function Broker() {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <input type="number" value={quantity[asset.id] || ''} onChange={(e) => setQuantity({ ...quantity, [asset.id]: e.target.value })} className="w-24 px-3 py-2 bg-dark border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary" placeholder="Qtd" min="1" />
                   <button onClick={() => handleTrade(asset.id, 'buy')} disabled={loading} className="px-4 py-2 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">Comprar</button>
                   <button onClick={() => handleTrade(asset.id, 'sell')} disabled={loading} className="px-4 py-2 bg-red-800 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">Vender</button>
