@@ -16,7 +16,7 @@ export default function GameLayout({ children }) {
 
       <GameHeader />
 
-      <main className={`relative z-10 transition-[padding] duration-300 pl-20 ${sidebarExpanded ? 'lg:pl-80' : ''}`}>
+      <main className={`relative z-10 transition-[padding] duration-300 ${sidebarExpanded ? 'pl-80' : 'pl-20'}`}>
         {children}
       </main>
     </div>

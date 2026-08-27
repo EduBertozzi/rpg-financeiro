@@ -143,22 +143,22 @@ export default function Bank() {
           </div>
         </div>
 
-        <div className="flex gap-4 border-b border-border mb-6">
-          <button 
-            onClick={() => { setMainTab('fixed'); setMessage({text:'',type:''}) }} 
-            className={`pb-2 px-4 font-bold transition-colors ${mainTab === 'fixed' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
+        <div className="flex gap-4 overflow-x-auto border-b border-border mb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            onClick={() => { setMainTab('fixed'); setMessage({text:'',type:''}) }}
+            className={`shrink-0 pb-2 px-4 font-bold transition-colors ${mainTab === 'fixed' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
           >
             Renda Fixa
           </button>
           <button
             onClick={() => { setMainTab('variable'); setMessage({text:'',type:''}) }}
-            className={`pb-2 px-4 font-bold transition-colors ${mainTab === 'variable' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
+            className={`shrink-0 pb-2 px-4 font-bold transition-colors ${mainTab === 'variable' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
           >
             Ações e FIIs (Corretora)
           </button>
           <button
             onClick={() => { setMainTab('companies'); setMessage({text:'',type:''}) }}
-            className={`pb-2 px-4 font-bold transition-colors ${mainTab === 'companies' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
+            className={`shrink-0 pb-2 px-4 font-bold transition-colors ${mainTab === 'companies' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
           >
             Empresas
           </button>
