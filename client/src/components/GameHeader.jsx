@@ -244,6 +244,8 @@ export default function GameHeader() {
 
   return (
     <aside
+      onMouseEnter={() => setSidebarExpanded(true)}
+      onMouseLeave={() => setSidebarExpanded(false)}
       className={[
         'fixed left-0 top-0 z-40 h-screen border-r border-white/10 bg-[var(--theme-bg)]/92 backdrop-blur-2xl',
         'shadow-[8px_0_40px_rgba(0,0,0,0.4)] transition-[width] duration-300 ease-out',
