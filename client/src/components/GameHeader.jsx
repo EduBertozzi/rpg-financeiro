@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import useGameStore from '../store/gameStore'
 import { Avatar } from './Avatars'
@@ -9,6 +8,10 @@ function formatMoney(value = 0) {
     currency: 'BRL',
     minimumFractionDigits: 2,
   })
+}
+
+function formatMoneyCompact(value = 0) {
+  return Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 0 })
 }
 
 function Icon({ name, className = 'h-5 w-5' }) {
@@ -74,12 +77,6 @@ function Icon({ name, className = 'h-5 w-5' }) {
         <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 .9-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6.9h.1a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6.9z" />
       </svg>
     ),
-    back: (
-      <svg {...commonProps}>
-        <path d="M19 12H5" />
-        <path d="M11 18l-6-6 6-6" />
-      </svg>
-    ),
     wallet: (
       <svg {...commonProps}>
         <path d="M19 7V6a2 2 0 0 0-2-2H5a3 3 0 0 0 0 6h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H5a3 3 0 0 1-3-3V7" />
@@ -99,13 +96,32 @@ function Icon({ name, className = 'h-5 w-5' }) {
   return icons[name] || null
 }
 
-function MenuItem({ active, icon, label, description, onClick }) {
+function MenuItem({ active, icon, label, description, onClick, expanded }) {
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        title={label}
+        aria-label={label}
+        className={[
+          'grid h-11 w-11 place-items-center rounded-2xl border transition-all duration-200 active:scale-95 cursor-pointer',
+          active
+            ? 'border-primary/60 bg-primary/20 text-white shadow-[0_0_16px_var(--theme-glow)]'
+            : 'border-white/10 bg-white/[0.035] text-gray-400 hover:border-primary/50 hover:text-white',
+        ].join(' ')}
+      >
+        <Icon name={icon} className="h-5 w-5" />
+      </button>
+    )
+  }
+
   return (
     <button
       type="button"
       onClick={onClick}
       className={[
-        'group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border px-3 py-2 text-left',
+        'group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border px-3 py-2 text-left cursor-pointer',
         'transition-all duration-200 active:scale-[0.98]',
         active
           ? 'border-primary/60 bg-primary/15 shadow-[0_0_20px_var(--theme-glow)]'
@@ -170,12 +186,21 @@ function StatusCard({ icon, label, value, helper, tone = 'theme' }) {
   )
 }
 
+function CompactStat({ icon, value, tone }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className={`grid h-8 w-8 place-items-center rounded-xl border border-white/10 bg-black/20 ${tone}`}>
+        <Icon name={icon} className="h-4 w-4" />
+      </div>
+      <span className={`text-[10px] font-black leading-none ${tone}`}>{value}</span>
+    </div>
+  )
+}
+
 export default function GameHeader() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { character, room, user, logout } = useGameStore()
-
-  const [open, setOpen] = useState(false)
+  const { character, room, user, logout, sidebarExpanded, setSidebarExpanded } = useGameStore()
 
   const path = location.pathname
 
@@ -210,83 +235,34 @@ export default function GameHeader() {
 
   function goTo(route) {
     navigate(route)
-    setOpen(false)
   }
 
   function handleLogout() {
     logout()
-    setOpen(false)
     navigate('/login')
   }
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        title="Abrir HUD"
-        aria-label="Abrir HUD"
-        className={[
-          'fixed left-5 top-5 z-50',
-          'rounded-full border border-white/15 bg-[var(--theme-bg)]/70 p-1',
-          'shadow-[0_0_28px_var(--theme-glow)] backdrop-blur-xl',
-          'transition-all duration-200 hover:scale-105 hover:border-primary/60 active:scale-95',
-          open ? 'pointer-events-none opacity-0' : 'opacity-100',
-        ].join(' ')}
-      >
-        <div className="relative">
-          <Avatar id={character.avatarId} size={58} selected />
+    <aside
+      className={[
+        'fixed left-0 top-0 z-40 h-screen border-r border-white/10 bg-[var(--theme-bg)]/92 backdrop-blur-2xl',
+        'shadow-[8px_0_40px_rgba(0,0,0,0.4)] transition-[width] duration-300 ease-out',
+        sidebarExpanded ? 'w-80' : 'w-20',
+      ].join(' ')}
+    >
+      <div className="relative flex h-full flex-col overflow-hidden">
+        <div className="pointer-events-none absolute left-[-25%] top-[-12%] h-72 w-72 rounded-full bg-[var(--theme-primary)]/30 blur-[95px]" />
+        <div className="pointer-events-none absolute bottom-[-15%] right-[-25%] h-72 w-72 rounded-full bg-[var(--theme-secondary)]/20 blur-[95px]" />
 
-          <span
-            className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full border-2 border-[var(--theme-bg)] bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]"
-            title="online"
-          />
-        </div>
-      </button>
-
-      {path !== '/map' && (
-        <button
-          type="button"
-          onClick={() => navigate('/map')}
-          title="Voltar ao Mapa"
-          aria-label="Voltar ao Mapa"
-          className={[
-            'fixed left-[86px] top-5 z-50',
-            'grid h-[42px] w-[42px] place-items-center rounded-full border border-white/15 bg-[var(--theme-bg)]/70',
-            'shadow-[0_0_20px_rgba(0,0,0,0.4)] backdrop-blur-xl text-gray-300',
-            'transition-all duration-200 hover:scale-105 hover:border-primary/60 hover:text-white active:scale-95 cursor-pointer',
-            open ? 'pointer-events-none opacity-0' : 'opacity-100',
-          ].join(' ')}
-        >
-          <Icon name="back" className="h-5 w-5" />
-        </button>
-      )}
-
-      {open && (
-        <button
-          type="button"
-          aria-label="Fechar HUD"
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-50 bg-black/45 backdrop-blur-[2px]"
-        />
-      )}
-
-      <aside
-        className={[
-          'fixed bottom-5 left-5 top-5 z-[60] w-[340px] max-w-[calc(100vw-40px)]',
-          'overflow-hidden rounded-[30px] border border-white/10 bg-[var(--theme-bg)]/92',
-          'shadow-[20px_20px_80px_rgba(0,0,0,0.6)] backdrop-blur-2xl',
-          'transition-all duration-300 ease-out',
-          open ? 'translate-x-0 opacity-100' : '-translate-x-[120%] opacity-0',
-        ].join(' ')}
-      >
-        <div className="relative flex h-full flex-col overflow-hidden">
-          <div className="pointer-events-none absolute left-[-25%] top-[-12%] h-72 w-72 rounded-full bg-[var(--theme-primary)]/30 blur-[95px]" />
-          <div className="pointer-events-none absolute bottom-[-15%] right-[-25%] h-72 w-72 rounded-full bg-[var(--theme-secondary)]/20 blur-[95px]" />
-
-          <div className="relative shrink-0 border-b border-white/10 p-4">
+        <div className="relative shrink-0 border-b border-white/10 p-4">
+          {sidebarExpanded ? (
             <div className="flex items-start justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setSidebarExpanded(false)}
+                className="flex min-w-0 items-center gap-3 text-left cursor-pointer"
+                title="Recolher"
+              >
                 <Avatar id={character.avatarId} size={66} selected />
 
                 <div className="min-w-0">
@@ -302,21 +278,38 @@ export default function GameHeader() {
                     {character.course}
                   </p>
                 </div>
-              </div>
+              </button>
 
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                aria-label="Fechar HUD"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.035] text-gray-400 transition-all hover:border-primary/50 hover:text-white active:scale-95"
+                onClick={() => setSidebarExpanded(false)}
+                aria-label="Recolher HUD"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.035] text-gray-400 transition-all hover:border-primary/50 hover:text-white active:scale-95 cursor-pointer"
               >
                 <Icon name="close" className="h-5 w-5" />
               </button>
             </div>
-          </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSidebarExpanded(true)}
+              title="Expandir"
+              className="mx-auto flex justify-center cursor-pointer"
+            >
+              <div className="relative">
+                <Avatar id={character.avatarId} size={48} selected />
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[var(--theme-bg)] bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]"
+                  title="online"
+                />
+              </div>
+            </button>
+          )}
+        </div>
 
-          <div className="relative min-h-0 flex-1 overflow-y-auto p-4 pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="space-y-4 pb-3">
+        <div className="relative min-h-0 flex-1 overflow-y-auto p-4 pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-4 pb-3">
+            {sidebarExpanded ? (
               <div className="grid grid-cols-2 gap-3">
                 <StatusCard
                   icon="wallet"
@@ -338,56 +331,81 @@ export default function GameHeader() {
                   helper="Progresso"
                 />
               </div>
+            ) : (
+              <div className="flex flex-col items-center gap-3">
+                <CompactStat icon="wallet" value={formatMoneyCompact(character.cash)} tone="text-emerald-300" />
+                <CompactStat icon="calendar" value={`${room?.currentTurn ?? 0}/12`} tone="text-[var(--theme-secondary)]" />
+              </div>
+            )}
 
-              <div>
+            <div>
+              {sidebarExpanded && (
                 <p className="mb-2 text-[10px] font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">
                   Navegação
                 </p>
+              )}
 
-                <div className="space-y-2">
-                  {navItems.map((item) => (
-                    <MenuItem
-                      key={item.path}
-                      icon={item.icon}
-                      label={item.label}
-                      description={item.description}
-                      active={path === item.path}
-                      onClick={() => goTo(item.path)}
-                    />
-                  ))}
-                </div>
+              <div className={sidebarExpanded ? 'space-y-2' : 'flex flex-col items-center gap-2'}>
+                {navItems.map((item) => (
+                  <MenuItem
+                    key={item.path}
+                    icon={item.icon}
+                    label={item.label}
+                    description={item.description}
+                    active={path === item.path}
+                    expanded={sidebarExpanded}
+                    onClick={() => goTo(item.path)}
+                  />
+                ))}
               </div>
+            </div>
 
-              {user?.role === 'admin' && (
-                <div>
+            {user?.role === 'admin' && (
+              <div>
+                {sidebarExpanded && (
                   <p className="mb-2 text-[10px] font-black uppercase tracking-[0.28em] text-yellow-200/70">
                     Admin
                   </p>
+                )}
 
+                <div className={sidebarExpanded ? '' : 'flex justify-center'}>
                   <MenuItem
                     icon="admin"
                     label="Painel Admin"
                     description="Gerenciar salas e jogo"
                     active={path === '/admin'}
+                    expanded={sidebarExpanded}
                     onClick={() => goTo('/admin')}
                   />
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
+        </div>
 
-          <div className="relative shrink-0 border-t border-white/10 bg-black/10 p-4">
+        <div className="relative shrink-0 border-t border-white/10 bg-black/10 p-4">
+          {sidebarExpanded ? (
             <button
               type="button"
               onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 font-black text-red-200 transition-all hover:border-red-400/40 hover:bg-red-500/15 active:scale-[0.98]"
+              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 font-black text-red-200 transition-all hover:border-red-400/40 hover:bg-red-500/15 active:scale-[0.98] cursor-pointer"
             >
               <Icon name="logout" className="h-5 w-5" />
               Sair
             </button>
-          </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Sair"
+              aria-label="Sair"
+              className="mx-auto grid h-11 w-11 place-items-center rounded-2xl border border-red-400/20 bg-red-500/10 text-red-200 transition-all hover:border-red-400/40 hover:bg-red-500/15 active:scale-95 cursor-pointer"
+            >
+              <Icon name="logout" className="h-5 w-5" />
+            </button>
+          )}
         </div>
-      </aside>
-    </>
+      </div>
+    </aside>
   )
 }

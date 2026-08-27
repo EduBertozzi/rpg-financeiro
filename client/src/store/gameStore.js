@@ -8,11 +8,14 @@ const useGameStore = create(
       token: null,
       character: null,
       room: null,
+      sidebarExpanded: false,
 
       setUser: (user) => set({ user }),
       setToken: (token) => set({ token }),
       setCharacter: (character) => set({ character }),
       setRoom: (room) => set({ room }),
+      toggleSidebar: () => set((s) => ({ sidebarExpanded: !s.sidebarExpanded })),
+      setSidebarExpanded: (sidebarExpanded) => set({ sidebarExpanded }),
 
       logout: () => {
         localStorage.removeItem('token')

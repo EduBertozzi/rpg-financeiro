@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import GameHeader from '../../components/GameHeader'
+import GameLayout from '../../components/GameLayout'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
 
@@ -121,9 +121,7 @@ export default function Finished() {
   const myPosition = myRank ? leaderboard.indexOf(myRank) + 1 : null
 
   return (
-    <div className="min-h-screen bg-darker text-white">
-      <GameHeader />
-
+    <GameLayout>
       <div className="max-w-2xl mx-auto p-6 pb-16">
         <div className="text-center mb-8 pt-4">
           <h1 className="text-4xl font-bold text-white mb-1">Fim de Jogo!</h1>
@@ -193,6 +191,6 @@ export default function Finished() {
           </button>
         )}
       </div>
-    </div>
+    </GameLayout>
   )
 }

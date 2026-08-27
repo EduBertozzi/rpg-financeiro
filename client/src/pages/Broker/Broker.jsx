@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
-import GameHeader from '../../components/GameHeader'
+import GameLayout from '../../components/GameLayout'
 
 export default function Broker() {
   const { character, room, setCharacter } = useGameStore()
@@ -57,9 +57,7 @@ export default function Broker() {
   const totalPortfolio = portfolio.reduce((sum, p) => sum + p.totalValue, 0)
 
   return (
-    <div className="min-h-screen bg-darker text-white">
-      <GameHeader />
-
+    <GameLayout>
       <div className="max-w-5xl mx-auto p-8 space-y-6">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-2xl">📈</span>
@@ -159,6 +157,6 @@ export default function Broker() {
           </div>
         )}
       </div>
-    </div>
+    </GameLayout>
   )
 }

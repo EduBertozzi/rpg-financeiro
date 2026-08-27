@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
 import socket from '../../services/socket'
-import GameHeader from '../../components/GameHeader'
+import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
 import BillModal from '../../components/BillModal'
 import bankArt from '../../assets/buildings/bank.png'
@@ -106,13 +106,6 @@ export default function Map() {
   useEffect(() => {
     roomRef.current = room
   }, [room])
-
-  const totalCosts = character
-    ? Number(character.housingCost) +
-    Number(character.foodCost) +
-    Number(character.utilitiesCost) +
-    Number(character.transportCost)
-    : 0
 
   useEffect(() => {
     if (!room?.code) return
@@ -221,149 +214,118 @@ export default function Map() {
   }
 
   const currentTurn = room?.currentTurn ?? 0
-  const lowReserve = character && Number(character.cash) < totalCosts * 3
   const activeBillBuilding = BUILDINGS.find((b) => b.route === `modal_bill_${activeBill}`)
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--theme-bg)] text-white">
-      <div className="absolute inset-0 z-0 perspective-grid opacity-15" />
+    <GameLayout>
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">
+              Mapa
+            </p>
 
-      <div className="pointer-events-none absolute left-[-10%] top-[-15%] z-0 h-[460px] w-[460px] animate-float rounded-full bg-[var(--theme-primary)]/15 blur-[110px]" />
-      <div
-        className="pointer-events-none absolute bottom-[-15%] right-[-10%] z-0 h-[460px] w-[460px] animate-float rounded-full bg-[var(--theme-secondary)]/15 blur-[110px]"
-        style={{ animationDelay: '2s' }}
-      />
+            <h2 className="mt-1 text-3xl font-black tracking-tight">
+              Cidade de Santa Rita
+            </h2>
 
-      <div className="relative z-10">
-        <GameHeader />
-
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4 pl-20 sm:pl-0">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">
-                Mapa
-              </p>
-
-              <h2 className="mt-1 text-3xl font-black tracking-tight">
-                Cidade de Santa Rita
-              </h2>
-
-              <p className="mt-1 text-sm text-gray-400">
-                Escolha um prédio para interagir.
-              </p>
-            </div>
-
-            <div className="flex flex-col items-end gap-3">
-              <div className="text-right">
-                <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
-                  Mês <span className="text-[var(--theme-secondary)]">{currentTurn}</span> / 12
-                </p>
-
-                <div className="flex w-48 gap-1">
-                  {Array.from({ length: 12 }).map((_, i) => {
-                    const m = i + 1
-                    const active = m === currentTurn
-                    const done = m < currentTurn
-
-                    return (
-                      <div
-                        key={m}
-                        className={`h-2 flex-1 rounded-full transition-all duration-500 ${active
-                            ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-[0_0_8px_var(--theme-glow)]'
-                            : done
-                              ? 'bg-primary/70'
-                              : 'bg-white/10'
-                          }`}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleFinishMonth}
-                disabled={character?.turnReady}
-                className={`rounded-2xl border px-5 py-2.5 text-sm font-black transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
-                    ? 'border-green-500/30 bg-green-600/15 text-green-300'
-                    : 'border-primary/40 bg-primary/15 text-white shadow-[0_0_18px_var(--theme-glow)] hover:bg-primary/25'
-                  }`}
-              >
-                {character?.turnReady ? 'Mês finalizado' : 'Encerrar mês'}
-              </button>
-            </div>
+            <p className="mt-1 text-sm text-gray-400">
+              Escolha um prédio para interagir.
+            </p>
           </div>
 
-          {lowReserve && (
-            <div className="mb-6 flex items-center gap-3 rounded-2xl border border-red-500/40 bg-red-900/20 px-4 py-3 text-sm text-red-300 backdrop-blur-sm">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-red-500/15 text-red-200">
-                !
-              </span>
+          <div className="flex flex-col items-end gap-3">
+            <div className="text-right">
+              <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
+                Mês <span className="text-[var(--theme-secondary)]">{currentTurn}</span> / 12
+              </p>
 
-              <div>
-                <p className="font-semibold text-red-200">
-                  Reserva de Emergência Baixa
-                </p>
+              <div className="flex w-48 gap-1">
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const m = i + 1
+                  const active = m === currentTurn
+                  const done = m < currentTurn
 
-                <p className="mt-0.5 text-xs text-red-300/80">
-                  Sem reserva para 3 meses de custos fixos. Considere a Renda Fixa.
-                </p>
+                  return (
+                    <div
+                      key={m}
+                      className={`h-2 flex-1 rounded-full transition-all duration-500 ${active
+                          ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-[0_0_8px_var(--theme-glow)]'
+                          : done
+                            ? 'bg-primary/70'
+                            : 'bg-white/10'
+                        }`}
+                    />
+                  )
+                })}
               </div>
             </div>
-          )}
 
-          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-b from-[var(--theme-surface)]/80 to-black/30 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.55)] ring-1 ring-white/5 animate-fade-in-up sm:p-8">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06),transparent_45%)]" />
+            <button
+              type="button"
+              onClick={handleFinishMonth}
+              disabled={character?.turnReady}
+              className={`rounded-2xl border px-5 py-2.5 text-sm font-black transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
+                  ? 'border-green-500/30 bg-green-600/15 text-green-300'
+                  : 'border-primary/40 bg-primary/15 text-white shadow-[0_0_18px_var(--theme-glow)] hover:bg-primary/25 hover:border-primary/70 hover:shadow-[0_0_28px_var(--theme-glow)] hover:-translate-y-0.5'
+                }`}
+            >
+              {character?.turnReady ? 'Mês finalizado' : 'Encerrar mês'}
+            </button>
+          </div>
+        </div>
 
-            <div className="relative grid grid-cols-1 gap-5 sm:grid-cols-2">
-              {BUILDINGS.map((b, index) => {
-                const done = b.requiredPrefix && isActionDone(b.requiredPrefix)
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    onClick={() => handleBuilding(b)}
-                    className={`group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] text-left transition-all duration-300 hover:-translate-y-1.5 cursor-pointer active:scale-[0.98] ${b.ring} animate-fade-in-up`}
-                    style={{ animationDelay: `${index * 0.08}s` }}
-                  >
+        <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-b from-[var(--theme-surface)]/80 to-black/30 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.55)] ring-1 ring-white/5 animate-fade-in-up sm:p-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06),transparent_45%)]" />
+
+          <div className="relative grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {BUILDINGS.map((b, index) => {
+              const done = b.requiredPrefix && isActionDone(b.requiredPrefix)
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => handleBuilding(b)}
+                  className={`group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] text-left transition-all duration-300 hover:-translate-y-1.5 cursor-pointer active:scale-[0.98] ${b.ring} animate-fade-in-up`}
+                  style={{ animationDelay: `${index * 0.08}s` }}
+                >
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                    style={{ boxShadow: `inset 0 0 70px ${b.glow}` }}
+                  />
+
+                  <div className="relative flex h-48 items-center justify-center overflow-hidden bg-black/20">
                     <div
-                      className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                      style={{ boxShadow: `inset 0 0 70px ${b.glow}` }}
+                      className="absolute inset-0 opacity-60 transition-opacity duration-300 group-hover:opacity-90"
+                      style={{ background: `radial-gradient(circle at 50% 40%, ${b.glow}, transparent 65%)` }}
                     />
+                    <img
+                      src={b.art}
+                      alt=""
+                      className="relative h-40 w-40 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1"
+                    />
+                  </div>
 
-                    <div className="relative flex h-48 items-center justify-center overflow-hidden bg-black/20">
-                      <div
-                        className="absolute inset-0 opacity-60 transition-opacity duration-300 group-hover:opacity-90"
-                        style={{ background: `radial-gradient(circle at 50% 40%, ${b.glow}, transparent 65%)` }}
-                      />
-                      <img
-                        src={b.art}
-                        alt=""
-                        className="relative h-40 w-40 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1"
-                      />
+                  <div className="relative flex flex-1 items-center justify-between gap-3 p-5">
+                    <div className="min-w-0">
+                      {done ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-green-300 bg-green-500/10 border-green-400/30">
+                          <IconCheck className="h-3 w-3" /> Concluído
+                        </span>
+                      ) : (
+                        <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${b.badge}`}>
+                          {b.requiredPrefix ? 'Obrigatório' : 'Distrito'}
+                        </span>
+                      )}
+                      <h4 className="mt-1.5 text-lg font-black text-white">{b.name}</h4>
+                      <p className="mt-0.5 text-sm text-gray-400">{b.desc}</p>
                     </div>
 
-                    <div className="relative flex flex-1 items-center justify-between gap-3 p-5">
-                      <div className="min-w-0">
-                        {done ? (
-                          <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-green-300 bg-green-500/10 border-green-400/30">
-                            <IconCheck className="h-3 w-3" /> Concluído
-                          </span>
-                        ) : (
-                          <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${b.badge}`}>
-                            {b.requiredPrefix ? 'Obrigatório' : 'Distrito'}
-                          </span>
-                        )}
-                        <h4 className="mt-1.5 text-lg font-black text-white">{b.name}</h4>
-                        <p className="mt-0.5 text-sm text-gray-400">{b.desc}</p>
-                      </div>
-
-                      <IconArrow className="h-5 w-5 shrink-0 text-gray-600 transition-all group-hover:translate-x-1 group-hover:text-white" />
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+                    <IconArrow className="h-5 w-5 shrink-0 text-gray-600 transition-all group-hover:translate-x-1 group-hover:text-white" />
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -383,6 +345,6 @@ export default function Map() {
           onComplete={handleBillComplete}
         />
       )}
-    </div>
+    </GameLayout>
   )
 }
