@@ -23,6 +23,32 @@ const IconCheck = (p) => (
     <path d="m5 13 4 4L19 7" />
   </svg>
 )
+const IconGuide = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M12 3 3 7l9 4 9-4-9-4Z" />
+    <path d="M3 12l9 4 9-4" />
+    <path d="M3 17l9 4 9-4" />
+  </svg>
+)
+
+const GUIDE_TIPS = [
+  {
+    title: 'Prédios obrigatórios',
+    desc: 'Lazer e as contas mensais (Mercadinho, Água e Luz, Internet) precisam ser resolvidos antes de encerrar o mês.',
+  },
+  {
+    title: 'Diversifique investimentos',
+    desc: 'No Banco você encontra Renda Fixa, Ações e Empresas — cada uma com riscos e retornos diferentes.',
+  },
+  {
+    title: 'Patrimônio decide o ranking',
+    desc: 'Ao final do mês 12, quem tiver o maior patrimônio líquido vence a partida.',
+  },
+  {
+    title: 'Estude na Universidade',
+    desc: 'A árvore de habilidades desbloqueia vantagens que ajudam sua estratégia financeira.',
+  },
+]
 
 const BUILDINGS = [
   {
@@ -218,7 +244,8 @@ export default function Map() {
 
   return (
     <GameLayout>
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 xl:flex xl:items-start xl:gap-6">
+      <div className="min-w-0 flex-1">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">
@@ -328,6 +355,25 @@ export default function Map() {
             })}
           </div>
         </div>
+      </div>
+
+      <aside className="mt-6 hidden xl:mt-0 xl:block xl:w-72 xl:shrink-0">
+        <div className="sticky top-8 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-[var(--theme-surface)]/80 to-black/30 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.4)] ring-1 ring-white/5">
+          <div className="mb-4 flex items-center gap-2">
+            <IconGuide className="h-5 w-5 text-[var(--theme-secondary)]" />
+            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">Guia Rápido</h3>
+          </div>
+
+          <div className="flex flex-col gap-4">
+            {GUIDE_TIPS.map((tip) => (
+              <div key={tip.title} className="border-l-2 border-white/10 pl-3">
+                <p className="text-sm font-bold text-white">{tip.title}</p>
+                <p className="mt-0.5 text-xs leading-relaxed text-gray-400">{tip.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </aside>
       </div>
 
       {showDilemmaModal && (
