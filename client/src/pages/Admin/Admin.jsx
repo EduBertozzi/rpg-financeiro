@@ -1,192 +1,214 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import socket from '../../services/socket'
+import { TOY_BUTTON, TOY_ERROR, TOY_GHOST, TOY_INPUT, TOY_LOGO } from '../../components/town/toy'
+import {
+  closeLabel, FILTERS, filterRooms, missingCount, monthName, playersLabel, ranked, roomTitle, STATUS_LABEL, TASKS,
+} from './adminData'
 
-const IconShield = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 3 4 6.5V11c0 4.9 3.4 9.1 8 10 4.6-.9 8-5.1 8-10V6.5L12 3Z" />
-  </svg>
-)
-const IconLogout = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M10 17l5-5-5-5" />
-    <path d="M15 12H3" />
-    <path d="M21 19V5a2 2 0 0 0-2-2h-5" />
-  </svg>
-)
-const IconMap = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M9 18l-6 3V6l6-3 6 3 6-3v15l-6 3-6-3z" />
-    <path d="M9 3v15M15 6v15" />
-  </svg>
-)
-const IconPlus = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 5v14M5 12h14" />
-  </svg>
-)
-const IconPlay = (p) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" {...p}>
-    <path d="M8 5v14l11-7-11-7Z" />
-  </svg>
-)
-const IconSkip = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M5 5v14l9-7-9-7Z" fill="currentColor" stroke="none" />
-    <path d="M19 5v14" />
-  </svg>
-)
-const IconRefresh = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" />
-    <path d="M21 3v5h-5" />
-    <path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" />
-    <path d="M3 21v-5h5" />
-  </svg>
-)
-const IconCheck = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="m5 13 4 4L19 7" />
-  </svg>
-)
-const IconHourglass = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M6 3h12M6 21h12" />
-    <path d="M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9" />
-  </svg>
-)
-const IconTrophy = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M8 21h8M12 17v4" />
-    <path d="M7 4h10v5a5 5 0 0 1-10 0V4Z" />
-    <path d="M7 5H4a3 3 0 0 0 3 5M17 5h3a3 3 0 0 1-3 5" />
-  </svg>
-)
-const IconBolt = (p) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" {...p}>
-    <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />
-  </svg>
-)
+const CARD = 'rounded-[24px] bg-[#FFFDF7] text-[#24331F] shadow-[0_6px_0_#E2D6BE]'
+const EYEBROW = 'text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#A9B19E]'
+const PILL = {
+  waiting: 'bg-[#FFF3C4] text-[#B07A0C]',
+  active: 'bg-[#E2F4E5] text-[#2B8C41]',
+  finished: 'bg-[#EFE6D3] text-[#6B7A62]',
+}
+const AMBER_BUTTON = 'rounded-[16px] bg-[#F2B53A] px-5 py-2.5 font-toy text-[17px] font-extrabold text-[#4A3200] shadow-[0_5px_0_#C98A12] transition-transform hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_1px_0_#C98A12] disabled:opacity-60 cursor-pointer'
+const brl = (v) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+const SELECTED_KEY = 'admin:room'
 
-function StatCard({ label, value, tone = 'default' }) {
-  const toneCls = {
-    default: 'text-white',
-    green: 'text-green-300',
-    yellow: 'text-yellow-300',
-    gray: 'text-gray-400',
-  }[tone]
+function readSelected() {
+  try {
+    return localStorage.getItem(SELECTED_KEY)
+  } catch {
+    return null
+  }
+}
 
+function StatusPill({ status }) {
+  return <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-extrabold ${PILL[status] ?? PILL.finished}`}>{STATUS_LABEL[status] ?? status}</span>
+}
+
+function MonthDots({ room }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-      <p className="mb-1 text-xs text-gray-400">{label}</p>
-      <p className={`font-bold ${toneCls}`}>{value}</p>
-    </div>
+    <span className="flex gap-0.5" aria-label={`Mês ${room.currentTurn} de ${room.maxTurns}`}>
+      {Array.from({ length: room.maxTurns }, (_, i) => {
+        const m = i + 1
+        const tone = room.status === 'finished' || m < room.currentTurn ? 'bg-[#3DBE5A]' : m === room.currentTurn ? 'bg-[#2457C5]' : 'bg-[#EFE6D3]'
+        return <i key={m} className={`h-1.5 flex-1 rounded ${tone}`} />
+      })}
+    </span>
   )
 }
 
+// Painel do administrador: todas as salas que ele criou numa lista, e a sala
+// aberta com o que cada jogador já fez no mês.
 export default function Admin() {
   const navigate = useNavigate()
-  const { character, room, setRoom, logout } = useGameStore()
-  const [roomData, setRoomData] = useState(null)
-  const [leaderboard, setLeaderboard] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState({ text: '', type: '' })
-  const [turnResult, setTurnResult] = useState(null)
-  const [newRoomCode, setNewRoomCode] = useState('')
+  const { character, logout, user } = useGameStore()
+  const [rooms, setRooms] = useState(null)
+  const [selectedId, setSelectedId] = useState(readSelected)
+  const [filter, setFilter] = useState('all')
+  const [progress, setProgress] = useState(null) // { room, players }
+  const [creating, setCreating] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [toast, setToast] = useState('')
+  const [confirm, setConfirm] = useState(null) // 'close' | 'delete' | null
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [lastResult, setLastResult] = useState(null)
 
-  const fetchRoom = async () => {
-    if (!room?.code) return
-    try {
-      const { data } = await api.get(`/rooms/${room.code}`)
-      setRoomData(data)
-    } catch (err) {
-      console.error(err)
-    }
+  const say = (text) => {
+    setToast(text)
+    setTimeout(() => setToast(''), 2500)
   }
 
-  const handleCreateRoom = async () => {
-    setLoading(true)
+  const select = (id) => {
+    setSelectedId(id)
+    setConfirm(null)
+    setEditing(false)
+    setLastResult(null)
     try {
-      const { data } = await api.post('/rooms', { maxTurns: 12 })
-      setRoom(data)
-      setNewRoomCode('')
-      window.location.reload()
+      localStorage.setItem(SELECTED_KEY, id)
     } catch {
-      alert('Erro ao criar sala!')
-    } finally {
-      setLoading(false)
+      // sem storage: só não lembra a última sala aberta
     }
   }
 
-  const handleJoinRoom = async () => {
-    try {
-      const { data } = await api.get(`/rooms/${newRoomCode}`)
-      setRoom(data)
-      setNewRoomCode('')
-      window.location.reload()
-    } catch {
-      alert('Sala não encontrada!')
-    }
-  }
+  const loadRooms = useCallback(() => api.get('/rooms/mine').then(({ data }) => setRooms(data)).catch(() => setError('Não deu para carregar suas salas.')), [])
 
-  const fetchLeaderboard = async () => {
-    if (!room?.id) return
-    try {
-      const { data } = await api.get(`/rooms/${room.id}/leaderboard`)
-      setLeaderboard(data)
-    } catch (err) {
-      console.error(err)
-    }
-  }
+  const loadProgress = useCallback((id) => {
+    if (!id) return Promise.resolve()
+    return api.get(`/rooms/${id}/progress`)
+      .then(({ data }) => setProgress(data))
+      .catch((err) => {
+        // sala apagada ou de outro administrador: some da tela
+        if ([403, 404].includes(err.response?.status)) setProgress(null)
+      })
+  }, [])
 
+  // lista de salas, atualizando de tempos em tempos (bolinha de "todo mundo pronto")
   useEffect(() => {
-    if (!room?.id) return
-    const load = async () => {
-      await Promise.all([fetchRoom(), fetchLeaderboard()])
-    }
-    load()
+    loadRooms()
+    const id = setInterval(loadRooms, 10000)
+    return () => clearInterval(id)
+  }, [loadRooms])
 
+  // sala aberta: quem está pronto e o que falta, a cada 5 segundos
+  const current = rooms?.find((r) => r.id === selectedId) ?? rooms?.[0] ?? null
+  const currentId = current?.id
+  useEffect(() => {
+    if (!currentId) return
+    loadProgress(currentId)
+    const id = setInterval(() => loadProgress(currentId), 5000)
+    return () => clearInterval(id)
+  }, [currentId, loadProgress])
+
+  // o admin entra no canal da sala para avisar os jogadores quando o mês vira
+  useEffect(() => {
+    if (!currentId) return
     socket.connect()
-    socket.emit('room:join', { roomId: room.id, characterId: 'admin' })
-
+    socket.emit('room:join', { roomId: currentId, characterId: 'admin' })
     return () => socket.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room?.id])
+  }, [currentId])
 
-  const handleStart = async () => {
-    setLoading(true)
-    setMessage({ text: '', type: '' })
+  const shown = progress?.room?.id === currentId ? progress : null
+  const room = shown?.room ?? current
+  const players = shown?.players ?? []
+  const missing = missingCount(players)
+
+  const refresh = () => Promise.all([loadRooms(), loadProgress(currentId)])
+
+  const createRoom = async (e) => {
+    e.preventDefault()
+    if (!newName.trim()) return
+    setBusy(true)
+    setError('')
     try {
-      const { data } = await api.post(`/rooms/${room.id}/start`)
-      setRoom({ ...room, ...data })
-      setMessage({ text: 'Partida iniciada!', type: 'success' })
-      fetchRoom()
+      const { data } = await api.post('/rooms', { name: newName, maxTurns: 12 })
+      setNewName('')
+      setCreating(false)
+      await loadRooms()
+      select(data.id)
+      say(`Sala criada. Código: ${data.code}`)
     } catch (err) {
-      setMessage({ text: err.response?.data?.error || 'Erro ao iniciar', type: 'error' })
+      setError(err.response?.data?.error || 'Não deu para criar a sala.')
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
-  const handleNextTurn = async () => {
-    setLoading(true)
-    setMessage({ text: '', type: '' })
-    setTurnResult(null)
+  const startRoom = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      await api.post(`/rooms/${room.id}/start`)
+      await refresh()
+      say('Partida iniciada. Janeiro começou!')
+    } catch (err) {
+      setError(err.response?.data?.error || 'Não deu para iniciar a partida.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const closeMonth = async () => {
+    setBusy(true)
+    setError('')
+    setConfirm(null)
     try {
       const { data } = await api.post(`/rooms/${room.id}/next-turn`)
-      setTurnResult(data)
-      setRoom({ ...room, currentTurn: data.turn })
-      setMessage({ text: `Turno ${data.turn} processado!`, type: 'success' })
       socket.emit('turn:broadcast', { roomId: room.id, result: data })
-      fetchRoom()
-      fetchLeaderboard()
+      setLastResult(data)
+      await refresh()
+      say(data.isFinished ? 'Ano fechado! A turma já vê o resultado.' : `${monthName(data.turn - 1)} fechado. ${monthName(data.turn)} começou.`)
     } catch (err) {
-      setMessage({ text: err.response?.data?.error || 'Erro ao processar turno', type: 'error' })
+      setError(err.response?.data?.error || 'Não deu para fechar o mês.')
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
+  }
+
+  const saveName = async (e) => {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      await api.patch(`/rooms/${room.id}`, { name: editName })
+      setEditing(false)
+      await refresh()
+      say('Nome da sala atualizado')
+    } catch (err) {
+      setError(err.response?.data?.error || 'Não deu para trocar o nome.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const deleteRoom = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      await api.delete(`/rooms/${room.id}`)
+      setConfirm(null)
+      setProgress(null)
+      const { data } = await api.get('/rooms/mine')
+      setRooms(data)
+      if (data[0]) select(data[0].id)
+      say('Sala apagada')
+    } catch (err) {
+      setError(err.response?.data?.error || 'Não deu para apagar a sala.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const copyCode = () => {
+    navigator.clipboard?.writeText(room.code).then(() => say('Código copiado'), () => say(`Código: ${room.code}`))
   }
 
   const handleLogout = () => {
@@ -194,229 +216,269 @@ export default function Admin() {
     navigate('/login')
   }
 
-  const readyCount = roomData?.characters?.filter(c => c.turnReady).length ?? 0
-  const totalPlayers = roomData?.characters?.length ?? 0
-  const allReady = totalPlayers > 0 && readyCount === totalPlayers
-
-  const statusLabel = roomData?.status === 'waiting' ? 'Aguardando' : roomData?.status === 'active' ? 'Em andamento' : 'Finalizada'
-  const statusTone = roomData?.status === 'waiting' ? 'yellow' : roomData?.status === 'active' ? 'green' : 'gray'
+  const list = rooms ? filterRooms(rooms, filter) : []
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-darker text-white">
-      <div className="absolute inset-0 z-0 perspective-grid opacity-15" />
-      <div className="pointer-events-none absolute left-[-10%] top-[-15%] z-0 h-[460px] w-[460px] animate-float rounded-full bg-primary/15 blur-[110px]" />
-      <div className="pointer-events-none absolute bottom-[-15%] right-[-10%] z-0 h-[460px] w-[460px] animate-float rounded-full bg-purple-500/15 blur-[110px]" style={{ animationDelay: '2s' }} />
-
-      <div className="relative z-10">
-        <div className="border-b border-white/10 bg-white/[0.035] px-6 py-4 backdrop-blur-xl">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-primary/40 bg-primary/15">
-                <IconShield className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-lg font-black">Painel Admin</h1>
-                <p className="text-xs text-gray-400">Controle da sessão de jogo</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <div className="text-right">
-                <p className="text-xs text-gray-400">Código da sala</p>
-                <p className="font-mono text-lg font-bold text-white">{room?.code ?? '—'}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400">Turno atual</p>
-                <p className="text-lg font-bold text-primary">{Math.min(roomData?.currentTurn ?? 0, roomData?.maxTurns ?? 12)}/{roomData?.maxTurns ?? 12}</p>
-              </div>
-
-              {character && (
-                <button
-                  type="button"
-                  onClick={() => navigate('/map')}
-                  className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-black/20 text-gray-400 transition-colors hover:border-primary/50 hover:text-white cursor-pointer"
-                  title="Voltar ao Mapa"
-                  aria-label="Voltar ao Mapa"
-                >
-                  <IconMap className="h-5 w-5" />
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="grid h-10 w-10 place-items-center rounded-xl border border-red-400/20 bg-red-500/10 text-red-300 transition-colors hover:border-red-400/40 hover:bg-red-500/15 cursor-pointer"
-                title="Sair"
-                aria-label="Sair"
-              >
-                <IconLogout className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#F3EBDA] px-4 pb-16 pt-5 text-[#24331F] sm:px-6">
+      <header className="mx-auto mb-5 flex max-w-[1240px] flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className={TOY_LOGO}>Fecha o Mês</span>
+          <span className="rounded-full bg-[#EFE6D3] px-3 py-1 text-xs font-extrabold text-[#6B7A62]">Painel do administrador</span>
         </div>
-
-        <div className="border-b border-white/10 bg-yellow-500/[0.06] px-6 py-3">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-sm font-medium text-yellow-300">Acessar sala existente:</p>
-              <input
-                type="text"
-                value={newRoomCode}
-                onChange={(e) => setNewRoomCode(e.target.value.toUpperCase())}
-                className="w-32 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5 font-mono text-sm text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-                placeholder="Código"
-                maxLength={6}
-              />
-              <button
-                onClick={handleJoinRoom}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-blue-600 transition-colors cursor-pointer"
-              >
-                Entrar
-              </button>
-            </div>
-            <button
-              onClick={handleCreateRoom}
-              disabled={loading}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-1.5 text-sm font-bold text-white shadow-lg transition-colors hover:bg-green-500 disabled:opacity-50 cursor-pointer"
-            >
-              <IconPlus className="h-4 w-4" />
-              {loading ? 'Criando...' : 'Criar Nova Sala'}
-            </button>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="hidden text-sm font-bold text-[#6B7A62] sm:inline">{user?.name}</span>
+          {character && (
+            <button type="button" onClick={() => navigate('/map')} className={`${TOY_GHOST} px-3 py-2 text-[15px]`}>Ir para o mapa</button>
+          )}
+          <button type="button" onClick={handleLogout} className={`${TOY_GHOST} px-3 py-2 text-[15px]`}>Sair</button>
         </div>
+      </header>
 
-        <div className="mx-auto max-w-5xl space-y-6 p-6 sm:p-8">
+      <main className="mx-auto grid max-w-[1240px] items-start gap-5 lg:grid-cols-[330px_minmax(0,1fr)]">
+        {/* ─── minhas salas ─── */}
+        <aside className={`${CARD} grid gap-3.5 p-4 lg:sticky lg:top-4`} aria-label="Minhas salas">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-toy text-[22px] font-extrabold">Minhas salas</h2>
+            <button type="button" onClick={() => setCreating(true)} className="rounded-[14px] bg-[#3DBE5A] px-3.5 py-1.5 font-toy text-[15px] font-extrabold text-white shadow-[0_4px_0_#2B8C41] cursor-pointer">+ Nova sala</button>
+          </div>
 
-          {message.text && (
-            <div className={`flex items-center gap-2 rounded-xl border p-3 text-sm ${message.type === 'error' ? 'border-red-500/50 bg-red-900/30 text-red-300' : 'border-green-500/50 bg-green-900/30 text-green-300'}`}>
-              {message.type === 'error' ? null : <IconCheck className="h-4 w-4 shrink-0" />}
-              {message.text}
-            </div>
+          {creating && (
+            <form onSubmit={createRoom} className="grid gap-2.5 rounded-[18px] border-2 border-dashed border-[#E2D6BE] p-3.5">
+              <label htmlFor="new-room-name" className="grid gap-1 text-[13px] font-extrabold text-[#6B7A62]">
+                Nome da turma
+                <input id="new-room-name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex.: 3º ano B · manhã" maxLength={40} autoFocus className={TOY_INPUT} />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" disabled={busy || !newName.trim()} className="rounded-[14px] bg-[#3DBE5A] px-4 py-2 font-toy text-[15px] font-extrabold text-white shadow-[0_4px_0_#2B8C41] disabled:opacity-50 cursor-pointer">Criar sala</button>
+                <button type="button" onClick={() => setCreating(false)} className="rounded-[14px] px-3 py-2 text-sm font-extrabold text-[#6B7A62] cursor-pointer">Cancelar</button>
+              </div>
+            </form>
           )}
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <StatCard label="Status" value={statusLabel} tone={statusTone} />
-            <StatCard label="Jogadores" value={totalPlayers} />
-            <StatCard label="Prontos" value={`${readyCount}/${totalPlayers}`} tone={allReady ? 'green' : 'yellow'} />
-            <StatCard label="Turno" value={`${Math.min(roomData?.currentTurn ?? 0, roomData?.maxTurns ?? 12)}/${roomData?.maxTurns ?? 12}`} />
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-6">
-            <h2 className="mb-4 text-lg font-bold">Controles</h2>
-            <div className="flex flex-wrap gap-3">
-              {roomData?.status === 'waiting' && (
-                <button
-                  onClick={handleStart}
-                  disabled={loading || totalPlayers === 0}
-                  className="inline-flex items-center gap-2 rounded-xl bg-green-700 px-6 py-3 font-semibold text-white transition-colors hover:bg-green-600 disabled:opacity-50 cursor-pointer"
-                >
-                  <IconPlay className="h-4 w-4" />
-                  {loading ? 'Iniciando...' : 'Iniciar Partida'}
-                </button>
-              )}
-              {roomData?.status === 'active' && (
-                <button
-                  onClick={handleNextTurn}
-                  disabled={loading}
-                  className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 font-semibold text-white transition-colors cursor-pointer disabled:opacity-50 ${allReady ? 'bg-primary hover:bg-blue-600' : 'bg-gray-700 hover:bg-gray-600'}`}
-                >
-                  <IconSkip className="h-4 w-4" />
-                  {loading ? 'Processando...' : `Processar Turno ${(roomData?.currentTurn ?? 0) + 1}`}
-                </button>
-              )}
-              <button
-                onClick={() => { fetchRoom(); fetchLeaderboard() }}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-gray-400 transition-colors hover:text-white cursor-pointer"
-              >
-                <IconRefresh className="h-4 w-4" />
-                Atualizar
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filtrar salas">
+            {FILTERS.map(([key, label]) => (
+              <button key={key} type="button" aria-pressed={filter === key} onClick={() => setFilter(key)}
+                className={`rounded-full px-3 py-1 text-[13px] font-extrabold cursor-pointer ${filter === key ? 'bg-[#24331F] text-[#FFFDF7]' : 'text-[#6B7A62] hover:bg-[#EFE6D3]'}`}>
+                {label}
               </button>
+            ))}
+          </div>
+
+          <div className="grid max-h-[62vh] gap-2 overflow-y-auto p-0.5">
+            {rooms === null && <p className="py-4 text-center text-sm text-[#6B7A62]">Carregando suas salas…</p>}
+            {rooms && list.length === 0 && (
+              <p className="py-4 text-center text-sm text-[#6B7A62]">{rooms.length ? 'Nenhuma sala aqui.' : 'Você ainda não tem salas. Crie a primeira em "+ Nova sala".'}</p>
+            )}
+            {list.map((r) => (
+              <button key={r.id} type="button" onClick={() => select(r.id)} aria-current={r.id === currentId}
+                className={`grid gap-1.5 rounded-[18px] border-[3px] p-3 text-left transition-colors cursor-pointer ${r.id === currentId ? 'border-[#2457C5] bg-[#FFFDF7]' : 'border-transparent bg-[#F3EBDA] hover:border-[#E2D6BE]'}`}>
+                <span className="flex items-center justify-between gap-2">
+                  <b className="font-toy text-[18px] leading-tight">{roomTitle(r)}</b>
+                  {r.allReady && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#EC4899]" title="Todo mundo pronto" aria-label="todo mundo pronto" />}
+                </span>
+                <span className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-[13px] text-[#6B7A62]">{r.code}</span>
+                  <StatusPill status={r.status} />
+                </span>
+                {r.status === 'waiting'
+                  ? <small className="text-xs text-[#6B7A62]">{playersLabel(r.players)} esperando você iniciar</small>
+                  : <MonthDots room={r} />}
+                {r.status === 'active' && <small className="text-xs text-[#6B7A62]">{monthName(r.currentTurn)} · {r.ready}/{r.players} prontos</small>}
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        {/* ─── sala aberta ─── */}
+        <section className="grid min-w-0 gap-5" aria-live="polite">
+          {error && <p className={TOY_ERROR}>{error}</p>}
+
+          {!room ? (
+            <div className={`${CARD} grid justify-items-center gap-3 p-10 text-center`}>
+              <h1 className="font-toy text-[30px] font-extrabold">Bem-vindo ao painel</h1>
+              <p className="max-w-md text-[#6B7A62]">Crie uma sala para cada turma. Você passa o código para os jogadores e controla quando cada mês fecha.</p>
+              <button type="button" onClick={() => setCreating(true)} className={`${TOY_BUTTON} !w-auto`}>Criar a primeira sala</button>
             </div>
-            {roomData?.status === 'active' && !allReady && (
-              <p className="mt-3 flex items-center gap-1.5 text-xs text-yellow-400">
-                <IconHourglass className="h-3.5 w-3.5" />
-                Aguardando {totalPlayers - readyCount} jogador(es) finalizar o mês
-              </p>
-            )}
-          </div>
-
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-6">
-            <h2 className="mb-4 text-lg font-bold">Jogadores na Sala</h2>
-            {totalPlayers === 0 ? (
-              <p className="text-sm text-gray-400">Nenhum jogador ainda. Compartilhe o código: <span className="font-mono text-primary">{room?.code}</span></p>
-            ) : (
-              <div className="space-y-2">
-                {roomData?.characters?.map(char => (
-                  <div key={char.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 p-3">
-                    <span className="font-medium text-white">{char.name}</span>
-                    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs ${char.turnReady ? 'border-green-700 bg-green-900/40 text-green-400' : 'border-yellow-700 bg-yellow-900/40 text-yellow-400'}`}>
-                      {char.turnReady ? <IconCheck className="h-3 w-3" /> : <IconHourglass className="h-3 w-3" />}
-                      {char.turnReady ? 'Pronto' : 'Jogando'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {turnResult && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-6">
-              <h2 className="mb-4 text-lg font-bold">Resultado do Turno {turnResult.turn}</h2>
-              {turnResult.dilemma && (
-                <div className="mb-4 rounded-xl border border-yellow-700 bg-yellow-900/20 p-4">
-                  <p className="mb-1 flex items-center gap-1.5 font-semibold text-yellow-400">
-                    <IconBolt className="h-4 w-4" />
-                    Dilema do mês: {turnResult.dilemma.title}
+          ) : (
+            <>
+              <div className={`${CARD} grid items-center gap-5 p-5 sm:grid-cols-[minmax(0,1fr)_auto]`}>
+                <div className="grid min-w-0 gap-1.5">
+                  <span className="justify-self-start"><StatusPill status={room.status} /></span>
+                  {editing ? (
+                    <form onSubmit={saveName} className="flex flex-wrap gap-2">
+                      <label htmlFor="edit-room-name" className="sr-only">Nome da sala</label>
+                      <input id="edit-room-name" value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={40} autoFocus className={`${TOY_INPUT} max-w-sm flex-1`} />
+                      <button type="submit" disabled={busy || !editName.trim()} className="rounded-[14px] bg-[#3DBE5A] px-4 py-2 font-toy font-extrabold text-white shadow-[0_4px_0_#2B8C41] disabled:opacity-50 cursor-pointer">Salvar</button>
+                      <button type="button" onClick={() => setEditing(false)} className="px-2 text-sm font-extrabold text-[#6B7A62] cursor-pointer">Cancelar</button>
+                    </form>
+                  ) : (
+                    <h1 className="flex flex-wrap items-baseline gap-x-3 font-toy text-[clamp(28px,4vw,38px)] font-extrabold leading-tight">
+                      {roomTitle(room)}
+                      <button type="button" onClick={() => { setEditName(room.name || ''); setEditing(true) }} className="text-sm font-extrabold text-[#2457C5] hover:underline cursor-pointer">Editar nome</button>
+                    </h1>
+                  )}
+                  <p className="text-sm text-[#6B7A62]">
+                    Criada em {new Date(room.createdAt).toLocaleDateString('pt-BR')} · {playersLabel(room.players)}
+                    {' · '}
+                    <button type="button" onClick={() => setConfirm('delete')} className="font-extrabold text-[#C4283D] hover:underline cursor-pointer">Apagar sala</button>
                   </p>
                 </div>
+                <div className="grid justify-items-center gap-1 rounded-[20px] bg-[#DCE7FB] px-5 py-3">
+                  <span className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#2457C5]">Código da sala</span>
+                  <span className="font-mono text-[32px] font-bold tracking-[0.14em] text-[#2457C5]">{room.code}</span>
+                  <button type="button" onClick={copyCode} className="rounded-full bg-[#FFFDF7] px-3 py-0.5 text-xs font-extrabold text-[#2457C5] cursor-pointer">Copiar código</button>
+                </div>
+              </div>
+
+              {confirm === 'delete' && (
+                <div role="alertdialog" aria-label="Apagar sala" className="grid gap-3 rounded-[20px] border-2 border-[#F5B8C0] bg-[#FDE2E5] p-4 text-[#9F1D2F]">
+                  <b className="font-toy text-lg">Apagar “{roomTitle(room)}”?</b>
+                  <p className="text-sm">Isso apaga a sala, os {playersLabel(room.players)} e todo o progresso deles. Não dá para desfazer.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={deleteRoom} disabled={busy} className="rounded-[14px] bg-[#C4283D] px-4 py-2 font-toy font-extrabold text-white shadow-[0_4px_0_#8E1B2C] disabled:opacity-60 cursor-pointer">Apagar de vez</button>
+                    <button type="button" onClick={() => setConfirm(null)} className="rounded-[14px] bg-white px-4 py-2 font-extrabold text-[#6B7A62] cursor-pointer">Cancelar</button>
+                  </div>
+                </div>
               )}
-              <div className="space-y-2">
-                {turnResult.results?.map(r => (
-                  <div key={r.characterId} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 p-3">
+
+              {/* controle do mês */}
+              <div className={`${CARD} grid gap-4 p-5`}>
+                {room.status === 'waiting' && (
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                      <p className="font-medium text-white">{r.characterName}</p>
-                      <p className="text-xs text-gray-400">{(r.events ?? [r.event]).filter(Boolean).map((e) => e.title).join(' · ')}</p>
+                      <p className={EYEBROW}>Antes de começar</p>
+                      <p className="font-toy text-[26px] font-extrabold">{room.players === 1 ? '1 jogador entrou' : `${room.players} jogadores entraram`}</p>
+                      <p className="text-sm text-[#6B7A62]">Passe o código para a turma. Quando todos tiverem criado o personagem, inicie.</p>
                     </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-medium ${r.cashDelta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {r.cashDelta >= 0 ? '+' : ''}R$ {Number(r.cashDelta).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        Patrimônio: R$ {Number(r.netWorth).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
+                    <button type="button" onClick={startRoom} disabled={busy || room.players === 0} className={`${TOY_BUTTON} !w-auto`}>Iniciar partida</button>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                )}
 
-          {leaderboard.length > 0 && (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-6">
-              <h2 className="mb-4 flex items-center gap-2 text-lg font-bold">
-                <IconTrophy className="h-5 w-5 text-yellow-400" />
-                Leaderboard
-              </h2>
-              <div className="space-y-2">
-                {leaderboard.map((entry, i) => (
-                  <div key={i} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 p-3">
-                    <div className="flex items-center gap-3">
-                      <span className={`text-lg font-bold ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-orange-400' : 'text-gray-500'}`}>
-                        #{i + 1}
-                      </span>
-                      <span className="font-medium text-white">{entry.characterName}</span>
+                {room.status === 'active' && (
+                  <>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <div>
+                        <p className={EYEBROW}>Mês {room.currentTurn} de {room.maxTurns}</p>
+                        <p className="font-toy text-[28px] font-extrabold">{monthName(room.currentTurn)}</p>
+                      </div>
+                      <button type="button" onClick={() => (missing ? setConfirm('close') : closeMonth())} disabled={busy || players.length === 0}
+                        className={missing ? AMBER_BUTTON : `${TOY_BUTTON} !w-auto`}>
+                        {busy ? 'Fechando…' : closeLabel(room)}
+                      </button>
                     </div>
-                    <span className="font-bold text-green-400">
-                      R$ {Number(entry.netWorth).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+                    <div className="grid gap-1.5">
+                      <div className="flex justify-between text-sm font-extrabold">
+                        <span>{players.length - missing} de {players.length} prontos</span>
+                        <span className="text-[#6B7A62]">{missing ? `faltam ${missing}` : 'todo mundo pronto'}</span>
+                      </div>
+                      <div className="h-3.5 overflow-hidden rounded-full bg-[#EFE6D3]">
+                        <span className="block h-full rounded-full bg-[#3DBE5A] transition-[width] duration-500" style={{ width: `${players.length ? ((players.length - missing) / players.length) * 100 : 0}%` }} />
+                      </div>
+                    </div>
+                    {confirm === 'close' && (
+                      <div role="alertdialog" aria-label="Confirmar fechamento" className="grid gap-2.5 rounded-[18px] bg-[#FFF3C4] p-4 text-[#5A3D00]">
+                        <b>{missing === 1 ? '1 jogador ainda não terminou' : `${missing} jogadores ainda não terminaram`} o mês.</b>
+                        <span className="text-sm">Se fechar agora, quem não pagou as contas ou não escolheu o lazer passa para o mês seguinte sem ter feito.</span>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={closeMonth} disabled={busy} className={AMBER_BUTTON}>Fechar mesmo assim</button>
+                          <button type="button" onClick={() => setConfirm(null)} className="rounded-[14px] bg-white px-4 py-2 font-extrabold text-[#6B7A62] cursor-pointer">Esperar</button>
+                        </div>
+                      </div>
+                    )}
+                    {!missing && players.length > 0 && confirm !== 'close' && (
+                      <p className="rounded-2xl bg-[#E2F4E5] px-4 py-2.5 text-sm font-bold text-[#2B8C41]">Todo mundo terminou. Pode fechar o mês.</p>
+                    )}
+                  </>
+                )}
 
-        </div>
-      </div>
+                {room.status === 'finished' && (
+                  <div>
+                    <p className={EYEBROW}>Partida encerrada</p>
+                    <p className="font-toy text-[26px] font-extrabold">
+                      {players.length ? `Venceu ${ranked(players)[0].name} com ${brl(ranked(players)[0].netWorth)}` : 'Ninguém jogou nesta sala'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* jogadores */}
+              <div className={`${CARD} grid gap-3 p-5`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="font-toy text-[22px] font-extrabold">{room.status === 'finished' ? 'Ranking final' : 'Jogadores'}</h2>
+                  {room.status === 'active' && (
+                    <div className="flex flex-wrap gap-3 text-xs text-[#6B7A62]">
+                      {TASKS.map(([key, icon, label]) => <span key={key}>{icon} {label}</span>)}
+                    </div>
+                  )}
+                </div>
+                {players.length === 0 ? (
+                  <p className="py-4 text-center text-sm text-[#6B7A62]">Ninguém entrou ainda. Passe o código <b className="font-mono">{room.code}</b> para a turma.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[560px] border-collapse text-sm">
+                      <thead>
+                        <tr className="text-left text-[11px] uppercase tracking-[0.14em] text-[#A9B19E]">
+                          <th className="px-2.5 py-2">Jogador</th>
+                          {room.status === 'active' && <th className="px-2.5 py-2">Falta no mês</th>}
+                          {room.status === 'active' && <th className="px-2.5 py-2">Situação</th>}
+                          <th className="px-2.5 py-2 text-right">Patrimônio</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(room.status === 'active' ? players : ranked(players)).map((p, i) => (
+                          <tr key={p.id} className="border-t border-[#EFE6D3]">
+                            <td className="px-2.5 py-2.5 font-extrabold">{room.status === 'finished' && `${i + 1}º · `}{p.name}</td>
+                            {room.status === 'active' && (
+                              <td className="px-2.5 py-2.5">
+                                <div className="flex gap-1">
+                                  {TASKS.map(([key, icon, label]) => {
+                                    const v = p.tasks?.[key]
+                                    if (v === null || v === undefined) return <span key={key} className="h-[26px] w-[26px]" />
+                                    return (
+                                      <span key={key} title={`${label}: ${v ? 'feito' : 'falta'}`}
+                                        className={`grid h-[26px] w-[26px] place-items-center rounded-lg text-[13px] ${v ? 'bg-[#E2F4E5]' : 'bg-[#EFE6D3] opacity-50 grayscale'}`}>
+                                        {icon}
+                                      </span>
+                                    )
+                                  })}
+                                </div>
+                              </td>
+                            )}
+                            {room.status === 'active' && (
+                              <td className="px-2.5 py-2.5">
+                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold ${p.ready ? PILL.active : PILL.waiting}`}>{p.ready ? 'Pronto' : 'Jogando'}</span>
+                              </td>
+                            )}
+                            <td className="px-2.5 py-2.5 text-right font-extrabold tabular-nums">{room.status === 'waiting' ? '—' : brl(p.netWorth)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {lastResult && (
+                <div className={`${CARD} grid gap-2 p-5`}>
+                  <h2 className="font-toy text-[20px] font-extrabold">Imprevistos da virada</h2>
+                  <ul className="grid">
+                    {lastResult.results?.map((r) => (
+                      <li key={r.characterId} className="flex justify-between gap-3 border-t border-[#EFE6D3] py-2 text-sm">
+                        <span className="font-extrabold">{r.characterName}</span>
+                        <span className="text-right text-[#6B7A62]">{(r.events ?? []).map((e) => e.title).join(' · ') || '—'}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      </main>
+
+      {toast && (
+        <div role="status" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-[14px] bg-[#24331F] px-5 py-2.5 text-sm font-extrabold text-[#FFFDF7] shadow-xl">{toast}</div>
+      )}
     </div>
   )
 }
