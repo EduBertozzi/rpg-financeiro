@@ -1,0 +1,27 @@
+{
+  "name": "video",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "studio": "remotion studio src/index.jsx",
+    "record": "node scripts/record.mjs",
+    "audio": "node scripts/audio.mjs",
+    "render:tutorial": "remotion render src/index.jsx Tutorial out/fecha-o-mes-tutorial.mp4",
+    "render:trailer": "remotion render src/index.jsx Trailer out/fecha-o-mes-trailer.mp4"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@remotion/cli": "^4.0.532",
+    "@remotion/google-fonts": "^4.0.532",
+    "@remotion/media-utils": "^4.0.532",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.532"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
+  }
+}

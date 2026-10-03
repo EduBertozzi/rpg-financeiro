@@ -1,0 +1,7 @@
+node_modules/
+out/
+frames/
+footage/
+# gerados por npm run record e npm run audio
+public/*.webm
+public/*.wav
