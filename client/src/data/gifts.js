@@ -13,7 +13,7 @@ export const GIFTS = [
   {
     id: 'agile',
     name: 'Desenrolado',
-    effect: 'Um freela fixo de R$ 200 por mês, e eventos bons rendem 50% a mais.',
+    effect: 'Um freela fixo de R$ 220 por mês, e eventos bons rendem 50% a mais.',
     style: 'Parte sorte',
     year: 3550,
     color: '#F07A26',

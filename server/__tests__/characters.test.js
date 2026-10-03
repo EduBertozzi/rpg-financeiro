@@ -40,7 +40,7 @@ describe('POST /api/v1/characters', () => {
     expect(res.body.name).toBe('Dudu')
   })
 
-  it('começa com o salário de janeiro (R$ 7.000) na conta', async () => {
+  it('começa com o salário de janeiro (R$ 7.000) + presente de boas-vindas (R$ 500)', async () => {
     prismaMock.room.findUnique.mockResolvedValue({ id: 'room-1', status: 'waiting' })
     prismaMock.character.findUnique.mockResolvedValue(null)
     prismaMock.character.create.mockResolvedValue({ id: 'char-1', name: 'Dudu' })
@@ -49,8 +49,23 @@ describe('POST /api/v1/characters', () => {
     await request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send(validBody)
 
     expect(prismaMock.character.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ cash: 7000 }),
+      data: expect.objectContaining({ cash: 7500 }),
     }))
+    expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ characterId: 'char-1', turn: 1, cashImpact: 500, description: expect.stringMatching(/^Presente de boas-vindas: /) }),
+    })
+  })
+
+  it('Desenrolado ganha 50% a mais no presente de boas-vindas (R$ 750)', async () => {
+    prismaMock.room.findUnique.mockResolvedValue({ id: 'room-1', status: 'waiting' })
+    prismaMock.character.findUnique.mockResolvedValue(null)
+    prismaMock.character.create.mockResolvedValue({ id: 'char-1', name: 'Dudu' })
+    prismaMock.characterSkillPoints.create.mockResolvedValue({})
+
+    await request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send({ ...validBody, gift: 'agile' })
+
+    expect(prismaMock.character.create.mock.calls[0][0].data.cash).toBe(7750)
+    expect(prismaMock.characterEventLog.create.mock.calls[0][0].data.cashImpact).toBe(750)
   })
 
   it('retorna 409 se usuário já tem personagem na sala', async () => {
@@ -320,6 +335,59 @@ describe('PATCH /api/v1/characters/:id/ready', () => {
   it('retorna 401 sem token', async () => {
     const res = await request(app).patch('/api/v1/characters/char-1/ready')
     expect(res.status).toBe(401)
+  })
+
+  const activeRoom = (currentTurn) => ({ status: 'active', currentTurn })
+  const ready = () => request(app).patch('/api/v1/characters/char-1/ready').set(authHeader(TOKEN))
+
+  it('não fecha o mês sem o lazer e o dilema', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({ id: 'char-1', userId: 'user-1', room: activeRoom(3), choices: [] })
+
+    const res = await ready()
+
+    expect(res.status).toBe(400)
+    expect(res.body.missing).toEqual(['Lazer', 'Dilema'])
+    expect(prismaMock.character.update).not.toHaveBeenCalled()
+  })
+
+  it('escolhas de outro mês não contam', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({
+      id: 'char-1', userId: 'user-1', room: activeRoom(3),
+      choices: [{ turn: 2, kind: 'leisure' }, { turn: 2, kind: 'dilemma' }, { turn: 3, kind: 'leisure' }],
+    })
+
+    const res = await ready()
+
+    expect(res.status).toBe(400)
+    expect(res.body.missing).toEqual(['Dilema'])
+  })
+
+  it('com lazer e dilema do mês, fecha', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({
+      id: 'char-1', userId: 'user-1', room: activeRoom(3),
+      choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }],
+    })
+    prismaMock.character.update.mockResolvedValue({ turnReady: true })
+
+    expect((await ready()).status).toBe(200)
+  })
+
+  it('dezembro não tem dilema: só o lazer é obrigatório', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({
+      id: 'char-1', userId: 'user-1', room: activeRoom(12), choices: [{ turn: 12, kind: 'leisure' }],
+    })
+    prismaMock.character.update.mockResolvedValue({ turnReady: true })
+
+    expect((await ready()).status).toBe(200)
+  })
+
+  it('sala esperando ou encerrada não cobra nada', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({
+      id: 'char-1', userId: 'user-1', room: { status: 'waiting', currentTurn: 0 }, choices: [],
+    })
+    prismaMock.character.update.mockResolvedValue({ turnReady: true })
+
+    expect((await ready()).status).toBe(200)
   })
 })
 // ─── cupons escondidos na criação ─────────────────────────────────────────────

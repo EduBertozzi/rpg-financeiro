@@ -8,6 +8,10 @@ import { OVERDRAFT_MONTHLY_RATE, overdraftInterest, paymentPreview } from '../pa
 import mercadinhoArt from '../assets/buildings/mercadinho.png'
 import utilitiesArt from '../assets/buildings/utilities.png'
 import internetArt from '../assets/buildings/internet.png'
+import CompanyInfo from './CompanyInfo'
+
+// empresa de cada conta (botão "i")
+const BILL_COMPANY = { food: 'mercadinho', utilities: 'utilities', transport: 'internet' }
 
 const BILL_ART = { food: mercadinhoArt, utilities: utilitiesArt, transport: internetArt }
 
@@ -86,7 +90,7 @@ export default function BillModal({ type, label, onClose, onComplete }) {
               <img src={BILL_ART[type]} alt="" className="h-16 w-16 shrink-0 object-contain" />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#627673]">Conta de {month}</p>
-                <p className="truncate text-lg font-black">{label}</p>
+                <p className="flex items-center gap-2 text-lg font-black"><span className="truncate">{label}</span><CompanyInfo id={BILL_COMPANY[type]} align="right" /></p>
                 <p className="text-xs text-[#627673]">Vence no fim do mês</p>
               </div>
             </div>

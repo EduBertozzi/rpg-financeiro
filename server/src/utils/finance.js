@@ -104,10 +104,11 @@ function closeMonth(cash, rent, legacyDebt = 0, salary = 0, overdraftRate = OVER
 }
 
 // Balanço do patrimônio: saldo positivo é ativo, saldo negativo é dívida.
-function balanceSheet({ cash, fixedIncome = 0, debentures = 0, stocks = 0, overdraftDebt = 0, loanDebt = 0 }) {
+// `installmentDebt` são as parcelas que ainda vão vencer (compras parceladas).
+function balanceSheet({ cash, fixedIncome = 0, debentures = 0, stocks = 0, overdraftDebt = 0, loanDebt = 0, installmentDebt = 0 }) {
   const c = Number(cash)
   const totalAssets = cents(Math.max(c, 0) + Number(fixedIncome) + Number(debentures) + Number(stocks))
-  const totalDebts = cents(Math.max(-c, 0) + Number(overdraftDebt) + Number(loanDebt))
+  const totalDebts = cents(Math.max(-c, 0) + Number(overdraftDebt) + Number(loanDebt) + Number(installmentDebt))
   return { totalAssets, totalDebts, netWorth: cents(totalAssets - totalDebts) }
 }
 

@@ -6,7 +6,7 @@ import { TOY_BUTTON, TOY_CARD, TOY_GHOST } from '../../components/town/toy'
 import { getAvatarById } from '../../data/avatarTheme'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
-import { linePoints, niceMax, yearGain } from './yearChart'
+import { consequenceNote, endOfMonthSeries, linePoints, niceMax, yearGain } from './yearChart'
 
 const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const brl0 = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
@@ -82,6 +82,7 @@ export default function Finished() {
                 </section>
               </div>
             </div>
+            {summary.timeline?.length > 0 && <Timeline items={summary.timeline} />}
           </>
         )}
       </div>
@@ -113,7 +114,9 @@ function Podium({ players }) {
 }
 
 function MyYear({ summary }) {
-  const { months, roomAverage, breakdown, rank, players } = summary
+  const { breakdown, rank, players } = summary
+  const months = endOfMonthSeries(summary.months)
+  const roomAverage = endOfMonthSeries(summary.roomAverage)
   const X0 = 56, X1 = 600, Y0 = 200, Y1 = 16
   const max = niceMax([...months, ...roomAverage].map((p) => Number(p.netWorth)))
   const box = { x0: X0, x1: X1, y0: Y0, y1: Y1, max }
@@ -193,6 +196,43 @@ function MyYear({ summary }) {
           <dd className="font-bold tabular-nums">{brl0(breakdown.debts)}</dd>
         </div>
       </dl>
+    </section>
+  )
+}
+
+const MONTH_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const brl2 = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+// Linha do tempo das escolhas: cada dilema, o que custou e o que voltou depois.
+function Timeline({ items }) {
+  return (
+    <section className={`${TOY_CARD} mt-5 grid gap-4 p-5`}>
+      <div>
+        <h2 className="font-toy text-xl font-extrabold">Suas escolhas do ano</h2>
+        <p className="text-sm text-[#6B7A62]">Cada dilema e o que ele trouxe nos meses seguintes.</p>
+      </div>
+      <ol className="grid gap-3">
+        {items.map((t) => (
+          <li key={t.turn} className="grid grid-cols-[52px_minmax(0,1fr)] gap-3">
+            <span className="grid h-11 place-items-center rounded-2xl bg-[#FFF3C4] font-toy text-[15px] font-extrabold text-[#B07A0C]">{MONTH_SHORT[t.turn - 1]}</span>
+            <div className="grid gap-1 border-b border-[#EFE6D3] pb-3">
+              <p className="text-[13px] font-extrabold uppercase tracking-[0.12em] text-[#8A9680]">{t.title}</p>
+              <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-[15px] font-semibold">
+                <span>{t.label} · {t.choice}</span>
+                {t.amount > 0 && <span className="tabular-nums text-[#C4283D]">−{brl2(t.amount)}</span>}
+              </p>
+              {t.consequences.map((c) => (
+                <p key={c.label} className="flex flex-wrap items-baseline justify-between gap-x-3 text-[13px] text-[#4A5A42]">
+                  <span>↳ {c.label.replace(/^[^:]+: /, '')} <span className="text-[#8A9680]">({consequenceNote(c)})</span></span>
+                  {c.amount !== 0 && (
+                    <span className={`font-bold tabular-nums ${c.amount > 0 ? 'text-[#2B8C41]' : 'text-[#C4283D]'}`}>{c.amount > 0 ? '+' : '−'}{brl2(Math.abs(c.amount))}</span>
+                  )}
+                </p>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }

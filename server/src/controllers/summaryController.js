@@ -1,6 +1,7 @@
 // Resumo de fim de ano: patrimônio mês a mês (o seu e a média da sala), como
 // está o patrimônio agora, o ranking da sala e as conquistas.
 const prisma = require('../lib/prisma')
+const { choicesTimeline } = require('../utils/dilemmas')
 const { evaluateBadges, monthlyBillsOf } = require('../utils/badges')
 const { latestPrices, breakdownOf, monthsOf, roomAverageOf, rankPlayers } = require('../utils/yearSummary')
 
@@ -20,6 +21,8 @@ exports.getYearSummary = async (req, res) => {
         trades: { take: 1 },
         unlockedSkills: true,
         coupons: true,
+        effects: true,
+        choices: true,
       },
     })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
@@ -35,6 +38,7 @@ exports.getYearSummary = async (req, res) => {
           fixedInvestments: { where: { redeemedAt: null } },
           debentures: { where: { status: 'active' } },
           positions: { include: { asset: true } },
+          effects: { where: { kind: 'installment', appliedAt: null } },
         },
       }),
       prisma.assetPrice.findMany({ where: { roomId: character.roomId, turn: { lte: currentTurn } } }),
@@ -62,6 +66,7 @@ exports.getYearSummary = async (req, res) => {
       breakdown: breakdownOf(character, priceMap),
       players,
       rank,
+      timeline: choicesTimeline(character.choices ?? [], character.effects ?? []),
       badges: evaluateBadges({
         snapshots: character.snapshots ?? [],
         eventLog: character.eventLog ?? [],

@@ -95,7 +95,7 @@ describe('GET /api/v1/characters/:id/year-summary — resposta', () => {
     setup()
     const res = await summary()
     expect(res.status).toBe(200)
-    expect(Object.keys(res.body).sort()).toEqual(['badges', 'breakdown', 'months', 'players', 'rank', 'roomAverage'])
+    expect(Object.keys(res.body).sort()).toEqual(['badges', 'breakdown', 'months', 'players', 'rank', 'roomAverage', 'timeline'])
   })
 
   it('carrega o personagem com tudo que as conquistas usam', async () => {
@@ -103,7 +103,7 @@ describe('GET /api/v1/characters/:id/year-summary — resposta', () => {
     await summary()
     const { include } = prismaMock.character.findUnique.mock.calls[0][0]
     expect(Object.keys(include).sort()).toEqual([
-      'coupons', 'debentures', 'eventLog', 'fixedInvestments', 'positions', 'room', 'snapshots', 'trades', 'unlockedSkills',
+      'choices', 'coupons', 'debentures', 'effects', 'eventLog', 'fixedInvestments', 'positions', 'room', 'snapshots', 'trades', 'unlockedSkills',
     ])
     expect(include.fixedInvestments).toBe(true) // inclusive as resgatadas
   })
@@ -285,5 +285,34 @@ describe('GET /api/v1/characters/:id/year-summary — conquistas', () => {
   it('faltou uma conta: sem Contas em dia', async () => {
     setup(makeSelf({ eventLog: paidAll([1, 2, 3]).slice(1) }))
     expect(earned(await summary())).not.toContain('bills_on_time')
+  })
+})
+
+describe('GET /api/v1/characters/:id/year-summary — linha do tempo das escolhas', () => {
+  it('lista os dilemas com as consequências', async () => {
+    setup(makeSelf({
+      choices: [{ kind: 'dilemma', turn: 2, option: 0, amount: 500 }, { kind: 'leisure', turn: 2, option: 1, amount: 300 }],
+      effects: [{ sourceTurn: 2, turn: 5, kind: 'cash', amount: 537, label: 'Empréstimo: Devolvido', appliedAt: new Date() }],
+    }))
+    const res = await summary()
+
+    expect(res.body.timeline).toEqual([
+      expect.objectContaining({
+        turn: 2, title: 'Empréstimo para o amigo', label: 'A', amount: 500,
+        consequences: [{ label: 'Empréstimo: Devolvido', turn: 5, amount: 537, count: 1, applied: 1 }],
+      }),
+    ])
+  })
+
+  it('sem escolhas, a linha do tempo é vazia', async () => {
+    setup()
+    const res = await summary()
+    expect(res.body.timeline).toEqual([])
+  })
+
+  it('parcelas que faltam entram como dívida no patrimônio atual', async () => {
+    setup(makeSelf({ cash: 2000, effects: [{ kind: 'installment', amount: -335.2, appliedAt: null, sourceTurn: 4, turn: 13, label: 'Parcela: Máquina de lavar (12/12)' }] }))
+    const res = await summary()
+    expect(res.body.breakdown.debts).toBe(335.2)
   })
 })

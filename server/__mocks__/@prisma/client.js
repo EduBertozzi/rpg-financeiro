@@ -96,6 +96,17 @@ const prismaMock = {
     update: jest.fn(),
     upsert: jest.fn(),
   },
+  characterChoice: {
+    findMany: jest.fn(),
+    findUnique: jest.fn(),
+    findFirst: jest.fn(),
+    create: jest.fn(),
+  },
+  scheduledEffect: {
+    findMany: jest.fn(),
+    createMany: jest.fn(),
+    updateMany: jest.fn(),
+  },
   company: {
     findMany: jest.fn(),
     findUnique: jest.fn(),

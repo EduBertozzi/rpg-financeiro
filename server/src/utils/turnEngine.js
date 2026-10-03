@@ -2,194 +2,69 @@ const prisma = require('../lib/prisma')
 const { monthlyReturn, debentureReturn, nextStockPrice, closeMonth, balanceSheet, cents, SALARY } = require('./finance')
 const { perksOf, rentAmount, eventImpact, savingsBonus, percentLabel } = require('./skills')
 const { giftIncome, giftIncomeEntry, giftEventImpact } = require('./gifts')
+const { eventsFor } = require('./events')
+const { dilemmaFor, summarizeEffects, installmentDebt } = require('./dilemmas')
 
-const EVENTS = [
-  { title: 'Resistência Queimada', description: 'A resistência do seu chuveiro queimou.', cashImpact: -200, category: 'daily', repair: true },
-  { title: 'Emergência Veterinária', description: 'Seu pet passou mal de madrugada.', cashImpact: -600, category: 'daily' },
-  { title: 'Dor de Dente Noturna', description: 'Tratamento de canal de emergência.', cashImpact: -600, category: 'daily' },
-  { title: 'Infiltração Grave', description: 'Um cano estourou na parede.', cashImpact: -3500, category: 'daily', repair: true },
-  { title: 'Sorteio de Ingressos', description: 'Você ganhou ingressos VIP para um festival!', cashImpact: -30, category: 'leisure' },
-  { title: 'Intoxicação Alimentar', description: 'A comida do rolê não caiu bem.', cashImpact: -150, category: 'leisure' },
-  { title: 'Promoção Relâmpago', description: 'Pacote de viagem imperdível de última hora!', cashImpact: -300, category: 'leisure' },
-  { title: 'Freelance Inesperado', description: 'Um conhecido te indicou para um freela rápido!', cashImpact: 800, category: 'positive' },
-  { title: 'Bônus no Trabalho', description: 'Seu desempenho foi reconhecido esse mês!', cashImpact: 1500, category: 'positive' },
-  { title: 'Nenhum imprevisto', description: 'Mês tranquilo, sem surpresas.', cashImpact: 0, category: 'none' },
-  { title: 'Nenhum imprevisto', description: 'Mês tranquilo, sem surpresas.', cashImpact: 0, category: 'none' },
-  { title: 'Nenhum imprevisto', description: 'Mês tranquilo, sem surpresas.', cashImpact: 0, category: 'none' },
-]
-
-const DILEMMAS = [
-  null, // turno 0
-  {     // turno 1 - Janeiro
-    title: 'Aniversário do seu amigo',
-    description: 'É aniversário do seu melhor amigo e você precisa comprar um presente e rachar a conta da comemoração.',
-    options: [
-      { label: 'A', text: 'Participar da comemoração (- R$ 100)', effectType: 'immediate_cash', effectValue: -100, probability: 1.0 }
-    ]
-  },
-  {     // turno 2 - Fevereiro
-    title: 'Jantar com amigos',
-    description: 'A galera marcou um jantar naquele restaurante novo que acabou de abrir na cidade.',
-    options: [
-      { label: 'A', text: 'Ir ao jantar (- R$ 150)', effectType: 'immediate_cash', effectValue: -150, probability: 1.0 }
-    ]
-  },
-  {     // turno 3 - Março
-    title: 'Carnaval',
-    description: 'Chegou o Carnaval! Bloquinhos, fantasias e muita curtição.',
-    options: [
-      { label: 'A', text: 'Pular carnaval (- R$ 300)', effectType: 'immediate_cash', effectValue: -300, probability: 1.0 }
-    ]
-  },
-  {     // turno 4 - Abril
-    title: 'Páscoa',
-    description: 'Época de comprar ovos de Páscoa e chocolates para a família.',
-    options: [
-      { label: 'A', text: 'Comprar chocolates (- R$ 100)', effectType: 'immediate_cash', effectValue: -100, probability: 1.0 }
-    ]
-  },
-  {     // turno 5 - Maio
-    title: 'Festa da cidade',
-    description: 'A cidade está de aniversário e tem shows e barracas de comida na praça principal.',
-    options: [
-      { label: 'A', text: 'Aproveitar a festa (- R$ 80)', effectType: 'immediate_cash', effectValue: -80, probability: 1.0 }
-    ]
-  },
-  {     // turno 6 - Junho
-    title: 'Festa junina do bairro',
-    description: 'Quentão, pipoca e quadrilha! A festa junina do seu bairro já começou.',
-    options: [
-      { label: 'A', text: 'Comer as comidas típicas (- R$ 50)', effectType: 'immediate_cash', effectValue: -50, probability: 1.0 }
-    ]
-  },
-  {     // turno 7 - Julho
-    title: 'Férias',
-    description: 'Mês de férias! Você planejou uma viagem para descansar.',
-    options: [
-      { label: 'A', text: 'Viajar (- R$ 1.500)', effectType: 'immediate_cash', effectValue: -1500, probability: 1.0 }
-    ]
-  },
-  {     // turno 8 - Agosto
-    title: 'Show do Michael Jackson',
-    description: 'Um cover oficial incrível (ou um holograma?) do Rei do Pop vai se apresentar perto daqui.',
-    options: [
-      { label: 'A', text: 'Comprar ingresso (- R$ 400)', effectType: 'immediate_cash', effectValue: -400, probability: 1.0 }
-    ]
-  },
-  {     // turno 9 - Setembro
-    title: 'Hacktown',
-    description: 'O maior festival de inovação, tecnologia e criatividade de Santa Rita do Sapucaí!',
-    options: [
-      { label: 'A', text: 'Ir ao Hacktown (- R$ 600)', effectType: 'immediate_cash', effectValue: -600, probability: 1.0 }
-    ]
-  },
-  {     // turno 10 - Outubro
-    title: 'Rock in Rio',
-    description: 'Festival de música gigante! A viagem e os ingressos não são baratos.',
-    options: [
-      { label: 'A', text: 'Ir ao Rock in Rio (- R$ 800)', effectType: 'immediate_cash', effectValue: -800, probability: 1.0 }
-    ]
-  },
-  {     // turno 11 - Novembro
-    title: 'Black Friday',
-    description: 'Muitas promoções! Você acabou não resistindo e trocou de celular ou TV.',
-    options: [
-      { label: 'A', text: 'Aproveitar promoções (- R$ 1.000)', effectType: 'immediate_cash', effectValue: -1000, probability: 1.0 }
-    ]
-  },
-  {     // turno 12 - Dezembro
-    title: 'Natal e Ano Novo',
-    description: 'Festas de fim de ano, presentes, ceia e viagem de réveillon.',
-    options: [
-      { label: 'A', text: 'Comemorar festas (- R$ 500)', effectType: 'immediate_cash', effectValue: -500, probability: 1.0 }
-    ]
-  },
-]
-
-function pickEvent() {
-  return EVENTS[Math.floor(Math.random() * EVENTS.length)]
-}
-
-async function applyFixedCosts(character, turn, perks = perksOf()) {
-  // foodCost, utilitiesCost e transportCost agora são pagos manualmente pelo
-  // jogador durante o mês (Mercadinho, Água e Luz, Internet e Celular — ver
-  // billController.js); só o aluguel continua sendo descontado automaticamente.
-  // Antes dele, quem fechou o mês no negativo paga os juros do cheque especial
-  // (na taxa do personagem) e entra o salário do mês novo, já com os bônus e
-  // as rendas extras das habilidades.
-  const totalCosts = rentAmount(character.housingCost, perks)
-  // renda fixa do dom (Desenrolado: freela de R$ 200) entra junto com o salário
-  const income = cents(SALARY + perks.salaryBonus + perks.extraIncome + giftIncome(character.gift))
-  const giftExtra = giftIncomeEntry(character.gift)
-  const month = closeMonth(character.cash, totalCosts, character.overdraftDebt, income, perks.overdraftRate)
+// Virada do mês na conta. Na ordem: juros do cheque especial sobre o saldo com
+// que o mês fechou, salário do mês novo (com os bônus e as rendas extras das
+// habilidades e do dom), consequências de dilemas marcadas para este mês
+// (parcelas, devoluções, promoção, demissão) e aluguel.
+// Na última virada (fechamento de dezembro) só entram os juros: não existe mês
+// novo para receber salário nem pagar aluguel.
+// foodCost, utilitiesCost e transportCost são pagos pelo jogador durante o mês
+// (Mercadinho, Água e Luz, Internet e Celular — ver billController.js).
+async function applyFixedCosts(character, turn, perks = perksOf(), { effects = [], final = false } = {}) {
+  const fx = summarizeEffects(effects)
+  const rent = final || fx.rentWaived ? 0 : rentAmount(character.housingCost, perks)
+  const paidSalary = !final && !fx.skipSalary
+  const salary = paidSalary ? cents(SALARY + perks.salaryBonus + fx.raise) : 0
+  // renda fixa do dom (Desenrolado: freela de R$ 220) entra junto com o salário
+  const extras = final ? 0 : cents(perks.extraIncome + giftIncome(character.gift))
+  const income = cents(salary + extras)
+  const giftExtra = final ? null : giftIncomeEntry(character.gift)
+  const month = closeMonth(character.cash, rent, character.overdraftDebt, cents(income + fx.cash), perks.overdraftRate)
 
   await prisma.character.update({
     where: { id: character.id },
     data: { cash: month.closing, overdraftDebt: 0, isBankrupt: month.inOverdraft }
   })
 
+  const log = (cashImpact, description) =>
+    prisma.characterEventLog.create({ data: { characterId: character.id, turn, cashImpact, description } })
+
   if (month.interest > 0) {
-    await prisma.characterEventLog.create({
-      data: {
-        characterId: character.id,
-        turn,
-        cashImpact: -month.interest,
-        description: `Cheque especial: Juros de ${percentLabel(perks.overdraftRate)} sobre R$ ${(-month.opening).toFixed(2)} (-R$ ${month.interest.toFixed(2)})`
-      }
-    })
+    await log(-month.interest, `Cheque especial: Juros de ${percentLabel(perks.overdraftRate)} sobre R$ ${(-month.opening).toFixed(2)} (-R$ ${month.interest.toFixed(2)})`)
   }
 
-  await prisma.characterEventLog.create({
-    data: {
-      characterId: character.id,
-      turn,
-      cashImpact: SALARY,
-      description: `Salário: Depósito do mês (+R$ ${SALARY.toFixed(2)})`
+  if (paidSalary) {
+    await log(SALARY, `Salário: Depósito do mês (+R$ ${SALARY.toFixed(2)})`)
+    // uma linha no extrato para cada bônus de salário das habilidades
+    for (const bonus of perks.salaryBonuses) {
+      await log(bonus.amount, `Bônus salarial: ${bonus.skill} (+R$ ${bonus.amount.toFixed(2)})`)
     }
-  })
-
-  // uma linha no extrato para cada bônus de salário e renda extra das habilidades
-  for (const bonus of perks.salaryBonuses) {
-    await prisma.characterEventLog.create({
-      data: {
-        characterId: character.id,
-        turn,
-        cashImpact: bonus.amount,
-        description: `Bônus salarial: ${bonus.skill} (+R$ ${bonus.amount.toFixed(2)})`
-      }
-    })
   }
-  for (const extra of perks.incomes) {
-    await prisma.characterEventLog.create({
-      data: {
-        characterId: character.id,
-        turn,
-        cashImpact: extra.amount,
-        description: `${extra.label}: ${extra.skill} (+R$ ${extra.amount.toFixed(2)})`
-      }
-    })
+  if (!final) {
+    for (const extra of perks.incomes) {
+      await log(extra.amount, `${extra.label}: ${extra.skill} (+R$ ${extra.amount.toFixed(2)})`)
+    }
   }
   if (giftExtra) {
-    await prisma.characterEventLog.create({
-      data: {
-        characterId: character.id,
-        turn,
-        cashImpact: giftExtra.amount,
-        description: `${giftExtra.label}: ${giftExtra.skill} (+R$ ${giftExtra.amount.toFixed(2)})`
-      }
-    })
+    await log(giftExtra.amount, `${giftExtra.label}: ${giftExtra.skill} (+R$ ${giftExtra.amount.toFixed(2)})`)
   }
 
-  await prisma.characterEventLog.create({
-    data: {
-      characterId: character.id,
-      turn,
-      cashImpact: -totalCosts,
-      description: `Aluguel: Casa — Pago (-R$ ${totalCosts})${perks.rentDiscount ? ` com ${percentLabel(perks.rentDiscount)} de desconto` : ''}`
-    }
-  })
+  // consequências dos dilemas, cada uma na sua linha
+  for (const e of effects) {
+    if (e.kind === 'salary_raise' && !paidSalary) continue
+    const value = ['cash', 'installment', 'salary_raise'].includes(e.kind) ? Number(e.amount ?? 0) : 0
+    const suffix = value ? ` (${value > 0 ? '+' : '-'}R$ ${Math.abs(value).toFixed(2)})` : ''
+    await log(value, `${e.label}${suffix}`)
+  }
 
-  return { totalCosts: totalCosts + month.interest, interest: month.interest, salary: income, newCash: month.closing }
+  if (!final && !fx.rentWaived) {
+    await log(-rent, `Aluguel: Casa — Pago (-R$ ${rent})${perks.rentDiscount ? ` com ${percentLabel(perks.rentDiscount)} de desconto` : ''}`)
+  }
+
+  return { totalCosts: rent + month.interest, interest: month.interest, salary: income, effectsCash: fx.cash, newCash: month.closing }
 }
 
 async function applyFixedIncomeReturns(character, turn) {
@@ -234,32 +109,38 @@ async function applySavingsBonus(character, turn, balance, perks) {
   return bonus
 }
 
-async function applyEvent(character, turn, perks = perksOf()) {
-  const event = pickEvent()
-  // imprevistos de casa custam menos com Resolução de Problemas
-  let cashImpact = eventImpact(event, perks)
-  const repaired = cashImpact !== event.cashImpact
+// Imprevistos do calendário para a virada deste mês (ver events.js).
+async function applyEvents(character, turn, perks = perksOf()) {
+  const events = eventsFor(turn)
+  let total = 0
 
-  // dom Desenrolado recebe 50% a mais em eventos positivos
-  cashImpact = giftEventImpact(cashImpact, character.gift)
+  for (const event of events) {
+    // imprevistos de casa custam menos com Resolução de Problemas
+    let cashImpact = eventImpact(event, perks)
+    const repaired = cashImpact !== event.cashImpact
 
-  if (cashImpact !== 0) {
-    await prisma.character.update({
-      where: { id: character.id },
-      data: { cash: { increment: cashImpact } }
+    // dom Desenrolado recebe 50% a mais em eventos positivos (13º não conta)
+    if (event.category !== 'salary') cashImpact = giftEventImpact(cashImpact, character.gift)
+
+    if (cashImpact !== 0) {
+      await prisma.character.update({
+        where: { id: character.id },
+        data: { cash: { increment: cashImpact } }
+      })
+    }
+
+    await prisma.characterEventLog.create({
+      data: {
+        characterId: character.id,
+        turn,
+        cashImpact,
+        description: `${event.title}: ${event.description}${repaired ? ` Você mesmo resolveu e pagou só ${percentLabel(1 - perks.repairDiscount)} do conserto.` : ''}`
+      }
     })
+    total = cents(total + cashImpact)
   }
 
-  await prisma.characterEventLog.create({
-    data: {
-      characterId: character.id,
-      turn,
-      cashImpact,
-      description: `${event.title}: ${event.description}${repaired ? ` Você mesmo resolveu e pagou só ${percentLabel(1 - perks.repairDiscount)} do conserto.` : ''}`
-    }
-  })
-
-  return { event, cashImpact }
+  return { events, cashImpact: total }
 }
 
 async function generateAssetPrices(roomId, turn) {
@@ -334,7 +215,8 @@ async function saveSnapshot(character, turn) {
     include: {
       fixedInvestments: { where: { redeemedAt: null } },
       positions: true,
-      debentures: { where: { status: 'active' } }
+      debentures: { where: { status: 'active' } },
+      effects: { where: { kind: 'installment', appliedAt: null } }
     }
   })
 
@@ -342,6 +224,7 @@ async function saveSnapshot(character, turn) {
   const debentures = fresh.debentures.reduce((sum, d) => sum + Number(d.amount), 0)
   const { totalAssets, totalDebts, netWorth } = balanceSheet({
     cash: fresh.cash, fixedIncome, debentures, overdraftDebt: fresh.overdraftDebt, loanDebt: fresh.loanDebt,
+    installmentDebt: installmentDebt(fresh.effects ?? []),
   })
 
   await prisma.financialSnapshot.upsert({
@@ -361,6 +244,8 @@ async function processTurn(roomId) {
 
   if (!room || room.status !== 'active') throw new Error('Sala inválida ou não ativa')
 
+  // a partida acaba no fechamento do último mês (dezembro, com maxTurns = 12)
+  const final = room.currentTurn >= room.maxTurns
   const nextTurn = room.currentTurn + 1
   const results = []
 
@@ -368,23 +253,35 @@ async function processTurn(roomId) {
 
   for (const character of room.characters) {
     const perks = perksOf(character.unlockedSkills)
-    const costs = await applyFixedCosts(character, nextTurn, perks)
+    // consequências de dilemas marcadas para esta virada (na última, as
+    // parcelas que sobram ficam como dívida)
+    const effects = final
+      ? []
+      : (await prisma.scheduledEffect.findMany({ where: { characterId: character.id, turn: nextTurn, appliedAt: null } })) ?? []
+    const costs = await applyFixedCosts(character, nextTurn, perks, { effects, final })
+    if (effects.length) {
+      await prisma.scheduledEffect.updateMany({
+        where: { id: { in: effects.map((e) => e.id) } },
+        data: { appliedAt: new Date() }
+      })
+    }
     const { totalReturns: returns, balance } = await applyFixedIncomeReturns(character, nextTurn)
     const bonus = await applySavingsBonus(character, nextTurn, balance, perks)
-    const eventResult = await applyEvent(character, nextTurn, perks)
+    const eventResult = final ? { events: [], cashImpact: 0 } : await applyEvents(character, nextTurn, perks)
     await checkDebentures(character, nextTurn)
     const snapshot = await saveSnapshot(character, nextTurn)
 
     results.push({
       characterId: character.id,
       characterName: character.name,
-      cashDelta: costs.salary - costs.totalCosts + returns + bonus + eventResult.cashImpact,
-      event: eventResult.event,
+      cashDelta: cents(costs.salary - costs.totalCosts + costs.effectsCash + returns + bonus + eventResult.cashImpact),
+      event: eventResult.events[0] ?? null,
+      events: eventResult.events,
       netWorth: snapshot.netWorth
     })
   }
 
-  const isFinished = nextTurn >= room.maxTurns
+  const isFinished = final
 
   await prisma.room.update({
     where: { id: roomId },
@@ -398,7 +295,9 @@ async function processTurn(roomId) {
 
   if (isFinished) await buildLeaderboard(roomId)
 
-  const dilemma = DILEMMAS[nextTurn] ?? null
+  // o cliente abre o dilema do mês novo assim que o mês vira
+  const next = isFinished ? null : dilemmaFor(nextTurn)
+  const dilemma = next ? { turn: nextTurn, title: next.title } : null
 
   return { turn: nextTurn, results, dilemma, isFinished }
 }
@@ -428,4 +327,4 @@ async function buildLeaderboard(roomId) {
   }
 }
 
-module.exports = { processTurn, DILEMMAS, EVENTS }
+module.exports = { processTurn }

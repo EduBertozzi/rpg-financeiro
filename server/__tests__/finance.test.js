@@ -450,6 +450,16 @@ describe('salário na virada do mês', () => {
 })
 
 describe('balanceSheet', () => {
+  it('parcelas que faltam pagar são dívida', () => {
+    expect(balanceSheet({ cash: 5000, installmentDebt: 1005.6 }))
+      .toEqual({ totalAssets: 5000, totalDebts: 1005.6, netWorth: 3994.4 })
+  })
+
+  it('parcelas somam com o cheque especial', () => {
+    expect(balanceSheet({ cash: -500, installmentDebt: '335.20' }))
+      .toEqual({ totalAssets: 0, totalDebts: 835.2, netWorth: -835.2 })
+  })
+
   it('saldo positivo é ativo', () => {
     expect(balanceSheet({ cash: 1000, fixedIncome: 500, debentures: 200 }))
       .toEqual({ totalAssets: 1700, totalDebts: 0, netWorth: 1700 })

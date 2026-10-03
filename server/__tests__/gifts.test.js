@@ -4,7 +4,7 @@ const {
   giftOf, isValidGift, startingCosts, startingSkillPoints,
   giftIncome, giftIncomeEntry, positiveEventMultiplier, giftEventImpact,
 } = require('../src/utils/gifts')
-const { EVENTS } = require('../src/utils/turnEngine')
+const { expectedPositiveEvents, WELCOME_GIFT, EVENT_CALENDAR } = require('../src/utils/events')
 
 const NEUTRAL = [null, undefined, '', 'invalido', 'FRUGAL', 'toString', '__proto__', 'constructor', 42]
 
@@ -28,8 +28,8 @@ describe('tabela de dons', () => {
     expect(GIFTS.frugal.costDiscount).toBe(0.10)
   })
 
-  it('agile: freela de R$ 200 e +50% nos eventos positivos', () => {
-    expect(GIFTS.agile.monthlyIncome).toEqual({ label: 'Freela', amount: 200 })
+  it('agile: freela de R$ 220 e +50% nos eventos positivos', () => {
+    expect(GIFTS.agile.monthlyIncome).toEqual({ label: 'Freela', amount: 220 })
     expect(GIFTS.agile.positiveEventBonus).toBe(0.5)
   })
 
@@ -114,8 +114,8 @@ describe('startingSkillPoints', () => {
 // ─── renda do dom ─────────────────────────────────────────────────────────────
 
 describe('giftIncome / giftIncomeEntry', () => {
-  it('agile: R$ 200 por mês', () => {
-    expect(giftIncome('agile')).toBe(200)
+  it('agile: R$ 220 por mês', () => {
+    expect(giftIncome('agile')).toBe(220)
   })
 
   it.each(['frugal', 'smart', ...NEUTRAL])('%p: 0', (gift) => {
@@ -123,7 +123,7 @@ describe('giftIncome / giftIncomeEntry', () => {
   })
 
   it('agile: linha do extrato no formato das rendas das habilidades', () => {
-    expect(giftIncomeEntry('agile')).toEqual({ label: 'Freela', skill: 'Desenrolado', amount: 200 })
+    expect(giftIncomeEntry('agile')).toEqual({ label: 'Freela', skill: 'Desenrolado', amount: 220 })
   })
 
   it.each(['frugal', 'smart', ...NEUTRAL])('%p: sem linha', (gift) => {
@@ -180,9 +180,8 @@ describe('balanceamento anual dos dons', () => {
     expect(value).toBeLessThanOrEqual(TARGET * 1.1)
   }
 
-  // valor esperado por mês dos eventos positivos (cada evento tem 1/N de chance)
-  const positives = EVENTS.filter((e) => e.category === 'positive')
-  const expectedPositivePerMonth = positives.reduce((sum, e) => sum + e.cashImpact, 0) / EVENTS.length
+  // valor esperado dos eventos positivos do ano: calendário + presente de boas-vindas
+  const expectedPositiveYear = expectedPositiveEvents() + WELCOME_GIFT.cashImpact
 
   const yearlyValue = {
     frugal: () => {
@@ -192,12 +191,17 @@ describe('balanceamento anual dos dons', () => {
     },
     agile: () =>
       giftIncome('agile') * MONTHS +
-      (positiveEventMultiplier('agile') - 1) * expectedPositivePerMonth * MONTHS,
+      (positiveEventMultiplier('agile') - 1) * expectedPositiveYear,
   }
 
-  it('o modelo usa os eventos positivos de R$ 800 e R$ 1.500 em 12 sorteáveis', () => {
-    expect(positives.map((e) => e.cashImpact)).toEqual([800, 1500])
-    expect(EVENTS).toHaveLength(12)
+  it('o modelo usa R$ 1.392 esperados do calendário + R$ 500 de boas-vindas', () => {
+    expect(expectedPositiveEvents()).toBe(1392)
+    expect(expectedPositiveYear).toBe(1892)
+  })
+
+  it('o 13º não entra no bônus do Desenrolado (é salário, não sorte)', () => {
+    const thirteenth = EVENT_CALENDAR[12].find((e) => e.title === '13º salário')
+    expect(thirteenth.category).toBe('salary')
   })
 
   it('frugal vale R$ 3.600 por ano (R$ 300 × 12)', () => {
@@ -205,8 +209,8 @@ describe('balanceamento anual dos dons', () => {
     within10(yearlyValue.frugal())
   })
 
-  it('agile vale ≈ R$ 3.550 por ano (200 × 12 + 50% de (800+1500)/12 × 12)', () => {
-    expect(yearlyValue.agile()).toBeCloseTo(2400 + 1150, 6)
+  it('agile vale ≈ R$ 3.586 por ano (220 × 12 + 50% de R$ 1.892)', () => {
+    expect(yearlyValue.agile()).toBeCloseTo(2640 + 946, 6)
     within10(yearlyValue.agile())
   })
 
@@ -228,7 +232,8 @@ describe('balanceamento anual dos dons', () => {
 
   it('os valores antigos estavam desbalanceados (frugal 15% ≈ 5.400, agile 20% ≈ 460)', () => {
     const oldFrugal = 3000 * 0.15 * MONTHS
-    const oldAgile = 0.2 * expectedPositivePerMonth * MONTHS
+    // eventos antigos: positivos de R$ 800 e R$ 1.500 entre 12 sorteáveis
+    const oldAgile = 0.2 * ((800 + 1500) / 12) * MONTHS
     expect(oldFrugal).toBeCloseTo(5400, 6)
     expect(oldAgile).toBeCloseTo(460, 6)
     expect(oldFrugal).toBeGreaterThan(TARGET * 1.1)

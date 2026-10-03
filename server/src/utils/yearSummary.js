@@ -1,5 +1,6 @@
 // Contas do resumo de fim de ano, em funções puras (sem banco de dados).
 const { cents, balanceSheet } = require('./finance')
+const { installmentDebt } = require('./dilemmas')
 
 // Último preço de cada ação: { [assetId]: price }. `prices` são linhas de
 // AssetPrice da sala (só até o mês atual); vale a do mês mais recente.
@@ -40,6 +41,7 @@ function breakdownOf(character, priceMap = {}) {
   const { totalDebts, netWorth } = balanceSheet({
     cash: character.cash, fixedIncome, debentures, stocks,
     overdraftDebt: character.overdraftDebt ?? 0, loanDebt: character.loanDebt ?? 0,
+    installmentDebt: installmentDebt(character.effects ?? []),
   })
   return { cash: cents(Math.max(Number(character.cash), 0)), fixedIncome, debentures, stocks, debts: totalDebts, netWorth }
 }

@@ -27,3 +27,28 @@ export function yearGain(series) {
   if (!series.length) return 0
   return Number(series[series.length - 1].netWorth) - Number(series[0].netWorth)
 }
+
+// O snapshot do mês N é tirado na virada para N (ou seja, no fim de N-1).
+// O gráfico mostra o patrimônio no fim de cada mês: turn 2 → fim de janeiro,
+// turn 13 → fim de dezembro.
+export function endOfMonthSeries(series = []) {
+  return series
+    .map((p) => ({ ...p, turn: Number(p.turn) - 1 }))
+    .filter((p) => p.turn >= 1 && p.turn <= 12)
+}
+
+const MONTH_NAMES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+
+// "em junho" para a virada que abre o mês (turn 6 → junho).
+export const monthName = (turn) => MONTH_NAMES[Number(turn) - 1] ?? ''
+
+// Texto curto de uma consequência na linha do tempo do fim de ano.
+// Parcelas: "8 de 11 pagas"; o resto: o valor que já caiu (ou "ainda não chegou").
+export function consequenceNote(c) {
+  if (c.count > 1) {
+    const left = c.count - c.applied
+    return left > 0 ? `${c.applied} de ${c.count} pagas, ${left} ficam como dívida` : `${c.applied} de ${c.count} pagas`
+  }
+  if (!c.applied) return 'ainda não chegou'
+  return `em ${monthName(c.turn)}`
+}

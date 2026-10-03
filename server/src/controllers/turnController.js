@@ -1,8 +1,11 @@
-const { processTurn, DILEMMAS } = require('../utils/turnEngine')
+const { processTurn } = require('../utils/turnEngine')
 const prisma = require('../lib/prisma')
-const { perksOf, dilemmaImpact, percentLabel } = require('../utils/skills')
+const { perksOf, percentLabel } = require('../utils/skills')
+const { cents } = require('../utils/finance')
+const { dilemmaFor, publicDilemma, resolveDilemma, LABELS } = require('../utils/dilemmas')
+const { leisureFor, leisurePrice } = require('../utils/leisure')
 
-const brl = (n) => Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+const brl = (n) => Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 exports.nextTurn = async (req, res) => {
   try {
@@ -17,28 +20,65 @@ exports.nextTurn = async (req, res) => {
   }
 }
 
+// Personagem do dono da requisição, com sala e habilidades. Responde o erro e
+// devolve null quando não pode.
+async function ownCharacter(req, res) {
+  const character = await prisma.character.findUnique({
+    where: { id: req.params.id },
+    include: { room: true, unlockedSkills: { include: { skillNode: true } } }
+  })
+  if (!character) {
+    res.status(404).json({ error: 'Personagem não encontrado' })
+    return null
+  }
+  if (character.userId !== req.user.id) {
+    res.status(403).json({ error: 'Sem permissão' })
+    return null
+  }
+  return character
+}
+
+// Só dá para escolher no mês que está sendo jogado.
+function checkCurrentTurn(character, turn, res) {
+  if (character.room?.status !== 'active' || character.room.currentTurn !== turn) {
+    res.status(400).json({ error: 'Esse mês não está aberto' })
+    return false
+  }
+  return true
+}
+
+// escolhas de dilema já feitas: { [turn]: optionIndex }
+async function dilemmaChoicesOf(characterId) {
+  const rows = await prisma.characterChoice.findMany({ where: { characterId, kind: 'dilemma' } })
+  return Object.fromEntries((rows ?? []).map((c) => [c.turn, c.option]))
+}
+
+// ─── Dilemas ──────────────────────────────────────────────────────────────────
+
 exports.getDilemma = async (req, res) => {
   try {
     const turn = parseInt(req.params.turn)
-    const dilemma = DILEMMAS[turn] ?? null
-    if (!dilemma) return res.json({ dilemma: null })
+    if (!dilemmaFor(turn)) return res.json({ dilemma: null })
 
-    const answered = await prisma.characterEventLog.findFirst({
-      where: {
-        characterId: req.params.id,
-        turn,
-        description: { startsWith: 'Dilema' }
-      }
+    const character = await ownCharacter(req, res)
+    if (!character) return
+
+    const ctx = {
+      perks: perksOf(character.unlockedSkills),
+      choices: await dilemmaChoicesOf(character.id),
+      housingCost: character.housingCost,
+    }
+    const answered = await prisma.characterChoice.findUnique({
+      where: { characterId_turn_kind: { characterId: character.id, turn, kind: 'dilemma' } }
     })
+    const dilemma = publicDilemma(turn, ctx)
+    const option = answered ? dilemmaFor(turn).options[answered.option] : null
 
     res.json({
       dilemma,
       alreadyAnswered: !!answered,
       previousResult: answered
-        ? {
-            result: answered.description.replace(/^Dilema ".*?" — Opção [^:]+: /, ''),
-            cashImpact: Number(answered.cashImpact ?? 0)
-          }
+        ? { label: LABELS[answered.option], text: option.text, result: option.result, cashImpact: -Number(answered.amount) }
         : null
     })
   } catch (err) {
@@ -48,93 +88,122 @@ exports.getDilemma = async (req, res) => {
 
 exports.chooseDilemma = async (req, res) => {
   try {
-    const { optionIndex } = req.body
-    const { id: characterId, dilemmaId } = req.params
-    const turn = parseInt(dilemmaId)
-
-    // verifica se já respondeu esse dilema
-    const alreadyAnswered = await prisma.characterEventLog.findFirst({
-      where: {
-        characterId,
-        turn,
-        description: { startsWith: 'Dilema' }
-      }
-    })
-    if (alreadyAnswered) return res.status(400).json({ error: 'Dilema já respondido' })
-
-    const dilemma = DILEMMAS[turn]
+    const turn = parseInt(req.params.dilemmaId)
+    const optionIndex = Number(req.body?.optionIndex)
+    const dilemma = dilemmaFor(turn)
     if (!dilemma) return res.status(404).json({ error: 'Dilema não encontrado' })
+    if (!Number.isInteger(optionIndex) || !dilemma.options[optionIndex]) return res.status(400).json({ error: 'Opção inválida' })
 
-    const option = dilemma.options[optionIndex]
-    if (!option) return res.status(400).json({ error: 'Opção inválida' })
+    const character = await ownCharacter(req, res)
+    if (!character) return
+    if (!checkCurrentTurn(character, turn, res)) return
 
-    const character = await prisma.character.findUnique({
-      where: { id: characterId },
-      include: { unlockedSkills: { include: { skillNode: true } } }
+    const already = await prisma.characterChoice.findUnique({
+      where: { characterId_turn_kind: { characterId: character.id, turn, kind: 'dilemma' } }
     })
-    if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
-    if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+    if (already) return res.status(400).json({ error: 'Dilema já respondido' })
 
-    // Trabalho em Equipe: o que o dilema custa fica 30% mais barato
     const perks = perksOf(character.unlockedSkills)
-    const discountNote = (value) =>
-      value < 0 && perks.leisureDiscount ? ` (${percentLabel(perks.leisureDiscount)} a menos com Trabalho em Equipe)` : ''
+    const outcome = resolveDilemma(turn, optionIndex, {
+      perks,
+      choices: await dilemmaChoicesOf(character.id),
+      housingCost: character.housingCost,
+    })
+    const discountNote = outcome.discount > 0 ? ` (${percentLabel(perks.leisureDiscount)} a menos com Trabalho em Equipe)` : ''
+    const paid = outcome.cash < 0 ? ` Você pagou R$ ${brl(-outcome.cash)}${discountNote}.` : ''
 
-    let cashImpact = 0
-    let resultMessage = option.text
-
-    if (option.effectType === 'immediate_cash') {
-      cashImpact = dilemmaImpact(option.effectValue, perks)
-      await prisma.character.update({
-        where: { id: characterId },
-        data: { cash: { increment: cashImpact } }
+    await prisma.$transaction(async (tx) => {
+      await tx.characterChoice.create({
+        data: { characterId: character.id, turn, kind: 'dilemma', option: optionIndex, amount: -outcome.cash }
       })
-      resultMessage = cashImpact > 0 ? `Você recebeu R$ ${cashImpact}!` : `Você pagou R$ ${Math.abs(cashImpact)}${discountNote(cashImpact)}.`
-    }
-
-    if (option.effectType === 'inheritance') {
-      cashImpact = option.effectValue
-      await prisma.character.update({
-        where: { id: characterId },
-        data: { cash: { increment: cashImpact } }
+      await tx.character.update({
+        where: { id: character.id },
+        data: { cash: { increment: outcome.cash }, ...outcome.updates }
       })
-      resultMessage = `Após pagar o inventário, você recebeu R$ ${cashImpact} líquidos!`
-    }
-
-    if (option.effectType === 'loan_friend') {
-      const paid = Math.random() < option.probability
-      if (paid) {
-        cashImpact = 1500
-        await prisma.character.update({
-          where: { id: characterId },
-          data: { cash: { increment: cashImpact } }
+      if (outcome.effects.length) {
+        await tx.scheduledEffect.createMany({
+          data: outcome.effects.map((e) => ({ characterId: character.id, sourceTurn: turn, ...e }))
         })
-        resultMessage = 'Seu amigo pagou de volta com juros! +R$ 1.500'
-      } else {
-        cashImpact = dilemmaImpact(option.effectValue, perks)
-        await prisma.character.update({
-          where: { id: characterId },
-          data: { cash: { increment: cashImpact } }
-        })
-        resultMessage = `Seu amigo sumiu com seu dinheiro. -R$ ${brl(Math.abs(cashImpact))}${discountNote(cashImpact)}`
       }
-    }
-
-    await prisma.characterEventLog.create({
-      data: {
-        characterId,
-        turn,
-        cashImpact,
-        description: `Dilema "${dilemma.title}" — Opção ${option.label}: ${resultMessage}`
-      }
+      await tx.characterEventLog.create({
+        data: {
+          characterId: character.id,
+          turn,
+          cashImpact: outcome.cash,
+          description: `Dilema "${dilemma.title}" — Opção ${outcome.label}: ${outcome.result}${paid}`
+        }
+      })
+      await tx.characterSkillPoints.update({
+        where: { characterId: character.id },
+        data: { totalPoints: { increment: 1 } }
+      })
     })
 
-    await prisma.characterSkillPoints.update({
-      where: { characterId },
-      data: { totalPoints: { increment: 1 } }
+    res.json({ result: `${outcome.result}${paid}`, cashImpact: outcome.cash, lockSeconds: outcome.lockSeconds })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+
+// ─── Lazer ────────────────────────────────────────────────────────────────────
+
+exports.getLeisure = async (req, res) => {
+  try {
+    const turn = parseInt(req.params.turn)
+    const month = leisureFor(turn)
+    if (!month) return res.json({ leisure: null })
+
+    const character = await ownCharacter(req, res)
+    if (!character) return
+
+    const perks = perksOf(character.unlockedSkills)
+    const price = leisurePrice(turn, perks)
+    const chosen = await prisma.characterChoice.findUnique({
+      where: { characterId_turn_kind: { characterId: character.id, turn, kind: 'leisure' } }
     })
 
-    res.json({ result: resultMessage, cashImpact })
+    res.json({
+      leisure: { turn, price, basePrice: month.price, discount: cents(month.price - price), options: month.options },
+      chosen: chosen ? { option: chosen.option, title: month.options[chosen.option]?.title, amount: Number(chosen.amount) } : null
+    })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+
+exports.chooseLeisure = async (req, res) => {
+  try {
+    const turn = parseInt(req.params.turn)
+    const optionIndex = Number(req.body?.optionIndex)
+    const month = leisureFor(turn)
+    if (!month) return res.status(404).json({ error: 'Lazer não encontrado' })
+    if (!Number.isInteger(optionIndex) || !month.options[optionIndex]) return res.status(400).json({ error: 'Opção inválida' })
+
+    const character = await ownCharacter(req, res)
+    if (!character) return
+    if (!checkCurrentTurn(character, turn, res)) return
+
+    const already = await prisma.characterChoice.findUnique({
+      where: { characterId_turn_kind: { characterId: character.id, turn, kind: 'leisure' } }
+    })
+    if (already) return res.status(400).json({ error: 'Lazer já escolhido' })
+
+    const perks = perksOf(character.unlockedSkills)
+    const price = leisurePrice(turn, perks)
+    const option = month.options[optionIndex]
+    const note = perks.leisureDiscount ? ` com ${percentLabel(perks.leisureDiscount)} de desconto` : ''
+
+    await prisma.$transaction(async (tx) => {
+      await tx.characterChoice.create({
+        data: { characterId: character.id, turn, kind: 'leisure', option: optionIndex, amount: price }
+      })
+      await tx.character.update({ where: { id: character.id }, data: { cash: { increment: -price } } })
+      await tx.characterEventLog.create({
+        data: { characterId: character.id, turn, cashImpact: -price, description: `Lazer: ${option.title} (-R$ ${price.toFixed(2)})${note}` }
+      })
+    })
+
+    res.json({ title: option.title, cashImpact: -price })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }

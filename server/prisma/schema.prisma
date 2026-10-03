@@ -69,6 +69,8 @@ model Character {
   snapshots         FinancialSnapshot[]
   leaderboard       Leaderboard?
   coupons           CharacterCoupon[]
+  choices           CharacterChoice[]
+  effects           ScheduledEffect[]
 
   @@unique([userId, roomId])
 }
@@ -245,4 +247,33 @@ model CharacterCoupon {
   value       Decimal?
 
   @@unique([characterId, turn])
+}
+
+// Escolha do mês: lazer (qual dos dois passeios) ou dilema (A ou B).
+model CharacterChoice {
+  id          String    @id @default(uuid())
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String
+  turn        Int
+  kind        String // leisure | dilemma
+  option      Int
+  amount      Decimal   @default(0) // o que saiu do caixa na hora
+  createdAt   DateTime  @default(now())
+
+  @@unique([characterId, turn, kind])
+}
+
+// Consequência de um dilema marcada para a virada de um mês seguinte.
+model ScheduledEffect {
+  id          String    @id @default(uuid())
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String
+  turn        Int // virada em que acontece
+  kind        String // cash | installment | salary_raise | no_salary | rent_waived | notice
+  amount      Decimal   @default(0)
+  label       String
+  sourceTurn  Int
+  appliedAt   DateTime?
+
+  @@index([characterId, turn])
 }

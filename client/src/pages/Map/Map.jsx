@@ -1,10 +1,15 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
 import socket from '../../services/socket'
 import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
+import LeisureModal from '../../components/LeisureModal'
+import WalkLock from '../../components/WalkLock'
+import CompanyInfo from '../../components/CompanyInfo'
+import { COMPANIES } from '../../data/companies'
+import { loadWalkLock, saveWalkLock } from '../../components/walkTimer'
 import BillModal from '../../components/BillModal'
 import CityScene from './CityScene'
 import CouponModal from '../../components/CouponModal'
@@ -40,7 +45,7 @@ const PANEL = 'rounded-[24px] bg-[#FFFDF7]/95 text-[#24331F] shadow-[0_6px_0_#E2
 const GUIDE_TIPS = [
   {
     title: 'Prédios obrigatórios',
-    desc: 'Lazer e as contas mensais (Mercadinho, Água e Luz, Internet) precisam ser resolvidos antes de encerrar o mês.',
+    desc: 'O dilema, o lazer e as contas mensais (Mercadinho, Água e Luz, Internet) precisam ser resolvidos antes de encerrar o mês.',
   },
   {
     title: 'Diversifique investimentos',
@@ -48,7 +53,7 @@ const GUIDE_TIPS = [
   },
   {
     title: 'Patrimônio decide o ranking',
-    desc: 'Ao final do mês 12, quem tiver o maior patrimônio líquido vence a partida.',
+    desc: 'Quando dezembro fechar, quem tiver o maior patrimônio líquido vence a partida. Parcelas que faltam pagar contam como dívida.',
   },
   {
     title: 'Universidade',
@@ -61,8 +66,9 @@ const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Jul
 const BUILDINGS = [
   {
     id: 'bank',
-    name: 'Banco',
+    name: 'Banco Maré',
     desc: 'Renda Fixa, Ações e Empresas',
+    company: 'bank',
     art: bankArt,
     glow: 'rgba(59,130,246,0.55)',
     route: '/bank',
@@ -70,16 +76,18 @@ const BUILDINGS = [
   {
     id: 'leisure',
     name: 'Lazer',
-    desc: 'Eventos mensais obrigatórios',
+    desc: 'Praça do Coreto · lazer do mês',
+    company: 'leisure',
     art: leisureArt,
     glow: 'rgba(236,72,153,0.55)',
-    route: 'modal_dilemma',
-    requiredPrefix: 'Dilema',
+    route: 'modal_leisure',
+    requiredPrefix: 'Lazer:',
   },
   {
     id: 'mercadinho',
     name: 'Mercadinho',
-    desc: 'Compras do mês',
+    desc: 'da Dona Cida · compras do mês',
+    company: 'mercadinho',
     art: mercadinhoArt,
     glow: 'rgba(34,197,94,0.55)',
     route: 'modal_bill_food',
@@ -88,7 +96,8 @@ const BUILDINGS = [
   {
     id: 'utilities',
     name: 'Água e Luz',
-    desc: 'Conta mensal fixa',
+    desc: 'Sapucaí Água e Luz · conta do mês',
+    company: 'utilities',
     art: utilitiesArt,
     glow: 'rgba(234,179,8,0.55)',
     route: 'modal_bill_utilities',
@@ -97,7 +106,8 @@ const BUILDINGS = [
   {
     id: 'internet',
     name: 'Internet e Celular',
-    desc: 'Conta mensal fixa',
+    desc: 'Vale Conecta · conta do mês',
+    company: 'internet',
     art: internetArt,
     glow: 'rgba(34,211,238,0.55)',
     route: 'modal_bill_transport',
@@ -107,6 +117,7 @@ const BUILDINGS = [
     id: 'university',
     name: 'Universidade',
     desc: 'Constelação de habilidades',
+    company: 'university',
     art: universityArt,
     glow: 'rgba(168,85,247,0.55)',
     route: '/skills',
@@ -119,6 +130,9 @@ export default function Map() {
   const characterRef = useRef(character)
   const roomRef = useRef(room)
   const [showDilemmaModal, setShowDilemmaModal] = useState(false)
+  const [showLeisure, setShowLeisure] = useState(false)
+  const [dilemmaInfo, setDilemmaInfo] = useState(null) // { turn, exists }
+  const [walkUntil, setWalkUntil] = useState(null)
   const [activeBill, setActiveBill] = useState(null)
   const [showGuide, setShowGuideState] = useState(() => {
     try {
@@ -204,7 +218,10 @@ export default function Map() {
         setCharacter({ ...characterRef.current, turnReady: false })
       }
 
-      if (data.dilemma) setShowDilemmaModal(true)
+      if (data.dilemma) {
+        setDilemmaInfo({ turn: data.dilemma.turn, exists: true })
+        setShowDilemmaModal(true)
+      }
     })
 
     socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
@@ -225,7 +242,7 @@ export default function Map() {
 
   const handleFinishMonth = async () => {
     if (room?.currentTurn > 0) {
-      const missing = BUILDINGS.filter((b) => b.requiredPrefix && !isActionDone(b.requiredPrefix))
+      const missing = checklist.filter((b) => !b.done)
 
       if (missing.length > 0) {
         alert(`Você precisa completar antes de finalizar o mês: ${missing.map((b) => b.name).join(', ')}`)
@@ -238,12 +255,14 @@ export default function Map() {
       setCharacter({ ...character, turnReady: true })
     } catch (err) {
       console.error(err)
-      alert('Erro ao finalizar mês!')
+      alert(err.response?.data?.error || 'Erro ao finalizar mês!')
     }
   }
 
-  const handleDilemmaComplete = async () => {
+  const handleDilemmaComplete = async (result) => {
     setShowDilemmaModal(false)
+    // ir a pé em agosto: a tela fica parada por alguns segundos
+    if (result?.lockSeconds > 0) setWalkUntil(saveWalkLock(character.id, room.currentTurn, result.lockSeconds))
 
     try {
       const { data } = await api.get(`/characters/${character.id}`)
@@ -252,6 +271,21 @@ export default function Map() {
       console.error(err)
     }
   }
+
+  // dilema do mês: se ainda não foi respondido, abre sozinho quando o mês começa
+  useEffect(() => {
+    if (!character?.id || !room?.currentTurn || room?.status !== 'active') return
+    const turn = room.currentTurn
+    api.get(`/characters/${character.id}/dilemma/${turn}`)
+      .then(({ data }) => {
+        setDilemmaInfo({ turn, exists: !!data.dilemma })
+        // quem deu F5 no meio da caminhada continua andando
+        const until = loadWalkLock(character.id, turn)
+        if (until) setWalkUntil(until)
+        else if (data.dilemma && !data.alreadyAnswered) setShowDilemmaModal(true)
+      })
+      .catch(() => setDilemmaInfo(null))
+  }, [character?.id, room?.currentTurn, room?.status])
 
   // cupom escondido do mês (o servidor só diz se tem e onde, nunca o prêmio)
   const [couponState, setCoupon] = useState(null) // { turn, id, spot }
@@ -279,6 +313,8 @@ export default function Map() {
     }
   }
 
+  const clearWalk = useCallback(() => setWalkUntil(null), [])
+
   const handleBillComplete = async () => {
     setActiveBill(null)
 
@@ -292,6 +328,7 @@ export default function Map() {
 
   const handleBuilding = (b) => {
     if (b.route === 'modal_dilemma') setShowDilemmaModal(true)
+    else if (b.route === 'modal_leisure') setShowLeisure(true)
     else if (b.route.startsWith('modal_bill_')) setActiveBill(b.route.replace('modal_bill_', ''))
     else navigate(b.route)
   }
@@ -311,7 +348,9 @@ export default function Map() {
     required: !!b.requiredPrefix && currentTurn > 0,
     done: !!b.requiredPrefix && isActionDone(b.requiredPrefix),
   }))
-  const checklist = sceneBuildings.filter((b) => b.required)
+  const hasDilemma = dilemmaInfo?.turn === currentTurn && dilemmaInfo.exists
+  const dilemmaItem = { id: 'dilemma', name: 'Dilema do mês', route: 'modal_dilemma', required: true, done: isActionDone('Dilema') }
+  const checklist = [...(hasDilemma ? [dilemmaItem] : []), ...sceneBuildings.filter((b) => b.required)]
   const doneCount = checklist.filter((b) => b.done).length
 
   return (
@@ -448,6 +487,17 @@ export default function Map() {
                       <p className="mt-0.5 text-xs leading-relaxed text-[#7A5200]">Dizem que tem algo diferente na cidade este mês. Olhe com calma.</p>
                     </div>
                   )}
+                  <div className="border-l-[3px] border-[#EFE6D3] pl-3">
+                    <p className="text-sm font-extrabold">Quem é quem na cidade</p>
+                    <ul className="mt-1 grid gap-1">
+                      {Object.entries(COMPANIES).map(([id, c]) => (
+                        <li key={id} className="flex items-center justify-between gap-2 text-xs text-[#6B7A62]">
+                          {c.name}
+                          <CompanyInfo id={id} align="right" />
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                   {GUIDE_TIPS.map((tip) => (
                     <div key={tip.title} className="border-l-[3px] border-[#EFE6D3] pl-3">
                       <p className="text-sm font-extrabold">{tip.title}</p>
@@ -476,6 +526,18 @@ export default function Map() {
           onComplete={handleDilemmaComplete}
         />
       )}
+
+      {showLeisure && (
+        <LeisureModal
+          onClose={() => setShowLeisure(false)}
+          onComplete={() => {
+            setShowLeisure(false)
+            handleBillComplete()
+          }}
+        />
+      )}
+
+      {walkUntil && <WalkLock until={walkUntil} onDone={clearWalk} />}
 
       {couponReward && <CouponModal reward={couponReward} onClose={() => setCouponReward(null)} />}
 

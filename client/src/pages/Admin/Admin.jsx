@@ -227,7 +227,7 @@ export default function Admin() {
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400">Turno atual</p>
-                <p className="text-lg font-bold text-primary">{roomData?.currentTurn ?? 0}/{roomData?.maxTurns ?? 12}</p>
+                <p className="text-lg font-bold text-primary">{Math.min(roomData?.currentTurn ?? 0, roomData?.maxTurns ?? 12)}/{roomData?.maxTurns ?? 12}</p>
               </div>
 
               {character && (
@@ -298,7 +298,7 @@ export default function Admin() {
             <StatCard label="Status" value={statusLabel} tone={statusTone} />
             <StatCard label="Jogadores" value={totalPlayers} />
             <StatCard label="Prontos" value={`${readyCount}/${totalPlayers}`} tone={allReady ? 'green' : 'yellow'} />
-            <StatCard label="Turno" value={`${roomData?.currentTurn ?? 0}/${roomData?.maxTurns ?? 12}`} />
+            <StatCard label="Turno" value={`${Math.min(roomData?.currentTurn ?? 0, roomData?.maxTurns ?? 12)}/${roomData?.maxTurns ?? 12}`} />
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-6">
@@ -368,7 +368,6 @@ export default function Admin() {
                     <IconBolt className="h-4 w-4" />
                     Dilema do mês: {turnResult.dilemma.title}
                   </p>
-                  <p className="text-sm text-gray-300">{turnResult.dilemma.description}</p>
                 </div>
               )}
               <div className="space-y-2">
@@ -376,7 +375,7 @@ export default function Admin() {
                   <div key={r.characterId} className="flex items-center justify-between rounded-xl border border-white/10 bg-black/20 p-3">
                     <div>
                       <p className="font-medium text-white">{r.characterName}</p>
-                      <p className="text-xs text-gray-400">{r.event?.title}</p>
+                      <p className="text-xs text-gray-400">{(r.events ?? [r.event]).filter(Boolean).map((e) => e.title).join(' · ')}</p>
                     </div>
                     <div className="text-right">
                       <p className={`text-sm font-medium ${r.cashDelta >= 0 ? 'text-green-400' : 'text-red-400'}`}>

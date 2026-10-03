@@ -248,14 +248,14 @@ export default function GameHeader() {
                 <StatusCard
                   icon="calendar"
                   label="Mês"
-                  value={<>{room?.currentTurn ?? 0}<span className="text-[#A9B19E]">/12</span></>}
+                  value={<>{Math.min(room?.currentTurn ?? 0, 12)}<span className="text-[#A9B19E]">/12</span></>}
                   helper="Progresso"
                 />
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3">
                 <CompactStat icon="wallet" value={formatMoneyCompact(character.cash)} color={negative ? '#C4283D' : '#2B8C41'} />
-                <CompactStat icon="calendar" value={`${room?.currentTurn ?? 0}/12`} color="#2457C5" />
+                <CompactStat icon="calendar" value={`${Math.min(room?.currentTurn ?? 0, 12)}/12`} color="#2457C5" />
               </div>
             )}
 
