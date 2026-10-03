@@ -19,7 +19,25 @@ exports.getDilemma = async (req, res) => {
     const turn = parseInt(req.params.turn)
     const dilemma = DILEMMAS[turn] ?? null
     if (!dilemma) return res.json({ dilemma: null })
-    res.json({ dilemma })
+
+    const answered = await prisma.characterEventLog.findFirst({
+      where: {
+        characterId: req.params.id,
+        turn,
+        description: { startsWith: 'Dilema' }
+      }
+    })
+
+    res.json({
+      dilemma,
+      alreadyAnswered: !!answered,
+      previousResult: answered
+        ? {
+            result: answered.description.replace(/^Dilema ".*?" — Opção [^:]+: /, ''),
+            cashImpact: Number(answered.cashImpact ?? 0)
+          }
+        : null
+    })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }

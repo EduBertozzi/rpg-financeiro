@@ -8,23 +8,32 @@ export default function DilemmaModal({ onClose, onComplete }) {
   const [loading, setLoading] = useState(!room?.currentTurn ? false : true)
   const [choosing, setChoosing] = useState(false)
   const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+  const [wasAlreadyAnswered, setWasAlreadyAnswered] = useState(false)
 
   useEffect(() => {
     if (!character?.id || !room?.currentTurn) return
-    
+
     api.get(`/characters/${character.id}/dilemma/${room.currentTurn}`)
-      .then(({ data }) => setDilemma(data.dilemma))
+      .then(({ data }) => {
+        setDilemma(data.dilemma)
+        if (data.alreadyAnswered && data.previousResult) {
+          setResult({ result: data.previousResult.result, cashImpact: data.previousResult.cashImpact })
+          setWasAlreadyAnswered(true)
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [character?.id, room?.currentTurn])
 
   const handleChoose = async (optionIndex) => {
     setChoosing(true)
+    setError('')
     try {
       const { data } = await api.post(`/characters/${character.id}/dilemma/${room.currentTurn}/choose`, { optionIndex })
       setResult(data)
     } catch (err) {
-      console.error(err)
+      setError(err.response?.data?.error || 'Erro ao registrar sua escolha. Tente novamente.')
     } finally {
       setChoosing(false)
     }
@@ -76,6 +85,9 @@ export default function DilemmaModal({ onClose, onComplete }) {
                     </button>
                   ))}
                 </div>
+                {error && (
+                  <p className="mt-4 text-center text-sm text-red-400">{error}</p>
+                )}
                 <div className="mt-4 text-center">
                   <button onClick={handleClose} className="text-gray-500 hover:text-white text-sm">Cancelar</button>
                 </div>
@@ -83,16 +95,18 @@ export default function DilemmaModal({ onClose, onComplete }) {
             ) : (
               <div className="bg-card border border-yellow-700 rounded-2xl p-8 text-center space-y-6">
                 <div className="text-5xl">{result.cashImpact > 0 ? '🎉' : result.cashImpact < 0 ? '😬' : '😐'}</div>
-                <h3 className="text-xl font-bold text-white">Resultado</h3>
+                <h3 className="text-xl font-bold text-white">{wasAlreadyAnswered ? 'Lazer já concluído' : 'Resultado'}</h3>
                 <p className="text-gray-300 text-sm">{result.result}</p>
                 {result.cashImpact !== 0 && (
                   <p className={`text-2xl font-bold ${result.cashImpact > 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {result.cashImpact > 0 ? '+' : ''}R$ {Number(result.cashImpact).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 )}
-                <p className="text-yellow-400 text-sm">+1 ponto de habilidade ganho!</p>
+                {!wasAlreadyAnswered && (
+                  <p className="text-yellow-400 text-sm">+1 ponto de habilidade ganho!</p>
+                )}
                 <button onClick={handleClose} className="px-8 py-3 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
-                  Concluir Lazer
+                  {wasAlreadyAnswered ? 'Fechar' : 'Concluir Lazer'}
                 </button>
               </div>
             )}

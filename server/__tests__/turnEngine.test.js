@@ -170,6 +170,22 @@ describe('custos fixos', () => {
     expect(prismaMock.character.update).toHaveBeenCalled()
   })
 
+  it('registra o aluguel descontado no eventLog', async () => {
+    setupHappyPath({ turn: 1, character: makeCharacter({ housingCost: 1000 }) })
+
+    await processTurn('room-1')
+
+    expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          turn: 2,
+          cashImpact: -1000,
+          description: expect.stringContaining('Aluguel: Casa'),
+        }),
+      })
+    )
+  })
+
   it('personagem com caixa insuficiente entra em cheque especial', async () => {
     // cash=100, custos totais=1850 → fica negativo → isBankrupt=true
     const brokeChar = makeCharacter({ cash: 100 })

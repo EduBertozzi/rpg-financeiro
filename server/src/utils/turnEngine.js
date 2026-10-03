@@ -107,7 +107,7 @@ function pickEvent() {
   return EVENTS[Math.floor(Math.random() * EVENTS.length)]
 }
 
-async function applyFixedCosts(character) {
+async function applyFixedCosts(character, turn) {
   // foodCost, utilitiesCost e transportCost agora são pagos manualmente pelo
   // jogador durante o mês (Mercadinho, Água e Luz, Internet e Celular — ver
   // billController.js); só o aluguel continua sendo descontado automaticamente.
@@ -128,6 +128,15 @@ async function applyFixedCosts(character) {
   await prisma.character.update({
     where: { id: character.id },
     data: { cash: newCash, overdraftDebt, isBankrupt }
+  })
+
+  await prisma.characterEventLog.create({
+    data: {
+      characterId: character.id,
+      turn,
+      cashImpact: -totalCosts,
+      description: `Aluguel: Casa — Pago (-R$ ${totalCosts})`
+    }
   })
 
   return { totalCosts, newCash, overdraftDebt }
@@ -307,7 +316,7 @@ async function processTurn(roomId) {
   await generateAssetPrices(roomId, nextTurn)
 
   for (const character of room.characters) {
-    const costs = await applyFixedCosts(character)
+    const costs = await applyFixedCosts(character, nextTurn)
     const returns = await applyFixedIncomeReturns(character, nextTurn)
     const eventResult = await applyEvent(character, nextTurn)
     await checkDebentures(character, nextTurn)

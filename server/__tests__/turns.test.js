@@ -108,6 +108,21 @@ describe('GET /api/v1/characters/:id/dilemma/:turn', () => {
     expect(res.body.dilemma).toBeNull()
   })
 
+  it('indica dilema já respondido com o resultado anterior', async () => {
+    prismaMock.characterEventLog.findFirst.mockResolvedValue({
+      description: 'Dilema "Reserva ou Investimento?" — Opção B: Você recebeu R$ 300!',
+      cashImpact: 300,
+    })
+
+    const res = await request(app)
+      .get('/api/v1/characters/char-1/dilemma/1')
+      .set(authHeader(TOKEN))
+
+    expect(res.status).toBe(200)
+    expect(res.body.alreadyAnswered).toBe(true)
+    expect(res.body.previousResult).toEqual({ result: 'Você recebeu R$ 300!', cashImpact: 300 })
+  })
+
   it('retorna 401 sem token', async () => {
     const res = await request(app).get('/api/v1/characters/char-1/dilemma/1')
     expect(res.status).toBe(401)
