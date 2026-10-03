@@ -514,24 +514,24 @@ describe('habilidades na virada do mês', () => {
 
   // ─── Técnico ────────────────────────────────────────────────────────────────
 
-  it('Fundamentos e Lógica: +R$ 150 de freela no saldo e no extrato', async () => {
+  it('Fundamentos e Lógica: +R$ 200 de freela no saldo e no extrato', async () => {
     setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: [skill('technical', 1)] }))
     await processTurn('room-1')
 
-    expect(costsUpdate().cash).toBe(6150)
+    expect(costsUpdate().cash).toBe(6200)
     expect(logStarting('Freela')).toEqual([
-      expect.objectContaining({ turn: 2, cashImpact: 150, description: 'Freela: Fundamentos e Lógica (+R$ 150.00)' }),
+      expect.objectContaining({ turn: 2, cashImpact: 200, description: 'Freela: Fundamentos e Lógica (+R$ 200.00)' }),
     ])
   })
 
-  it('Pensamento Analítico Avançado: salário +R$ 300 numa linha à parte', async () => {
+  it('Pensamento Analítico Avançado: salário +R$ 400 numa linha à parte', async () => {
     setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: [skill('technical', 1), skill('technical', 2), skill('technical', 3)] }))
     await processTurn('room-1')
 
-    expect(costsUpdate().cash).toBe(6450) // 7000 + 300 + 150 - 1000
+    expect(costsUpdate().cash).toBe(6600) // 7000 + 400 + 200 - 1000
     expect(logStarting('Salário')).toEqual([expect.objectContaining({ cashImpact: 7000 })])
     expect(logStarting('Bônus salarial')).toEqual([
-      expect.objectContaining({ cashImpact: 300, description: 'Bônus salarial: Pensamento Analítico Avançado (+R$ 300.00)' }),
+      expect.objectContaining({ cashImpact: 400, description: 'Bônus salarial: Pensamento Analítico Avançado (+R$ 400.00)' }),
     ])
   })
 
@@ -539,7 +539,7 @@ describe('habilidades na virada do mês', () => {
     setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: all('technical') }))
     await processTurn('room-1')
 
-    expect(costsUpdate().cash).toBe(6850) // 7000 + 300 + 150 + 400 - 1000
+    expect(costsUpdate().cash).toBe(7000) // 7000 + 400 + 200 + 400 - 1000
     expect(logStarting('Projeto paralelo')).toEqual([
       expect.objectContaining({ cashImpact: 400, description: 'Projeto paralelo: Inovação e Otimização (+R$ 400.00)' }),
     ])
@@ -550,7 +550,7 @@ describe('habilidades na virada do mês', () => {
     setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: all('technical') }))
     const { results } = await processTurn('room-1')
 
-    expect(results[0].cashDelta).toBe(7000 + 300 + 150 + 400 - 1000)
+    expect(results[0].cashDelta).toBe(7000 + 400 + 200 + 400 - 1000)
   })
 
   it('Resolução de Problemas: tela do celular custa R$ 225 em maio', async () => {
@@ -592,13 +592,13 @@ describe('habilidades na virada do mês', () => {
 
   // ─── Comunicação ────────────────────────────────────────────────────────────
 
-  it('Negociação e Liderança: aluguel 20% mais barato no saldo e no extrato', async () => {
+  it('Negociação e Liderança: aluguel 15% mais barato no saldo e no extrato', async () => {
     setup(makeCharacter({ cash: 0, housingCost: 1500, unlockedSkills: [skill('communication', 3)] }))
     await processTurn('room-1')
 
-    expect(costsUpdate().cash).toBe(5800) // 7000 - 1200
+    expect(costsUpdate().cash).toBe(5725) // 7000 - 1275
     expect(logStarting('Aluguel')).toEqual([
-      expect.objectContaining({ cashImpact: -1200, description: 'Aluguel: Casa — Pago (-R$ 1200) com 20% de desconto' }),
+      expect.objectContaining({ cashImpact: -1275, description: 'Aluguel: Casa — Pago (-R$ 1275) com 15% de desconto' }),
     ])
   })
 
@@ -606,15 +606,15 @@ describe('habilidades na virada do mês', () => {
     setup(makeCharacter({ cash: 0, housingCost: '1234.56', unlockedSkills: [skill('communication', 3)] }))
     await processTurn('room-1')
 
-    expect(costsUpdate().cash).toBe(6012.35) // 7000 - 987.65
-    expect(logStarting('Aluguel')[0].cashImpact).toBe(-987.65)
+    expect(costsUpdate().cash).toBe(5950.62) // 7000 - 1049.38
+    expect(logStarting('Aluguel')[0].cashImpact).toBe(-1049.38)
   })
 
   it('Liderança Estratégica: salário +R$ 400', async () => {
     setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: all('communication') }))
     await processTurn('room-1')
 
-    expect(costsUpdate().cash).toBe(6600) // 7000 + 400 - 800
+    expect(costsUpdate().cash).toBe(6550) // 7000 + 400 - 850
     expect(logStarting('Bônus salarial')).toEqual([
       expect.objectContaining({ cashImpact: 400, description: 'Bônus salarial: Liderança Estratégica (+R$ 400.00)' }),
     ])
@@ -624,8 +624,8 @@ describe('habilidades na virada do mês', () => {
     setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: [skill('technical', 3), skill('communication', 4)] }))
     await processTurn('room-1')
 
-    expect(logStarting('Bônus salarial').map((l) => l.cashImpact)).toEqual([300, 400])
-    expect(costsUpdate().cash).toBe(6700)
+    expect(logStarting('Bônus salarial').map((l) => l.cashImpact)).toEqual([400, 400])
+    expect(costsUpdate().cash).toBe(6800)
   })
 
   // ─── Gestão ─────────────────────────────────────────────────────────────────
@@ -655,17 +655,17 @@ describe('habilidades na virada do mês', () => {
     expect(costsUpdate()).toEqual({ cash: 3400, overdraftDebt: 0, isBankrupt: false }) // -2500 - 100 + 7000 - 1000
   })
 
-  it('bônus de 0,6% sobre as caixinhas pago em dinheiro, depois do rendimento', async () => {
+  it('bônus de 0,8% sobre as caixinhas pago em dinheiro, depois do rendimento', async () => {
     setup(makeCharacter({ unlockedSkills: [skill('management', 1), skill('management', 2)] }), {
       investments: [{ id: 'fi-1', amount: 10000, monthlyRate: 0.01 }],
     })
     await processTurn('room-1')
 
-    // caixinha rende 100 → 10.100; bônus = 10.100 * 0,6% = 60,60
+    // caixinha rende 100 → 10.100; bônus = 10.100 * 0,8% = 80,80
     expect(prismaMock.fixedIncomeInvestment.update).toHaveBeenCalledWith({ where: { id: 'fi-1' }, data: { amount: { increment: 100 } } })
-    expect(cashIncrements()).toContain(60.6)
+    expect(cashIncrements()).toContain(80.8)
     expect(logStarting('Gestão')).toEqual([
-      expect.objectContaining({ turn: 2, cashImpact: 60.6, description: 'Gestão: Bônus de 0,6% sobre as caixinhas (+R$ 60.60)' }),
+      expect.objectContaining({ turn: 2, cashImpact: 80.8, description: 'Gestão: Bônus de 0,8% sobre as caixinhas (+R$ 80.80)' }),
     ])
   })
 
@@ -679,7 +679,7 @@ describe('habilidades na virada do mês', () => {
     expect(prismaMock.fixedIncomeInvestment.update).toHaveBeenCalledWith({ where: { id: 'fi-1' }, data: { amount: { increment: 100 } } })
   })
 
-  it('Gestão completa: 2,7% somando todas as caixinhas abertas', async () => {
+  it('Gestão completa: 3,8% somando todas as caixinhas abertas', async () => {
     setup(makeCharacter({ unlockedSkills: all('management') }), {
       investments: [
         { id: 'fi-1', amount: 10000, monthlyRate: 0.01 },
@@ -688,21 +688,21 @@ describe('habilidades na virada do mês', () => {
     })
     const { results } = await processTurn('room-1')
 
-    // (10.100 + 5.000) * 2,7% = 407,70
+    // (10.100 + 5.000) * 3,8% = 573,80
     expect(logStarting('Gestão')).toEqual([
-      expect.objectContaining({ cashImpact: 407.7, description: 'Gestão: Bônus de 2,7% sobre as caixinhas (+R$ 407.70)' }),
+      expect.objectContaining({ cashImpact: 573.8, description: 'Gestão: Bônus de 3,8% sobre as caixinhas (+R$ 573.80)' }),
     ])
-    expect(results[0].cashDelta).toBeCloseTo(7000 - 1000 + 100 + 407.7, 2)
+    expect(results[0].cashDelta).toBeCloseTo(7000 - 1000 + 100 + 573.8, 2)
   })
 
-  it('L2 + L3 pagam 1,5%', async () => {
+  it('L2 + L3 pagam 2,1%', async () => {
     setup(makeCharacter({ unlockedSkills: [skill('management', 2), skill('management', 3)] }), {
       investments: [{ id: 'fi-1', amount: 2000, monthlyRate: 0 }],
     })
     await processTurn('room-1')
 
     expect(logStarting('Gestão')).toEqual([
-      expect.objectContaining({ cashImpact: 30, description: 'Gestão: Bônus de 1,5% sobre as caixinhas (+R$ 30.00)' }),
+      expect.objectContaining({ cashImpact: 42, description: 'Gestão: Bônus de 2,1% sobre as caixinhas (+R$ 42.00)' }),
     ])
   })
 
@@ -712,7 +712,7 @@ describe('habilidades na virada do mês', () => {
     })
     await processTurn('room-1')
 
-    expect(logStarting('Gestão')[0].cashImpact).toBe(7.41)
+    expect(logStarting('Gestão')[0].cashImpact).toBe(9.88) // 1234,56 * 0,8% = 9,87648
   })
 
   it('sem caixinhas não há bônus nem linha no extrato', async () => {
@@ -742,10 +742,10 @@ describe('habilidades na virada do mês', () => {
     }), { investments: [{ id: 'fi-1', amount: 10000, monthlyRate: 0 }] })
     const { results } = await processTurn('room-1')
 
-    // -1000 - 40 (4%) + 7000 + 700 + 550 - 1200 = 6010
-    expect(costsUpdate().cash).toBe(6010)
-    expect(cashIncrements()).toEqual([270, -225])
-    expect(results[0].cashDelta).toBeCloseTo(7000 + 700 + 550 - 1200 - 40 + 270 - 225, 2)
+    // -1000 - 40 (4%) + 7000 + 800 + 600 - 1275 = 6085
+    expect(costsUpdate().cash).toBe(6085)
+    expect(cashIncrements()).toEqual([380, -225])
+    expect(results[0].cashDelta).toBeCloseTo(7000 + 800 + 600 - 1275 - 40 + 380 - 225, 2)
   })
 })
 
@@ -823,10 +823,10 @@ describe('dons na virada do mês', () => {
     await processTurn('room-1')
 
     expect(logStarting('Freela').map((l) => l.description)).toEqual([
-      'Freela: Fundamentos e Lógica (+R$ 150.00)',
+      'Freela: Fundamentos e Lógica (+R$ 200.00)',
       'Freela: Desenrolado (+R$ 220.00)',
     ])
-    expect(costsUpdate().cash).toBe(6370) // 7000 + 150 + 220 - 1000
+    expect(costsUpdate().cash).toBe(6420) // 7000 + 200 + 220 - 1000
   })
 
   it('Desenrolado: o freela entra no resultado do mês', async () => {
@@ -1026,11 +1026,11 @@ describe('consequências dos dilemas na virada', () => {
     }), { turn: 11, effects: [effect('no_salary', 0, 'Sem salário: Você foi demitido em novembro')] })
     await processTurn('room-1')
 
-    // 150 (freela Técnico) + 220 (freela dom) - 1000 aluguel
-    expect(costsUpdate().cash).toBe(-630)
+    // 200 (freela Técnico) + 220 (freela dom) - 1000 aluguel
+    expect(costsUpdate().cash).toBe(-580)
     expect(logStarting('Salário')).toEqual([])
     expect(logStarting('Bônus salarial')).toEqual([])
-    expect(logStarting('Freela').map((l) => l.cashImpact)).toEqual([150, 220])
+    expect(logStarting('Freela').map((l) => l.cashImpact)).toEqual([200, 220])
     expect(logStarting('Sem salário')).toEqual([expect.objectContaining({ cashImpact: 0 })])
   })
 

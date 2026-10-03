@@ -21,6 +21,9 @@ const arg = (name, fallback) => {
 const ROOMS = Number(arg('rooms', 30))
 const SEED = Number(arg('seed', 42))
 const OUT = path.resolve(arg('out', path.join(__dirname, '../../bots-out')))
+// experimento de balanceamento: multiplica o bônus das caixinhas da Gestão só
+// nesta simulação (o jogo não muda). Ex.: --management-mult 1.5
+const MANAGEMENT_MULT = Number(arg('management-mult', 1))
 const MONTHS = 12
 const BILL_TYPES = ['food', 'utilities', 'transport']
 
@@ -48,6 +51,13 @@ async function main() {
   // sorteios do servidor (eventos, ações, calote, cupons) com semente
   const rng = seededRandom(SEED)
   Math.random = rng
+
+  if (MANAGEMENT_MULT !== 1) {
+    const { PERKS } = require('../../src/utils/skills')
+    for (const perk of Object.values(PERKS.management)) {
+      if (perk.savingsBonusRate) perk.savingsBonusRate = Math.round(perk.savingsBonusRate * MANAGEMENT_MULT * 1e6) / 1e6
+    }
+  }
 
   const app = require('../../src/app')
   const prisma = require('../../src/lib/prisma')
@@ -222,6 +232,7 @@ async function main() {
 
   const summary = {
     seed: SEED,
+    managementMult: MANAGEMENT_MULT,
     rooms: ROOMS,
     botYears: results.length,
     seconds: Math.round((Date.now() - started) / 1000),

@@ -86,21 +86,21 @@ describe('perksOf sem habilidades', () => {
 describe('perksOf aceita nós ou linhas de CharacterSkill', () => {
   it('aceita { skillNode: { path, level } }', () => {
     const p = perksOf([{ skillNodeId: 3, skillNode: { id: 3, path: 'technical', level: 3, name: 'x' } }])
-    expect(p.salaryBonus).toBe(300)
+    expect(p.salaryBonus).toBe(400)
   })
 
   it('aceita { path, level } direto', () => {
-    expect(perksOf([node('technical', 3)]).salaryBonus).toBe(300)
+    expect(perksOf([node('technical', 3)]).salaryBonus).toBe(400)
   })
 })
 
 // ─── Técnico ──────────────────────────────────────────────────────────────────
 
 describe('Técnico (renda garantida)', () => {
-  it('L1 Fundamentos e Lógica: +R$ 150 de freela por mês', () => {
+  it('L1 Fundamentos e Lógica: +R$ 200 de freela por mês', () => {
     const p = only('technical', 1)
-    expect(p.extraIncome).toBe(150)
-    expect(p.incomes).toEqual([{ label: 'Freela', skill: 'Fundamentos e Lógica', amount: 150 }])
+    expect(p.extraIncome).toBe(200)
+    expect(p.incomes).toEqual([{ label: 'Freela', skill: 'Fundamentos e Lógica', amount: 200 }])
     expect(p.salaryBonus).toBe(0)
   })
 
@@ -110,10 +110,10 @@ describe('Técnico (renda garantida)', () => {
     expect(p.extraIncome).toBe(0)
   })
 
-  it('L3 Pensamento Analítico Avançado: salário +R$ 300', () => {
+  it('L3 Pensamento Analítico Avançado: salário +R$ 400', () => {
     const p = only('technical', 3)
-    expect(p.salaryBonus).toBe(300)
-    expect(p.salaryBonuses).toEqual([{ skill: 'Pensamento Analítico Avançado', amount: 300 }])
+    expect(p.salaryBonus).toBe(400)
+    expect(p.salaryBonuses).toEqual([{ skill: 'Pensamento Analítico Avançado', amount: 400 }])
   })
 
   it('L4 Inovação e Otimização: +R$ 400 de projeto paralelo', () => {
@@ -122,10 +122,10 @@ describe('Técnico (renda garantida)', () => {
     expect(p.incomes).toEqual([{ label: 'Projeto paralelo', skill: 'Inovação e Otimização', amount: 400 }])
   })
 
-  it('caminho completo: +R$ 300 de salário e R$ 550 de renda extra', () => {
+  it('caminho completo: +R$ 400 de salário e R$ 600 de renda extra', () => {
     const p = perksOf(all('technical'))
-    expect(p.salaryBonus).toBe(300)
-    expect(p.extraIncome).toBe(550)
+    expect(p.salaryBonus).toBe(400)
+    expect(p.extraIncome).toBe(600)
     expect(p.incomes.map((i) => i.label)).toEqual(['Freela', 'Projeto paralelo'])
     expect(p.repairDiscount).toBe(0.5)
   })
@@ -143,8 +143,8 @@ describe('Comunicação (contas mais baratas)', () => {
     expect(only('communication', 2).leisureDiscount).toBe(0.3)
   })
 
-  it('L3 Negociação e Liderança: aluguel 20% mais barato', () => {
-    expect(only('communication', 3).rentDiscount).toBe(0.2)
+  it('L3 Negociação e Liderança: aluguel 15% mais barato', () => {
+    expect(only('communication', 3).rentDiscount).toBe(0.15)
   })
 
   it('L4 Liderança Estratégica: salário +R$ 400', () => {
@@ -153,9 +153,9 @@ describe('Comunicação (contas mais baratas)', () => {
     expect(p.salaryBonuses).toEqual([{ skill: 'Liderança Estratégica', amount: 400 }])
   })
 
-  it('Técnico L3 + Comunicação L4 somam R$ 700 de salário, em duas linhas', () => {
+  it('Técnico L3 + Comunicação L4 somam R$ 800 de salário, em duas linhas', () => {
     const p = perksOf([node('technical', 3), node('communication', 4)])
-    expect(p.salaryBonus).toBe(700)
+    expect(p.salaryBonus).toBe(800)
     expect(p.salaryBonuses).toHaveLength(2)
   })
 })
@@ -167,30 +167,30 @@ describe('Gestão (rende sobre o que você guarda)', () => {
     expect(only('management', 1).foodDiscount).toBe(0.15)
   })
 
-  it('L2 Planejamento e Produtividade: cheque especial a 4% e +0,6% nas caixinhas', () => {
+  it('L2 Planejamento e Produtividade: cheque especial a 4% e +0,8% nas caixinhas', () => {
     const p = only('management', 2)
     expect(p.overdraftRate).toBe(0.04)
     expect(p.overdraftRate).toBe(REDUCED_OVERDRAFT_RATE)
-    expect(p.savingsBonusRate).toBe(0.006)
+    expect(p.savingsBonusRate).toBe(0.008)
   })
 
-  it('L3 Visão de Mercado: +0,9% nas caixinhas e dica das ações', () => {
+  it('L3 Visão de Mercado: +1,3% nas caixinhas e dica das ações', () => {
     const p = only('management', 3)
-    expect(p.savingsBonusRate).toBe(0.009)
+    expect(p.savingsBonusRate).toBe(0.013)
     expect(p.stockTips).toBe(true)
     expect(p.overdraftRate).toBe(0.08) // sozinho não mexe no cheque especial
   })
 
-  it('L4 Estratégia e Empreendedorismo: +1,2% nas caixinhas', () => {
-    expect(only('management', 4).savingsBonusRate).toBe(0.012)
+  it('L4 Estratégia e Empreendedorismo: +1,7% nas caixinhas', () => {
+    expect(only('management', 4).savingsBonusRate).toBe(0.017)
   })
 
-  it('L2 + L3 = 1,5%', () => {
-    expect(perksOf([node('management', 2), node('management', 3)]).savingsBonusRate).toBe(0.015)
+  it('L2 + L3 = 2,1%', () => {
+    expect(perksOf([node('management', 2), node('management', 3)]).savingsBonusRate).toBe(0.021)
   })
 
-  it('L2 + L3 + L4 = 2,7% exatos (sem lixo de ponto flutuante)', () => {
-    expect(perksOf(all('management')).savingsBonusRate).toBe(0.027)
+  it('L2 + L3 + L4 = 3,8% exatos (sem lixo de ponto flutuante)', () => {
+    expect(perksOf(all('management')).savingsBonusRate).toBe(0.038)
   })
 
   it('caminho completo: 4% no cheque especial, 15% no mercado e dica de ações', () => {
@@ -208,23 +208,23 @@ describe('árvore inteira', () => {
 
   it('junta todas as vantagens', () => {
     expect(p).toEqual({
-      salaryBonus: 700,
+      salaryBonus: 800,
       salaryBonuses: [
-        { skill: 'Pensamento Analítico Avançado', amount: 300 },
+        { skill: 'Pensamento Analítico Avançado', amount: 400 },
         { skill: 'Liderança Estratégica', amount: 400 },
       ],
-      extraIncome: 550,
+      extraIncome: 600,
       incomes: [
-        { label: 'Freela', skill: 'Fundamentos e Lógica', amount: 150 },
+        { label: 'Freela', skill: 'Fundamentos e Lógica', amount: 200 },
         { label: 'Projeto paralelo', skill: 'Inovação e Otimização', amount: 400 },
       ],
       repairDiscount: 0.5,
       utilitiesDiscount: 0.3,
       leisureDiscount: 0.3,
-      rentDiscount: 0.2,
+      rentDiscount: 0.15,
       foodDiscount: 0.15,
       overdraftRate: 0.04,
-      savingsBonusRate: 0.027,
+      savingsBonusRate: 0.038,
       stockTips: true,
     })
   })
@@ -232,9 +232,9 @@ describe('árvore inteira', () => {
   it('a ordem de desbloqueio não muda o resultado', () => {
     const shuffled = [...all('management'), ...all('communication'), ...all('technical')].reverse()
     const q = perksOf(shuffled)
-    expect(q.salaryBonus).toBe(700)
-    expect(q.extraIncome).toBe(550)
-    expect(q.savingsBonusRate).toBe(0.027)
+    expect(q.salaryBonus).toBe(800)
+    expect(q.extraIncome).toBe(600)
+    expect(q.savingsBonusRate).toBe(0.038)
     expect(q.overdraftRate).toBe(0.04)
   })
 
@@ -319,11 +319,11 @@ describe('rentAmount', () => {
     expect(rentAmount('1500.50', perksOf())).toBe(1500.5)
   })
 
-  it('com Negociação e Liderança é 20% mais barato', () => {
+  it('com Negociação e Liderança é 15% mais barato', () => {
     const p = only('communication', 3)
-    expect(rentAmount(1000, p)).toBe(800)
-    expect(rentAmount(1500, p)).toBe(1200)
-    expect(rentAmount(1234.56, p)).toBe(987.65) // 987.648
+    expect(rentAmount(1000, p)).toBe(850)
+    expect(rentAmount(1500, p)).toBe(1275)
+    expect(rentAmount(1234.56, p)).toBe(1049.38) // 1049.376
   })
 })
 
@@ -405,30 +405,30 @@ describe('savingsBonus', () => {
     expect(savingsBonus(10000, perksOf())).toBe(0)
   })
 
-  it('0,6% com Planejamento e Produtividade', () => {
-    expect(savingsBonus(10000, only('management', 2))).toBe(60)
+  it('0,8% com Planejamento e Produtividade', () => {
+    expect(savingsBonus(10000, only('management', 2))).toBe(80)
   })
 
-  it('0,9% com Visão de Mercado', () => {
-    expect(savingsBonus(10000, only('management', 3))).toBe(90)
+  it('1,3% com Visão de Mercado', () => {
+    expect(savingsBonus(10000, only('management', 3))).toBe(130)
   })
 
-  it('1,2% com Estratégia e Empreendedorismo', () => {
-    expect(savingsBonus(10000, only('management', 4))).toBe(120)
+  it('1,7% com Estratégia e Empreendedorismo', () => {
+    expect(savingsBonus(10000, only('management', 4))).toBe(170)
   })
 
-  it('L2+L3 = 1,5%', () => {
-    expect(savingsBonus(10000, perksOf([node('management', 2), node('management', 3)]))).toBe(150)
+  it('L2+L3 = 2,1%', () => {
+    expect(savingsBonus(10000, perksOf([node('management', 2), node('management', 3)]))).toBe(210)
   })
 
-  it('L2+L3+L4 = 2,7%', () => {
-    expect(savingsBonus(10000, perksOf(all('management')))).toBe(270)
-    expect(savingsBonus(8230.5, perksOf(all('management')))).toBe(222.22) // 222.2235
+  it('L2+L3+L4 = 3,8%', () => {
+    expect(savingsBonus(10000, perksOf(all('management')))).toBe(380)
+    expect(savingsBonus(8230.5, perksOf(all('management')))).toBe(312.76) // 312.759
   })
 
   it('arredonda para centavos', () => {
-    expect(savingsBonus(1234.56, only('management', 2))).toBe(7.41) // 7.40736
-    expect(savingsBonus(0.5, only('management', 2))).toBe(0) // 0.003
+    expect(savingsBonus(1234.56, only('management', 2))).toBe(9.88) // 9.87648
+    expect(savingsBonus(0.5, only('management', 2))).toBe(0) // 0.004
   })
 
   it('caixinha vazia ou negativa não rende bônus', () => {
@@ -437,7 +437,7 @@ describe('savingsBonus', () => {
   })
 
   it('aceita string', () => {
-    expect(savingsBonus('5000', only('management', 4))).toBe(60)
+    expect(savingsBonus('5000', only('management', 4))).toBe(85)
   })
 })
 
@@ -481,12 +481,16 @@ describe('cheque especial com Planejamento e Produtividade', () => {
 
 describe('percentLabel', () => {
   it('formata taxas no padrão brasileiro', () => {
+    expect(percentLabel(0.008)).toBe('0,8%')
+    expect(percentLabel(0.021)).toBe('2,1%')
+    expect(percentLabel(0.038)).toBe('3,8%')
     expect(percentLabel(0.006)).toBe('0,6%')
     expect(percentLabel(0.015)).toBe('1,5%')
     expect(percentLabel(0.027)).toBe('2,7%')
     expect(percentLabel(0.08)).toBe('8%')
     expect(percentLabel(0.04)).toBe('4%')
     expect(percentLabel(0.2)).toBe('20%')
+    expect(percentLabel(0.15)).toBe('15%')
     expect(percentLabel(0.35)).toBe('35%')
   })
 })

@@ -300,7 +300,7 @@ describe('POST chooseDilemma', () => {
     })
     await choose(10, 0)
 
-    expect(cashIncrement()).toBe(-3240) // 1200 × 3 × 0,9
+    expect(cashIncrement()).toBe(-3442.5) // 1275 × 3 × 0,9
   })
 
   it('advogado: 40% do que pagou e R$ 5.000 em dezembro', async () => {

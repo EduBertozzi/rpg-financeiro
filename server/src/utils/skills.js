@@ -6,25 +6,26 @@ const { cents, OVERDRAFT_MONTHLY_RATE, STOCK_EVENTS } = require('./finance')
 
 const REDUCED_OVERDRAFT_RATE = 0.04 // cheque especial com Planejamento e Produtividade
 
-// Tabela oficial das vantagens (aprovada pelo game design).
+// Tabela oficial das vantagens (aprovada pelo game design). Valores ajustados
+// em 03/10/2026 com os robôs de teste para os três caminhos valerem o mesmo.
 const PERKS = {
   technical: {
-    1: { name: 'Fundamentos e Lógica', perk: '+R$ 150 por mês (freela)', income: { label: 'Freela', amount: 150 } },
+    1: { name: 'Fundamentos e Lógica', perk: '+R$ 200 por mês (freela)', income: { label: 'Freela', amount: 200 } },
     2: { name: 'Resolução de Problemas', perk: 'Imprevistos de casa custam metade', repairDiscount: 0.5 },
-    3: { name: 'Pensamento Analítico Avançado', perk: 'Salário +R$ 300', salaryBonus: 300 },
+    3: { name: 'Pensamento Analítico Avançado', perk: 'Salário +R$ 400', salaryBonus: 400 },
     4: { name: 'Inovação e Otimização', perk: '+R$ 400 por mês (projeto paralelo)', income: { label: 'Projeto paralelo', amount: 400 } },
   },
   communication: {
     1: { name: 'Comunicação Básica', perk: 'Água/luz e internet 30% mais baratas', utilitiesDiscount: 0.3 },
     2: { name: 'Trabalho em Equipe', perk: 'Lazer e dilemas 30% mais baratos', leisureDiscount: 0.3 },
-    3: { name: 'Negociação e Liderança', perk: 'Aluguel 20% mais barato', rentDiscount: 0.2 },
+    3: { name: 'Negociação e Liderança', perk: 'Aluguel 15% mais barato', rentDiscount: 0.15 },
     4: { name: 'Liderança Estratégica', perk: 'Salário +R$ 400', salaryBonus: 400 },
   },
   management: {
     1: { name: 'Organização Financeira', perk: 'Mercadinho 15% mais barato', foodDiscount: 0.15 },
-    2: { name: 'Planejamento e Produtividade', perk: 'Cheque especial cai para 4% ao mês e +0,6% ao mês sobre as caixinhas', overdraftRate: REDUCED_OVERDRAFT_RATE, savingsBonusRate: 0.006 },
-    3: { name: 'Visão de Mercado', perk: '+0,9% ao mês sobre as caixinhas e dica das ações do próximo mês', savingsBonusRate: 0.009, stockTips: true },
-    4: { name: 'Estratégia e Empreendedorismo', perk: '+1,2% ao mês sobre as caixinhas', savingsBonusRate: 0.012 },
+    2: { name: 'Planejamento e Produtividade', perk: 'Cheque especial cai para 4% ao mês e +0,8% ao mês sobre as caixinhas', overdraftRate: REDUCED_OVERDRAFT_RATE, savingsBonusRate: 0.008 },
+    3: { name: 'Visão de Mercado', perk: '+1,3% ao mês sobre as caixinhas e dica das ações do próximo mês', savingsBonusRate: 0.013, stockTips: true },
+    4: { name: 'Estratégia e Empreendedorismo', perk: '+1,7% ao mês sobre as caixinhas', savingsBonusRate: 0.017 },
   },
 }
 
