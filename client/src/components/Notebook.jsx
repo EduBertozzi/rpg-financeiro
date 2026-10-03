@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import { COMPANIES } from '../data/companies'
 import { GLOSSARY, GUIDE_EVENT, PRODUCTS, overdraftAfter, searchGlossary, termOf, yearlyNet } from '../data/guide'
 
@@ -186,6 +187,20 @@ export default function Notebook() {
   const [flipKey, setFlipKey] = useState(0)
   const closeRef = useRef(null)
   const openerRef = useRef(null)
+  // abertura: o caderno voa do canto para o meio ('flying'), a capa gira
+  // como num livro ('opening') e aí as páginas ficam prontas ('open')
+  const [phase, setPhase] = useState('open')
+  const [origin, setOrigin] = useState({ x: 0, y: 0 })
+
+  const openBook = () => {
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const r = openerRef.current?.getBoundingClientRect()
+    setOrigin(r ? { x: r.left + r.width / 2 - window.innerWidth / 2, y: r.top + r.height / 2 - window.innerHeight / 2 } : { x: 0, y: 0 })
+    setPhase(reduced ? 'open' : 'flying')
+    setOpen(true)
+  }
+  const wide = () => window.matchMedia?.('(min-width: 768px)').matches
+  const landed = () => setPhase((p) => (p === 'flying' ? (wide() ? 'opening' : 'open') : p))
 
   const turn = (fn) => {
     fn()
@@ -200,7 +215,7 @@ export default function Notebook() {
 
   useEffect(() => {
     const onOpen = (e) => {
-      setOpen(true)
+      openBook()
       if (e.detail?.term && termOf(e.detail.term)) {
         setChapter(GLOSSARY_INDEX)
         setTerm(e.detail.term)
@@ -252,7 +267,7 @@ export default function Notebook() {
       <button
         ref={openerRef}
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={openBook}
         aria-label="Abrir o caderninho"
         className="group fixed bottom-5 right-5 z-30 grid justify-items-center gap-1.5 cursor-pointer"
       >
@@ -265,11 +280,41 @@ export default function Notebook() {
 
       {open && (
         <div className="fixed inset-0 z-[55] grid place-items-center bg-[#141E12]/55 p-4 pt-14 backdrop-blur-[3px] md:pt-4" onClick={(e) => e.target === e.currentTarget && close()}>
-          <div role="dialog" aria-label="Caderninho do jogo" className="notebook-pop relative grid h-[min(640px,calc(100vh-80px))] w-[min(980px,100%)] grid-cols-1 rounded-[18px] bg-[#2457C5] p-2.5 text-[#24331F] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)] md:h-[min(640px,calc(100vh-40px))] md:grid-cols-2 md:p-3.5">
+          <motion.div
+            role="dialog"
+            aria-label="Caderninho do jogo"
+            initial={phase === 'flying' ? { x: origin.x, y: origin.y, scale: 0.12, rotate: -10 } : false}
+            animate={{ x: 0, y: 0, scale: 1, rotate: 0 }}
+            transition={{ type: 'spring', stiffness: 120, damping: 18, mass: 0.9 }}
+            onAnimationComplete={landed}
+            style={{ perspective: 2400 }}
+            className={`relative grid h-[min(640px,calc(100vh-80px))] w-[min(980px,100%)] grid-cols-1 rounded-[18px] p-2.5 text-[#24331F] transition-[background-color,box-shadow] duration-200 md:h-[min(640px,calc(100vh-40px))] md:grid-cols-2 md:p-3.5 ${phase === 'flying' ? 'bg-transparent md:shadow-none' : 'bg-[#2457C5] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)]'} ${phase === 'flying' ? 'max-md:bg-[#2457C5]' : ''}`}
+          >
+            {/* capa: cobre a metade direita e gira para a esquerda como um livro */}
+            {phase !== 'open' && (
+              <motion.div
+                aria-hidden="true"
+                className="absolute bottom-0 left-1/2 right-0 top-0 z-20 hidden md:block"
+                style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
+                initial={{ rotateY: 0 }}
+                animate={{ rotateY: phase === 'opening' ? -180 : 0 }}
+                transition={{ duration: 0.85, ease: [0.6, 0.05, 0.3, 1] }}
+                onAnimationComplete={() => phase === 'opening' && setPhase('open')}
+              >
+                <div className="absolute inset-0 grid place-items-center rounded-r-[18px] bg-[linear-gradient(90deg,#173A8A_0_22px,#2457C5_22px)] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)] [backface-visibility:hidden]">
+                  <div className="grid justify-items-center gap-2 rounded-2xl bg-[#FFFDF5] px-10 py-6 text-center">
+                    <span className="font-hand text-[44px] font-bold leading-none text-[#2457C5]">Caderninho</span>
+                    <span className="font-toy text-lg font-extrabold text-[#6B7A62]">de Santa Rita</span>
+                  </div>
+                  <span className="absolute bottom-0 right-10 h-16 w-5 bg-[#EC4899] [clip-path:polygon(0_0,100%_0,100%_100%,50%_78%,0_100%)]" />
+                </div>
+                <div className="notebook-page absolute inset-0 rounded-l-lg [backface-visibility:hidden] [transform:rotateY(180deg)]" />
+              </motion.div>
+            )}
             <button ref={closeRef} type="button" onClick={close} aria-label="Fechar o caderninho"
-              className="absolute -right-3.5 -top-3.5 z-10 grid h-10 w-10 place-items-center rounded-full bg-[#FFFDF5] text-xl font-extrabold shadow-[0_4px_0_#E2D6BE] cursor-pointer">×</button>
+              className={`absolute -right-3.5 -top-3.5 z-30 grid h-10 w-10 place-items-center rounded-full bg-[#FFFDF5] text-xl font-extrabold shadow-[0_4px_0_#E2D6BE] transition-opacity cursor-pointer ${phase === 'open' ? '' : 'opacity-0'}`}>×</button>
 
-            <div role="tablist" aria-label="Capítulos" className="absolute -top-10 left-0 z-10 flex gap-1.5 md:-right-10 md:left-auto md:top-10 md:grid md:gap-2">
+            <div role="tablist" aria-label="Capítulos" className={`absolute -top-10 left-0 z-10 flex gap-1.5 transition-opacity duration-300 md:-right-10 md:left-auto md:top-10 md:grid md:gap-2 ${phase === 'open' ? '' : 'opacity-0'}`}>
               {CHAPTERS.map((c, i) => (
                 <button key={c.id} type="button" role="tab" aria-selected={chapter === i}
                   onClick={() => turn(() => { setChapter(i); setPage(0); setShowList(true) })}
@@ -279,8 +324,8 @@ export default function Notebook() {
               ))}
             </div>
 
-            {/* página da esquerda (só no desktop) */}
-            <section className="notebook-page hidden rounded-l-lg md:block">
+            {/* página da esquerda (só no desktop): aparece quando a capa termina de abrir */}
+            <section className={`notebook-page hidden rounded-l-lg transition-opacity duration-150 md:block ${phase === 'open' ? 'opacity-100' : 'opacity-0'}`}>
               {isGlossary
                 ? <TermList inputId="guide-search" term={term} query={query} setQuery={setQuery} onPick={(t) => turn(() => setTerm(t))} />
                 : Page(0)}
@@ -312,7 +357,7 @@ export default function Notebook() {
                 </div>
               </div>
             </section>
-          </div>
+          </motion.div>
         </div>
       )}
     </>

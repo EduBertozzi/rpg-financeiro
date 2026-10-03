@@ -6,6 +6,7 @@ import socket from '../../services/socket'
 import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
 import LeisureModal from '../../components/LeisureModal'
+import TurnSummaryModal from '../../components/TurnSummaryModal'
 import WalkLock from '../../components/WalkLock'
 import { loadWalkLock, saveWalkLock } from '../../components/walkTimer'
 import BillModal from '../../components/BillModal'
@@ -89,6 +90,23 @@ const BUILDINGS = [
   },
 ]
 
+// o resumo da virada abre sozinho uma vez por mês; depois, pelo painel do mês
+const summaryKey = (characterId, turn) => `virada:${characterId}:${turn}`
+function summarySeen(characterId, turn) {
+  try {
+    return localStorage.getItem(summaryKey(characterId, turn)) === '1'
+  } catch {
+    return false
+  }
+}
+function markSummarySeen(characterId, turn) {
+  try {
+    localStorage.setItem(summaryKey(characterId, turn), '1')
+  } catch {
+    // sem storage: o resumo pode abrir de novo depois de um F5
+  }
+}
+
 export default function Map() {
   const navigate = useNavigate()
   const { character, room, setCharacter, setRoom } = useGameStore()
@@ -168,10 +186,7 @@ export default function Map() {
         setCharacter({ ...characterRef.current, turnReady: false })
       }
 
-      if (data.dilemma) {
-        setDilemmaInfo({ turn: data.dilemma.turn, exists: true })
-        setShowDilemmaModal(true)
-      }
+      // o resumo da virada e o dilema do mês novo abrem pelo efeito do mês (abaixo)
     })
 
     socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
@@ -222,20 +237,41 @@ export default function Map() {
     }
   }
 
-  // dilema do mês: se ainda não foi respondido, abre sozinho quando o mês começa
+  // Começo do mês: primeiro o resumo da virada (o imprevisto, as consequências,
+  // o que ficou em aberto), depois o dilema, se ainda não foi respondido.
+  const [turnSummary, setTurnSummary] = useState(null)
+  const [showSummary, setShowSummary] = useState(false)
+  const [dilemmaPending, setDilemmaPending] = useState(false)
   useEffect(() => {
     if (!character?.id || !room?.currentTurn || room?.status !== 'active') return
     const turn = room.currentTurn
-    api.get(`/characters/${character.id}/dilemma/${turn}`)
-      .then(({ data }) => {
+    Promise.all([
+      api.get(`/characters/${character.id}/dilemma/${turn}`),
+      api.get(`/characters/${character.id}/turn-summary/${turn}`).catch(() => ({ data: null })),
+    ])
+      .then(([{ data }, { data: summary }]) => {
         setDilemmaInfo({ turn, exists: !!data.dilemma })
+        setTurnSummary(summary)
         // quem deu F5 no meio da caminhada continua andando
         const until = loadWalkLock(character.id, turn)
-        if (until) setWalkUntil(until)
-        else if (data.dilemma && !data.alreadyAnswered) setShowDilemmaModal(true)
+        if (until) return setWalkUntil(until)
+        const pending = Boolean(data.dilemma && !data.alreadyAnswered)
+        if (summary && !summarySeen(character.id, turn)) {
+          setDilemmaPending(pending)
+          setShowSummary(true)
+        } else if (pending) setShowDilemmaModal(true)
       })
       .catch(() => setDilemmaInfo(null))
   }, [character?.id, room?.currentTurn, room?.status])
+
+  const closeSummary = () => {
+    setShowSummary(false)
+    markSummarySeen(character.id, room.currentTurn)
+    if (dilemmaPending) {
+      setDilemmaPending(false)
+      setShowDilemmaModal(true)
+    }
+  }
 
   // cupom escondido do mês (o servidor só diz se tem e onde, nunca o prêmio)
   const [couponState, setCoupon] = useState(null) // { turn, id, spot }
@@ -334,6 +370,11 @@ export default function Map() {
                     <span aria-hidden="true">{weather.icon}</span> {weather.season} · {weather.label}
                   </p>
                 )}
+                {turnSummary?.turn === currentTurn && (
+                  <button type="button" onClick={() => setShowSummary(true)} className="mb-1.5 text-xs font-extrabold text-[#2457C5] underline decoration-dotted underline-offset-2 cursor-pointer">
+                    O que aconteceu na virada
+                  </button>
+                )}
 
                 <div className="flex w-48 gap-1">
                   {Array.from({ length: 12 }).map((_, i) => {
@@ -423,6 +464,8 @@ export default function Map() {
           onComplete={handleDilemmaComplete}
         />
       )}
+
+      {showSummary && turnSummary && <TurnSummaryModal summary={turnSummary} onClose={closeSummary} />}
 
       {showLeisure && (
         <LeisureModal

@@ -5,6 +5,7 @@ const { WELCOME_GIFT } = require('../utils/events')
 const { leisureFor } = require('../utils/leisure')
 const { dilemmaFor } = require('../utils/dilemmas')
 const { BILLS, pendingForMonth } = require('../utils/settle')
+const { turnSummary } = require('../utils/turnSummary')
 const { createCouponPlan } = require('./couponController')
 
 // gênero saiu da criação de personagem; a coluna continua obrigatória no
@@ -137,6 +138,26 @@ exports.getMyCharacter = async (req, res) => {
     })
     if (!character) return res.status(404).json({ error: 'Nenhum personagem encontrado' })
     res.json(character)
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+// Resumo da virada para o mês `turn` (o cartão do começo do mês).
+exports.getTurnSummary = async (req, res) => {
+  try {
+    const turn = parseInt(req.params.turn)
+    if (!Number.isInteger(turn) || turn < 1) return res.status(400).json({ error: 'Mês inválido' })
+    const character = await prisma.character.findUnique({
+      where: { id: req.params.id },
+      include: {
+        eventLog: { where: { turn: { in: [turn - 1, turn] } } },
+        effects: { where: { turn, appliedAt: { not: null } } }
+      }
+    })
+    if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
+    if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+
+    res.json(turnSummary({ turn, logs: character.eventLog ?? [], effectLabels: (character.effects ?? []).map((e) => e.label) }))
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
