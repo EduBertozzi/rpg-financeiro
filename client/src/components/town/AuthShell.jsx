@@ -11,7 +11,7 @@ export default function AuthShell({ subtitle, children }) {
       <div className={`${TOY_CARD} relative z-10 grid w-full max-w-[420px] gap-4 px-7 pb-7 pt-4 text-center sm:px-8 animate-fade-in-up`}>
         <img src={bankArt} alt="" className="mx-auto -mt-20 h-32 drop-shadow-[0_10px_10px_rgba(0,0,0,0.18)]" />
         <div>
-          <h1 className={TOY_LOGO}>Santa Rita</h1>
+          <h1 className={TOY_LOGO}>Fecha o Mês</h1>
           <p className="mt-1.5 text-xs font-extrabold tracking-[0.22em] text-[#6B7A62]">SIMULADOR FINANCEIRO · INATEL</p>
           {subtitle && <p className="mt-2 text-sm text-[#6B7A62]">{subtitle}</p>}
         </div>

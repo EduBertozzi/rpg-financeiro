@@ -71,7 +71,7 @@ export default function CharacterCreation() {
       <section className={`${TOY_CARD} relative z-10 mx-auto w-full max-w-5xl p-6 sm:p-8 animate-fade-in-up`}>
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-extrabold tracking-[0.22em] text-[#6B7A62]">SANTA RITA · NOVO MORADOR</p>
+            <p className="text-xs font-extrabold tracking-[0.22em] text-[#6B7A62]">FECHA O MÊS · NOVO MORADOR DE SANTA RITA</p>
             <h1 className="font-toy text-4xl font-extrabold leading-tight text-[#24331F]">Criar personagem</h1>
           </div>
           <ol className="flex flex-wrap gap-2" aria-label="Passos">
