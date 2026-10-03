@@ -1,6 +1,7 @@
 const prisma = require('../lib/prisma')
 const { monthlyReturn, debentureReturn, nextStockPrice, closeMonth, balanceSheet, cents, SALARY } = require('./finance')
 const { perksOf, rentAmount, eventImpact, savingsBonus, percentLabel } = require('./skills')
+const { giftIncome, giftIncomeEntry, giftEventImpact } = require('./gifts')
 
 const EVENTS = [
   { title: 'Resistência Queimada', description: 'A resistência do seu chuveiro queimou.', cashImpact: -200, category: 'daily', repair: true },
@@ -117,7 +118,9 @@ async function applyFixedCosts(character, turn, perks = perksOf()) {
   // (na taxa do personagem) e entra o salário do mês novo, já com os bônus e
   // as rendas extras das habilidades.
   const totalCosts = rentAmount(character.housingCost, perks)
-  const income = cents(SALARY + perks.salaryBonus + perks.extraIncome)
+  // renda fixa do dom (Desenrolado: freela de R$ 200) entra junto com o salário
+  const income = cents(SALARY + perks.salaryBonus + perks.extraIncome + giftIncome(character.gift))
+  const giftExtra = giftIncomeEntry(character.gift)
   const month = closeMonth(character.cash, totalCosts, character.overdraftDebt, income, perks.overdraftRate)
 
   await prisma.character.update({
@@ -163,6 +166,16 @@ async function applyFixedCosts(character, turn, perks = perksOf()) {
         turn,
         cashImpact: extra.amount,
         description: `${extra.label}: ${extra.skill} (+R$ ${extra.amount.toFixed(2)})`
+      }
+    })
+  }
+  if (giftExtra) {
+    await prisma.characterEventLog.create({
+      data: {
+        characterId: character.id,
+        turn,
+        cashImpact: giftExtra.amount,
+        description: `${giftExtra.label}: ${giftExtra.skill} (+R$ ${giftExtra.amount.toFixed(2)})`
       }
     })
   }
@@ -227,10 +240,8 @@ async function applyEvent(character, turn, perks = perksOf()) {
   let cashImpact = eventImpact(event, perks)
   const repaired = cashImpact !== event.cashImpact
 
-  // dom agile recebe 20% a mais em eventos positivos
-  if (cashImpact > 0 && character.gift === 'agile') {
-    cashImpact = Math.round(cashImpact * 1.2)
-  }
+  // dom Desenrolado recebe 50% a mais em eventos positivos
+  cashImpact = giftEventImpact(cashImpact, character.gift)
 
   if (cashImpact !== 0) {
     await prisma.character.update({

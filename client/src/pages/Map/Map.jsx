@@ -49,8 +49,8 @@ const GUIDE_TIPS = [
     desc: 'Ao final do mês 12, quem tiver o maior patrimônio líquido vence a partida.',
   },
   {
-    title: 'Árvore de Habilidades',
-    desc: 'A árvore de habilidades desbloqueia vantagens que ajudam sua estratégia financeira.',
+    title: 'Universidade',
+    desc: 'Na Universidade fica o Cruzeiro, sua constelação de habilidades: cada estrela dá uma vantagem financeira de verdade.',
   },
 ]
 
@@ -103,8 +103,8 @@ const BUILDINGS = [
   },
   {
     id: 'university',
-    name: 'Árvore de Habilidades',
-    desc: 'Desbloqueie vantagens para sua estratégia',
+    name: 'Universidade',
+    desc: 'Constelação de habilidades',
     art: universityArt,
     glow: 'rgba(168,85,247,0.55)',
     route: '/skills',

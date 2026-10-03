@@ -161,21 +161,99 @@ describe('POST /api/v1/skills/character/:id/unlock/:skillId', () => {
     expect(res.body.error).toBe('Pré-requisito não atendido')
   })
 
-  it('aplica desconto de 20% para personagem com dom smart', async () => {
-    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift: 'smart' }))
-    prismaMock.skillNode.findUnique.mockResolvedValue({
-      id: 1, name: 'Poupador', path: 'economy', level: 1, costPoints: 5
-    })
+  // ─── dom Inteligente: pontos extras, sem desconto ───────────────────────────
+
+  const unlock = (id = 1) => request(app).post(`/api/v1/skills/character/char-1/unlock/${id}`).set(authHeader(TOKEN))
+  const node = (costPoints) => ({ id: 1, name: 'Poupador', path: 'economy', level: 1, costPoints })
+  const allowUnlock = () => {
     prismaMock.characterSkill.create.mockResolvedValue({})
     prismaMock.characterSkillPoints.update.mockResolvedValue({})
+  }
+  const usedIncrement = () => prismaMock.characterSkillPoints.update.mock.calls[0][0].data.usedPoints.increment
 
-    const res = await request(app)
-      .post('/api/v1/skills/character/char-1/unlock/1')
-      .set(authHeader(TOKEN))
+  it('smart não tem mais desconto: nó de 2 pontos custa 2', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift: 'smart', skillPoints: { totalPoints: 2, usedPoints: 0, maxPoints: 10 } }))
+    prismaMock.skillNode.findUnique.mockResolvedValue(node(2))
+    allowUnlock()
+
+    const res = await unlock()
 
     expect(res.status).toBe(200)
-    // custo original=5, com 20% desconto=4 (ceil(5*0.8)), remainingPoints = 5-1-4=0
     expect(res.body.remainingPoints).toBe(0)
+    expect(usedIncrement()).toBe(2)
+  })
+
+  it.each([1, 2, 3, 5])('smart paga o custo cheio de um nó de %i ponto(s)', async (cost) => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift: 'smart', skillPoints: { totalPoints: 10, usedPoints: 0, maxPoints: 10 } }))
+    prismaMock.skillNode.findUnique.mockResolvedValue(node(cost))
+    allowUnlock()
+
+    const res = await unlock()
+
+    expect(res.status).toBe(200)
+    expect(usedIncrement()).toBe(cost)
+    expect(res.body.remainingPoints).toBe(10 - cost)
+  })
+
+  it('smart com 5 pontos e nó de 5 não ganha desconto (antes ceil(5*0,8)=4)', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift: 'smart' })) // 5 total, 1 usado
+    prismaMock.skillNode.findUnique.mockResolvedValue(node(5))
+
+    const res = await unlock()
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Pontos insuficientes')
+    expect(prismaMock.characterSkill.create).not.toHaveBeenCalled()
+  })
+
+  it('smart com limite 10 pode chegar a 10 pontos usados', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift: 'smart', skillPoints: { totalPoints: 10, usedPoints: 8, maxPoints: 10 } }))
+    prismaMock.skillNode.findUnique.mockResolvedValue(node(2))
+    allowUnlock()
+
+    const res = await unlock()
+
+    expect(res.status).toBe(200)
+    expect(res.body.remainingPoints).toBe(0)
+  })
+
+  it('smart não passa de 10 pontos usados', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift: 'smart', skillPoints: { totalPoints: 12, usedPoints: 9, maxPoints: 10 } }))
+    prismaMock.skillNode.findUnique.mockResolvedValue(node(2))
+
+    const res = await unlock()
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Limite de pontos atingido')
+  })
+
+  it('sem o dom Inteligente o limite continua 8', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift: 'agile', skillPoints: { totalPoints: 10, usedPoints: 7, maxPoints: 8 } }))
+    prismaMock.skillNode.findUnique.mockResolvedValue(node(2))
+
+    const res = await unlock()
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Limite de pontos atingido')
+  })
+
+  it.each(['frugal', 'agile', null])('dom %s também paga o custo cheio', async (gift) => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift, skillPoints: { totalPoints: 5, usedPoints: 0, maxPoints: 8 } }))
+    prismaMock.skillNode.findUnique.mockResolvedValue(node(3))
+    allowUnlock()
+
+    const res = await unlock()
+
+    expect(res.status).toBe(200)
+    expect(usedIncrement()).toBe(3)
+  })
+
+  it('GET da árvore devolve o limite 10 do Inteligente', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ gift: 'smart', skillPoints: { totalPoints: 2, usedPoints: 0, maxPoints: 10 } }))
+
+    const res = await request(app).get('/api/v1/skills/character/char-1').set(authHeader(TOKEN))
+
+    expect(res.body).toMatchObject({ totalPoints: 2, usedPoints: 0, maxPoints: 10 })
   })
 
   it('retorna 404 para personagem inexistente', async () => {

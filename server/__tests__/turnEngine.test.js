@@ -708,3 +708,158 @@ describe('habilidades na virada do mês', () => {
     expect(results[0].cashDelta).toBeCloseTo(7000 + 700 + 550 - 1200 - 40 + 270 - 1750, 2)
   })
 })
+
+// ─── dons na virada do mês ────────────────────────────────────────────────────
+
+describe('dons na virada do mês', () => {
+  const { EVENTS } = require('../src/utils/turnEngine')
+  const skill = (path, level) => ({ skillNode: { path, level, name: `${path}-${level}` } })
+
+  const randomFor = (index) => (index + 0.5) / EVENTS.length
+  const QUIET = EVENTS.findIndex((e) => e.category === 'none')
+  const pickEvent = (title) => Math.random.mockReturnValue(randomFor(EVENTS.findIndex((e) => e.title === title)))
+
+  function setup(character) {
+    prismaMock.room.findUnique.mockResolvedValueOnce({
+      id: 'room-1', currentTurn: 1, maxTurns: 12, status: 'active', characters: [character],
+    })
+    prismaMock.marketAsset.findMany.mockResolvedValue([])
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([])
+    prismaMock.debentureInvestment.findMany.mockResolvedValue([])
+    prismaMock.characterEventLog.create.mockResolvedValue({})
+    prismaMock.character.update.mockResolvedValue({})
+    prismaMock.character.findUnique.mockResolvedValue({
+      ...character, fixedInvestments: [], positions: [], debentures: [],
+    })
+    prismaMock.financialSnapshot.upsert.mockResolvedValue({})
+    prismaMock.room.update.mockResolvedValue({ currentTurn: 2, status: 'active' })
+  }
+
+  const costsUpdate = () => prismaMock.character.update.mock.calls.find(([args]) => 'isBankrupt' in (args?.data ?? {}))[0].data
+  const logs = () => prismaMock.characterEventLog.create.mock.calls.map(([args]) => args.data)
+  const logStarting = (prefix) => logs().filter((l) => l.description.startsWith(prefix))
+  const cashIncrements = () => prismaMock.character.update.mock.calls
+    .map(([args]) => args.data.cash)
+    .filter((c) => c && typeof c === 'object' && 'increment' in c)
+    .map((c) => c.increment)
+
+  const agile = (overrides = {}) => makeCharacter({ cash: 0, housingCost: 1000, gift: 'agile', unlockedSkills: [], ...overrides })
+
+  beforeEach(() => jest.spyOn(Math, 'random').mockReturnValue(randomFor(QUIET)))
+  afterEach(() => Math.random.mockRestore())
+
+  // ─── Desenrolado (agile) ────────────────────────────────────────────────────
+
+  it('Desenrolado: +R$ 200 de freela no saldo do mês', async () => {
+    setup(agile())
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6200) // 7000 + 200 - 1000
+  })
+
+  it('Desenrolado: linha própria no extrato', async () => {
+    setup(agile())
+    await processTurn('room-1')
+
+    expect(logStarting('Freela')).toEqual([
+      expect.objectContaining({ characterId: 'char-1', turn: 2, cashImpact: 200, description: 'Freela: Desenrolado (+R$ 200.00)' }),
+    ])
+  })
+
+  it('Desenrolado: o freela entra depois do salário e antes do aluguel', async () => {
+    setup(agile())
+    await processTurn('room-1')
+
+    expect(logs().map((l) => l.description.split(':')[0])).toEqual(['Salário', 'Freela', 'Aluguel', 'Nenhum imprevisto'])
+  })
+
+  it('Desenrolado: o freela do dom vem depois das rendas das habilidades', async () => {
+    setup(agile({ unlockedSkills: [skill('technical', 1)] }))
+    await processTurn('room-1')
+
+    expect(logStarting('Freela').map((l) => l.description)).toEqual([
+      'Freela: Fundamentos e Lógica (+R$ 150.00)',
+      'Freela: Desenrolado (+R$ 200.00)',
+    ])
+    expect(costsUpdate().cash).toBe(6350) // 7000 + 150 + 200 - 1000
+  })
+
+  it('Desenrolado: o freela entra no resultado do mês', async () => {
+    setup(agile())
+    const { results } = await processTurn('room-1')
+
+    expect(results[0].cashDelta).toBe(7000 + 200 - 1000)
+  })
+
+  it('Desenrolado: o freela ajuda a cobrir o cheque especial', async () => {
+    setup(agile({ cash: -1000 }))
+    await processTurn('room-1')
+
+    // -1000 - 80 de juros (8%) + 7000 + 200 - 1000
+    expect(costsUpdate().cash).toBe(5120)
+  })
+
+  it('Desenrolado: Freelance Inesperado paga 50% a mais (800 → 1200)', async () => {
+    pickEvent('Freelance Inesperado')
+    setup(agile())
+    await processTurn('room-1')
+
+    expect(logStarting('Freelance Inesperado')).toEqual([expect.objectContaining({ cashImpact: 1200 })])
+    expect(cashIncrements()).toContain(1200)
+  })
+
+  it('Desenrolado: Bônus no Trabalho paga 50% a mais (1500 → 2250)', async () => {
+    pickEvent('Bônus no Trabalho')
+    setup(agile())
+    const { results } = await processTurn('room-1')
+
+    expect(logStarting('Bônus no Trabalho')).toEqual([expect.objectContaining({ cashImpact: 2250 })])
+    expect(cashIncrements()).toContain(2250)
+    expect(results[0].cashDelta).toBe(7000 + 200 - 1000 + 2250)
+  })
+
+  it.each(['Resistência Queimada', 'Emergência Veterinária', 'Infiltração Grave', 'Promoção Relâmpago'])(
+    'Desenrolado: evento negativo "%s" não muda', async (title) => {
+      pickEvent(title)
+      const event = EVENTS.find((e) => e.title === title)
+      setup(agile())
+      await processTurn('room-1')
+
+      expect(logStarting(title)).toEqual([expect.objectContaining({ cashImpact: event.cashImpact })])
+    })
+
+  it('Desenrolado: mês tranquilo continua em zero', async () => {
+    setup(agile())
+    await processTurn('room-1')
+
+    expect(logStarting('Nenhum imprevisto')).toEqual([expect.objectContaining({ cashImpact: 0 })])
+    expect(cashIncrements()).toEqual([])
+  })
+
+  // ─── quem não é Desenrolado ─────────────────────────────────────────────────
+
+  it.each(['frugal', 'smart', null])('dom %s não recebe o freela do dom', async (gift) => {
+    setup(agile({ gift }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6000)
+    expect(logStarting('Freela')).toEqual([])
+    expect(logs().map((l) => l.description.split(':')[0])).toEqual(['Salário', 'Aluguel', 'Nenhum imprevisto'])
+  })
+
+  it.each([
+    ['frugal', 'Freelance Inesperado', 800],
+    ['smart', 'Freelance Inesperado', 800],
+    [null, 'Freelance Inesperado', 800],
+    ['frugal', 'Bônus no Trabalho', 1500],
+    ['smart', 'Bônus no Trabalho', 1500],
+    [null, 'Bônus no Trabalho', 1500],
+  ])('dom %s recebe "%s" sem bônus (R$ %i)', async (gift, title, value) => {
+    pickEvent(title)
+    setup(agile({ gift }))
+    await processTurn('room-1')
+
+    expect(logStarting(title)).toEqual([expect.objectContaining({ cashImpact: value })])
+    expect(cashIncrements()).toContain(value)
+  })
+})

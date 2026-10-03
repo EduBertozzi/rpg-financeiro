@@ -222,10 +222,10 @@ export default function GameHeader() {
       description: 'Conta, caixinhas e ações',
     },
     {
-      label: 'Skills',
+      label: 'Universidade',
       path: '/skills',
       icon: 'skills',
-      description: 'Evolução do personagem',
+      description: 'Constelação de habilidades',
     },
   ]
 

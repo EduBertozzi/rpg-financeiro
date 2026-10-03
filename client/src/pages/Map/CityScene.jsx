@@ -12,7 +12,7 @@ import {
 // quarteirões decorativos (CityBlocks) e pela paisagem (Scenery).
 const ART = 270
 const ART_ANCHOR = 0.66
-// prédio central (Árvore de Habilidades) aparece maior e com aura
+// prédio central (Universidade) aparece maior e com aura
 const FEATURED = 'university'
 const artSize = (id) => (id === FEATURED ? ART * 1.22 : ART)
 // onde o desenho de cada PNG termina (fração da altura, medido pelo alfa);
@@ -23,7 +23,7 @@ const labelY = (id, y) => y + artSize(id) * ((ART_BOTTOM[id] ?? 0.8) - ART_ANCHO
 // além dela (overflow visível) e o anel de casas aparece cortado nas bordas.
 const VIEW = { x: 150, y: 60, w: 1300, h: 870 }
 
-// A Árvore de Habilidades fica no centro da cidade; os demais ao redor.
+// A Universidade fica no centro da cidade; os demais ao redor.
 const PLOTS = {
   bank: [0, 0],
   utilities: [1, 0],

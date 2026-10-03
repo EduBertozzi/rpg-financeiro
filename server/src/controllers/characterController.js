@@ -1,20 +1,19 @@
 const prisma = require('../lib/prisma')
 const { SALARY } = require('../utils/finance')
+const { isValidGift, startingCosts, startingSkillPoints } = require('../utils/gifts')
 
-const GIFT_MODIFIERS = {
-  frugal:  { housingCost: 0.85, foodCost: 0.85, utilitiesCost: 0.85, transportCost: 0.85 },
-  agile:   {},
-  smart:   {}
-}
+// gênero saiu da criação de personagem; a coluna continua obrigatória no
+// banco, então guardamos um valor neutro quando não vem
+const DEFAULT_GENDER = 'none'
 
 exports.createCharacter = async (req, res) => {
   try {
     const { roomId, name, gender, avatarId = 1, course, gift } = req.body
 
-    if (!roomId || !name || !gender || !course || !gift)
+    if (!roomId || !name || !course || !gift)
       return res.status(400).json({ error: 'Preencha todos os campos' })
 
-    if (!['frugal', 'agile', 'smart'].includes(gift))
+    if (!isValidGift(gift))
       return res.status(400).json({ error: 'Dom inválido' })
 
     const room = await prisma.room.findUnique({ where: { id: roomId } })
@@ -26,26 +25,22 @@ exports.createCharacter = async (req, res) => {
     })
     if (existing) return res.status(409).json({ error: 'Personagem já criado nessa sala' })
 
-    const mods = GIFT_MODIFIERS[gift]
     const character = await prisma.character.create({
       data: {
         userId: req.user.id,
         roomId,
         name,
-        gender,
+        gender: gender || DEFAULT_GENDER,
         avatarId,
         course,
         gift,
         cash: SALARY, // começa com o salário de janeiro na conta
-        housingCost:   mods.housingCost   ? 1500 * mods.housingCost   : 1500,
-        foodCost:      mods.foodCost       ? 1000 * mods.foodCost       : 1000,
-        utilitiesCost: mods.utilitiesCost  ? 250  * mods.utilitiesCost  : 250,
-        transportCost: mods.transportCost  ? 250  * mods.transportCost  : 250,
+        ...startingCosts(gift), // aluguel, mercado, contas e transporte (Mão de Vaca: -10%)
       }
     })
 
     await prisma.characterSkillPoints.create({
-      data: { characterId: character.id }
+      data: { characterId: character.id, ...startingSkillPoints(gift) } // Inteligente: 2 pontos, limite 10
     })
 
     res.status(201).json(character)

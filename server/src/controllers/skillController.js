@@ -81,9 +81,8 @@ exports.unlockSkill = async (req, res) => {
       if (!hasPrereq) return res.status(400).json({ error: 'Pré-requisito não atendido' })
     }
 
-    // calcula custo (smart tem 20% de desconto)
-    let cost = skill.costPoints
-    if (character.gift === 'smart') cost = Math.ceil(cost * 0.8)
+    // o custo é sempre o do nó (o dom Inteligente dá pontos extras, não desconto)
+    const cost = skill.costPoints
 
     const points = character.skillPoints
     if (!points) return res.status(400).json({ error: 'Pontos não inicializados' })

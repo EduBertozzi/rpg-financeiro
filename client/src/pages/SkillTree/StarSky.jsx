@@ -14,7 +14,7 @@ export default function StarSky() {
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const mouse = { x: 0, y: 0 }
     const t0 = performance.now()
-    let W = 0, H = 0, stars = [], shooting = null, nextShot = 2600, frame = 0
+    let W = 0, H = 0, stars = [], dust = [], shooting = null, nextShot = 2600, frame = 0
 
     const resize = () => {
       const r = canvas.getBoundingClientRect()
@@ -26,6 +26,11 @@ export default function StarSky() {
         x: Math.random() * W, y: Math.random() * H, z: [0.25, 0.55, 1][i % 3],
         r: Math.random() * 1.2 + 0.3, p: Math.random() * 6.28, s: Math.random() * 1.5 + 0.5,
       }))
+      // poeira da Via Láctea, concentrada na faixa
+      dust = Array.from({ length: Math.round((W * H) / 900) }, () => {
+        const u = (Math.random() - 0.5) * 2.2 * W, v = (Math.random() + Math.random() + Math.random() - 1.5) * H * 0.12
+        return { x: W * 0.5 + u * Math.cos(-0.42) - v * Math.sin(-0.42), y: H * 0.45 + u * Math.sin(-0.42) + v * Math.cos(-0.42), a: Math.random() * 0.5 + 0.1, p: Math.random() * 6.28 }
+      })
       if (reduce) draw(performance.now())
     }
 
@@ -39,7 +44,18 @@ export default function StarSky() {
         g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(1, 'rgba(0,0,0,0)')
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H)
       })
+      // Via Láctea: faixa diagonal suave
+      ctx.save()
+      ctx.translate(W * 0.5, H * 0.45); ctx.rotate(-0.42)
+      const band = ctx.createLinearGradient(0, -H * 0.22, 0, H * 0.22)
+      band.addColorStop(0, 'rgba(180,190,255,0)'); band.addColorStop(0.5, 'rgba(200,205,255,0.07)'); band.addColorStop(1, 'rgba(180,190,255,0)')
+      ctx.fillStyle = band; ctx.fillRect(-W, -H * 0.22, W * 2, H * 0.44)
+      ctx.restore()
       ctx.fillStyle = '#fff'
+      for (const s of dust) {
+        ctx.globalAlpha = s.a * (0.6 + 0.4 * Math.sin(t * 0.7 + s.p))
+        ctx.fillRect(s.x + mouse.x * 4, s.y + mouse.y * 3, 1, 1)
+      }
       for (const s of stars) {
         const x = (((s.x - t * 4 * s.z + mouse.x * 18 * s.z) % W) + W) % W
         const y = s.y + mouse.y * 12 * s.z

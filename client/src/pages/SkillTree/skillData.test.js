@@ -46,14 +46,17 @@ describe('skillStatus', () => {
 })
 
 describe('skillCost', () => {
-  it('custo normal é o da habilidade', () => {
-    assert.equal(skillCost({ costPoints: 2 }, 'frugal'), 2)
+  it('custo é sempre o da habilidade, para qualquer dom', () => {
+    for (const gift of [null, 'frugal', 'agile', 'smart']) {
+      assert.equal(skillCost({ costPoints: 1 }, gift), 1)
+      assert.equal(skillCost({ costPoints: 2 }, gift), 2)
+    }
   })
 
-  it('Inteligente arredonda para cima, como o servidor', () => {
-    assert.equal(skillCost({ costPoints: 1 }, 'smart'), 1)
-    assert.equal(skillCost({ costPoints: 2 }, 'smart'), 2)
-    assert.equal(skillCost({ costPoints: 5 }, 'smart'), 4)
+  it('o Inteligente usa até 10 pontos (limite vem do servidor)', () => {
+    const s = skills.find((x) => x.path === 'management' && x.level === 1)
+    assert.equal(skillStatus(s, ctx({ totalPoints: 12, usedPoints: 9, maxPoints: 10, gift: 'smart' })), 'ready')
+    assert.equal(skillStatus(s, ctx({ totalPoints: 12, usedPoints: 10, maxPoints: 10, gift: 'smart' })), 'cap')
   })
 })
 

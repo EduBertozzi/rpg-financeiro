@@ -44,8 +44,8 @@ export const STATUS_TEXT = {
   ready: 'Pronta para desbloquear',
 }
 
-// Custo em pontos (o dom Inteligente tem desconto, como no servidor).
-export const skillCost = (skill, gift) => (gift === 'smart' ? Math.ceil(skill.costPoints * 0.8) : skill.costPoints)
+// Custo em pontos: sempre o da habilidade (o dom Inteligente dá pontos a mais, não desconto).
+export const skillCost = (skill) => skill.costPoints
 
 // Estado de uma habilidade, na mesma ordem de checagem do servidor.
 export function skillStatus(skill, { skills, unlockedIds, totalPoints, usedPoints, maxPoints, gift }) {

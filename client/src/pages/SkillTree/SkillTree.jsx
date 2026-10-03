@@ -3,6 +3,7 @@ import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import GameLayout from '../../components/GameLayout'
 import StarSky from './StarSky'
+import { getAvatarById } from '../../data/avatarTheme'
 import { CORE, PATHS, PATH_ORDER, SPOTS, STATUS_TEXT, perkOf, skillCost, skillStatus } from './skillData'
 import './cruzeiro.css'
 
@@ -98,6 +99,7 @@ export default function SkillTree() {
               selectedId={current?.id}
               justUnlocked={justUnlocked}
               intro={intro}
+              avatar={getAvatarById(character?.avatarId ?? 1)?.image}
               onPick={(id) => { setSelected(id); setJustUnlocked(null); setError('') }}
             />
 
@@ -114,7 +116,7 @@ export default function SkillTree() {
             <Detail
               skill={current}
               status={statusOf(current)}
-              cost={skillCost(current, character?.gift)}
+              cost={skillCost(current)}
               unlocked={skills.filter((s) => unlockedIds.includes(s.id))}
               tips={mine.tips}
               busy={busy}
@@ -145,7 +147,33 @@ function Points({ free, used, max }) {
   )
 }
 
-function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, onPick }) {
+// Estrela de 4 pontas centrada em (x, y).
+const starPath = (x, y, R) => {
+  const r = R * 0.3
+  return Array.from({ length: 8 }, (_, i) => {
+    const a = (i * Math.PI) / 4 - Math.PI / 2
+    const d = i % 2 ? r : R
+    return `${i ? 'L' : 'M'}${(x + Math.cos(a) * d).toFixed(1)} ${(y + Math.sin(a) * d).toFixed(1)}`
+  }).join(' ') + 'Z'
+}
+
+// Nomes longos quebram em duas linhas, no espaço mais perto do meio.
+const splitName = (name) => {
+  if (name.length <= 22) return [name]
+  const mid = name.length / 2
+  const spaces = [...name.matchAll(/ /g)].map((m) => m.index)
+  const cut = spaces.reduce((best, i) => (Math.abs(i - mid) < Math.abs(best - mid) ? i : best), spaces[0])
+  return [name.slice(0, cut), name.slice(cut + 1)]
+}
+
+// Nome ao lado da estrela, longe da linha que desce para o centro.
+const labelPos = (path, x, y, R) => {
+  if (path === 'technical') return { x: x - 8, y: y + R + 16, anchor: 'end' }
+  if (path === 'management') return { x: x + 8, y: y + R + 16, anchor: 'start' }
+  return { x: x + R + 12, y: y + 5, anchor: 'start' }
+}
+
+function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, avatar, onPick }) {
   if (!skills.length) return <div className="flex-1" />
   const [cx, cy] = CORE
   const isOn = (s) => unlockedIds.includes(s.id)
@@ -153,20 +181,21 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
 
   return (
     <svg
-      viewBox="0 0 1000 740"
+      viewBox="0 130 1000 640"
       preserveAspectRatio="xMidYMid meet"
       className={`min-h-0 w-full flex-1 ${intro ? 'cz-intro' : 'cz-quick'}`}
       role="group"
       aria-label="Habilidades por caminho"
     >
       <defs>
-        <radialGradient id="cz-gcore"><stop offset="0" stopColor="#FFF4D6" /><stop offset=".45" stopColor="#FFC857" /><stop offset="1" stopColor="#E08A00" /></radialGradient>
+        <radialGradient id="cz-gcore"><stop offset="0" stopColor="#FFF4D6" /><stop offset=".55" stopColor="#FFC857" /><stop offset="1" stopColor="#E08A00" /></radialGradient>
         {PATH_ORDER.map((p) => (
           <g key={p}>
-            <radialGradient id={`cz-g-${p}`}><stop offset="0" stopColor="#fff" /><stop offset=".35" stopColor={PATHS[p].hex} /><stop offset="1" stopColor={PATHS[p].hex} stopOpacity=".85" /></radialGradient>
-            <radialGradient id={`cz-glow-${p}`}><stop offset="0" stopColor={PATHS[p].hex} stopOpacity=".55" /><stop offset="1" stopColor={PATHS[p].hex} stopOpacity="0" /></radialGradient>
+            <radialGradient id={`cz-g-${p}`}><stop offset="0" stopColor="#fff" /><stop offset=".45" stopColor="#fff" /><stop offset="1" stopColor={PATHS[p].hex} /></radialGradient>
+            <radialGradient id={`cz-glow-${p}`}><stop offset="0" stopColor={PATHS[p].hex} stopOpacity=".6" /><stop offset="1" stopColor={PATHS[p].hex} stopOpacity="0" /></radialGradient>
           </g>
         ))}
+        <clipPath id="cz-avatar-clip"><circle cx={cx} cy={cy} r="35" /></clipPath>
         <filter id="cz-soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" /></filter>
       </defs>
 
@@ -186,16 +215,16 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
                 className={`cz-ln ${s.id === justUnlocked ? 'cz-drawnow' : ''}`}
                 style={style}
                 x1={from[0]} y1={from[1]} x2={x} y2={y}
-                stroke={on ? hex : 'rgba(200,215,240,.18)'}
-                strokeWidth={on ? 2.6 : 1.5}
-                strokeDasharray={on ? undefined : '3 7'}
+                stroke={on ? hex : 'rgba(200,215,240,.16)'}
+                strokeWidth={on ? 2.6 : 1.2}
+                strokeDasharray={on ? undefined : '2 8'}
                 strokeLinecap="round"
                 filter={on ? 'url(#cz-soft)' : undefined}
               />
               {on && (
                 <>
-                  <line className="cz-ln" style={style} x1={from[0]} y1={from[1]} x2={x} y2={y} stroke={hex} strokeWidth="1.6" strokeLinecap="round" />
-                  <line className="cz-flow" x1={from[0]} y1={from[1]} x2={x} y2={y} stroke="#fff" strokeWidth="2.2" strokeLinecap="round" opacity=".85" />
+                  <line className="cz-ln" style={style} x1={from[0]} y1={from[1]} x2={x} y2={y} stroke={hex} strokeWidth="1.4" strokeLinecap="round" />
+                  <line className="cz-flow" x1={from[0]} y1={from[1]} x2={x} y2={y} stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity=".8" />
                 </>
               )}
             </g>
@@ -206,13 +235,16 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
       {/* você, no centro */}
       <circle className="cz-shock" cx={cx} cy={cy} r="30" fill="none" stroke="#FFC857" strokeWidth="2" />
       <g className="cz-vc">
-        <circle cx={cx} cy={cy} r="60" fill="#FFC857" opacity=".12" />
-        <circle cx={cx} cy={cy} r="44" fill="none" stroke="#FFC857" strokeOpacity=".35" strokeWidth="1.5" />
-        <circle cx={cx} cy={cy} r="34" fill="url(#cz-gcore)" />
-        <text x={cx} y={cy + 7} textAnchor="middle" fontSize="20" fontWeight="900" fill="#2A1C00">VC</text>
+        <circle cx={cx} cy={cy} r="74" fill="url(#cz-glow-technical)" opacity=".0" />
+        <circle cx={cx} cy={cy} r="64" fill="#FFC857" opacity=".1" />
+        <circle className="cz-orbit" cx={cx} cy={cy} r="52" fill="none" stroke="#FFC857" strokeOpacity=".55" strokeWidth="1.5" strokeDasharray="2 9" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="40" fill="url(#cz-gcore)" />
+        <circle cx={cx} cy={cy} r="35" fill="#1B2B47" />
+        {avatar && <image href={avatar} x={cx - 44} y={cy - 40} width="88" height="88" clipPath="url(#cz-avatar-clip)" preserveAspectRatio="xMidYMin slice" />}
+        <circle cx={cx} cy={cy} r="35" fill="none" stroke="#FFF4D6" strokeWidth="2" />
       </g>
 
-      {/* nós */}
+      {/* estrelas */}
       {PATH_ORDER.map((path, pi) =>
         skills.filter((s) => s.path === path).map((s) => {
           const [x, y] = SPOTS[path][s.level - 1] ?? CORE
@@ -220,9 +252,10 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
           const st = statusOf(s)
           const on = st === 'on'
           const sel = s.id === selectedId
-          const r = 17 + s.level * 2.5
           const hex = PATHS[path].hex
+          const R = (on ? 17 : st === 'locked' ? 9 : 14) + s.level * 2
           const d = { '--d': `${(1.15 + li * 0.32 + pi * 0.08).toFixed(2)}s` }
+          const lp = labelPos(path, x, y, Math.max(R * 0.6, 12))
           const pick = () => onPick(s.id)
           return (
             <g
@@ -236,32 +269,30 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick() } }}
             >
               <g className="cz-nd" style={d}>
-                {on && <circle className="cz-halo" cx={x} cy={y} r={r * 2.6} fill={`url(#cz-glow-${path})`} />}
-                {st === 'ready' && <circle className="cz-ready" cx={x} cy={y} r={r + 4} fill="none" stroke="#FFC857" strokeWidth="2" />}
-                <circle className="cz-focus" cx={x} cy={y} r={r + 9} fill="none" stroke="#FFC857" strokeWidth="2" strokeDasharray="4 4" />
+                <circle cx={x} cy={y} r={R + 12} fill="transparent" />
+                {on && <circle className="cz-halo" cx={x} cy={y} r={R * 2.4} fill={`url(#cz-glow-${path})`} />}
+                {st === 'ready' && <circle className="cz-ready" cx={x} cy={y} r={R * 0.75} fill="none" stroke="#FFC857" strokeWidth="2" />}
+                {sel && <circle className="cz-orbit" cx={x} cy={y} r={R + 8} fill="none" stroke="#FFC857" strokeWidth="1.6" strokeDasharray="3 5" />}
+                <circle className="cz-focus" cx={x} cy={y} r={R + 13} fill="none" stroke="#FFC857" strokeWidth="2" strokeDasharray="4 4" />
                 <g className="cz-core">
-                  <circle
-                    cx={x} cy={y} r={r}
-                    fill={on ? `url(#cz-g-${path})` : 'rgba(9,18,34,.92)'}
-                    stroke={sel ? '#FFC857' : on ? 'rgba(255,255,255,.9)' : st === 'locked' ? 'rgba(200,215,240,.22)' : hex}
-                    strokeWidth={sel ? 3 : 1.8}
-                  />
-                  {on ? (
-                    <path
-                      d={`M${x} ${y - r * 0.55} L${x + r * 0.14} ${y - r * 0.14} L${x + r * 0.55} ${y} L${x + r * 0.14} ${y + r * 0.14} L${x} ${y + r * 0.55} L${x - r * 0.14} ${y + r * 0.14} L${x - r * 0.55} ${y} L${x - r * 0.14} ${y - r * 0.14} Z`}
-                      fill="#fff" opacity=".95"
-                    />
-                  ) : st === 'locked' ? (
-                    <g transform={`translate(${x - 7} ${y - 8})`} fill="none" stroke="#5B6B80" strokeWidth="1.8" strokeLinecap="round">
-                      <rect x="0" y="6" width="14" height="10" rx="2" /><path d="M3 6V4a4 4 0 0 1 8 0v2" />
+                  {on && (
+                    <g stroke={hex} strokeLinecap="round" opacity=".7">
+                      <line x1={x - R * 2} y1={y} x2={x + R * 2} y2={y} strokeWidth="1" />
+                      <line x1={x} y1={y - R * 2} x2={x} y2={y + R * 2} strokeWidth="1" />
                     </g>
-                  ) : (
-                    <text x={x} y={y + 5} textAnchor="middle" fontSize="15" fontWeight="900" fill="#fff">{s.level}</text>
                   )}
+                  <path
+                    d={starPath(x, y, R)}
+                    fill={on ? `url(#cz-g-${path})` : st === 'locked' ? 'rgba(200,215,240,.32)' : st === 'ready' ? hex : 'rgba(9,18,34,.9)'}
+                    stroke={on ? '#fff' : st === 'locked' ? 'none' : hex}
+                    strokeWidth={on ? 1 : 1.6}
+                    strokeLinejoin="round"
+                  />
+                  {on && <circle cx={x} cy={y} r={R * 0.22} fill="#fff" />}
                 </g>
               </g>
-              <text className="cz-lbl" style={d} x={x} y={y + r + 19} textAnchor="middle" fontSize="12.5" fontWeight={on ? 700 : 600} fill={on ? '#fff' : sel ? '#F6E7C1' : '#8EA0B8'}>
-                {s.name}
+              <text className="cz-lbl" style={d} x={lp.x} y={lp.y} textAnchor={lp.anchor} fontSize="13" fontWeight={on || sel ? 700 : 500} fill={on ? '#fff' : sel ? '#F6E7C1' : st === 'locked' ? '#6E7F96' : '#A9B8CC'}>
+                {splitName(s.name).map((line, i) => <tspan key={i} x={lp.x} dy={i ? 15 : 0}>{line}</tspan>)}
               </text>
             </g>
           )
@@ -274,8 +305,8 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
         const d = { '--d': `${(2 + pi * 0.1).toFixed(2)}s` }
         return (
           <g key={`t-${path}`}>
-            <text className="cz-lbl" style={d} x={lx} y={ly - 46} textAnchor="middle" fontSize="12" fontWeight="800" letterSpacing="3" fill={PATHS[path].hex}>{PATHS[path].short.toUpperCase()}</text>
-            <text className="cz-lbl" style={d} x={lx} y={ly - 30} textAnchor="middle" fontSize="11" fill="#8EA0B8">{PATHS[path].theme}</text>
+            <text className="cz-lbl" style={d} x={lx} y={ly - 50} textAnchor="middle" fontSize="12" fontWeight="800" letterSpacing="3" fill={PATHS[path].hex}>{PATHS[path].short.toUpperCase()}</text>
+            <text className="cz-lbl" style={d} x={lx} y={ly - 34} textAnchor="middle" fontSize="11" fill="#8EA0B8">{PATHS[path].theme}</text>
           </g>
         )
       })}

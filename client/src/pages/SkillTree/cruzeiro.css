@@ -8,6 +8,7 @@
 
 .cz-flow { stroke-dasharray: 2 16; animation: cz-flow 1.6s linear infinite; }
 .cz-ready { animation: cz-ring 1.9s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.cz-orbit { animation: cz-spin 24s linear infinite; transform-box: fill-box; transform-origin: center; }
 .cz-halo { animation: cz-breathe 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
 
 .cz-intro .cz-ln { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: cz-draw .7s cubic-bezier(.6, 0, .2, 1) forwards; animation-delay: var(--d); }
@@ -24,6 +25,7 @@
 .cz-just .cz-core { animation: cz-unlock .7s cubic-bezier(.2, 1.6, .4, 1); }
 .cz-drawnow { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: cz-draw .6s ease forwards; }
 
+@keyframes cz-spin { to { transform: rotate(360deg) } }
 @keyframes cz-flow { to { stroke-dashoffset: -36; } }
 @keyframes cz-ring { 0% { transform: scale(.85); opacity: .9 } 100% { transform: scale(1.6); opacity: 0 } }
 @keyframes cz-breathe { 50% { transform: scale(1.12); opacity: .55 } }
@@ -37,7 +39,7 @@
 @keyframes cz-unlock { 0% { transform: scale(.6) } 60% { transform: scale(1.45) } 100% { transform: scale(1) } }
 
 @media (prefers-reduced-motion: reduce) {
-  .cz-flow, .cz-ready, .cz-halo, .cz-burst circle, .cz-just .cz-core, .cz-brand { animation: none !important; }
+  .cz-flow, .cz-ready, .cz-halo, .cz-orbit, .cz-burst circle, .cz-just .cz-core, .cz-brand { animation: none !important; }
   .cz-intro .cz-ln, .cz-intro .cz-nd, .cz-intro .cz-lbl, .cz-intro .cz-vc, .cz-drawnow, .cz-quick * { animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; }
   .cz-shock { display: none; }
 }
