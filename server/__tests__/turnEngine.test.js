@@ -186,12 +186,10 @@ describe('custos fixos', () => {
     )
   })
 
-  it('personagem com caixa insuficiente entra em cheque especial', async () => {
-    // cash=100, custos totais=1850 → fica negativo → isBankrupt=true
-    const brokeChar = makeCharacter({ cash: 100 })
-
+  // Configura um turno de um personagem só, devolvendo o personagem fresco para o snapshot.
+  function setupOne(character, fresh = {}) {
     prismaMock.room.findUnique.mockResolvedValueOnce({
-      id: 'room-1', currentTurn: 1, maxTurns: 12, status: 'active', characters: [brokeChar],
+      id: 'room-1', currentTurn: 1, maxTurns: 12, status: 'active', characters: [character],
     })
     prismaMock.marketAsset.findMany.mockResolvedValue([])
     prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([])
@@ -199,19 +197,65 @@ describe('custos fixos', () => {
     prismaMock.characterEventLog.create.mockResolvedValue({})
     prismaMock.character.update.mockResolvedValue({})
     prismaMock.character.findUnique.mockResolvedValue({
-      ...brokeChar, cash: 0, overdraftDebt: 208.2, isBankrupt: true,
-      fixedInvestments: [], positions: [], debentures: [],
+      ...character, fixedInvestments: [], positions: [], debentures: [], ...fresh,
     })
     prismaMock.financialSnapshot.upsert.mockResolvedValue({})
     prismaMock.room.update.mockResolvedValue({ currentTurn: 2, status: 'active' })
+  }
 
+  const costsUpdate = () => prismaMock.character.update.mock.calls.find(([args]) => 'isBankrupt' in (args?.data ?? {}))[0]
+  const logs = () => prismaMock.characterEventLog.create.mock.calls.map(([args]) => args.data)
+
+  it('caixa que não cobre o aluguel fica negativo com o valor inteiro', async () => {
+    setupOne(makeCharacter({ cash: 100, housingCost: 1000 }))
     await processTurn('room-1')
 
-    // O update com isBankrupt=true deve ter sido chamado
-    const bankruptCall = prismaMock.character.update.mock.calls.find(
-      ([args]) => args?.data?.isBankrupt === true
-    )
-    expect(bankruptCall).toBeDefined()
+    expect(costsUpdate().data).toEqual({ cash: -900, overdraftDebt: 0, isBankrupt: true })
+  })
+
+  it('saldo negativo paga 8% de juros e registra no extrato', async () => {
+    setupOne(makeCharacter({ cash: -1000, housingCost: 1000 }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().data.cash).toBe(-2080)
+    expect(logs()).toContainEqual(expect.objectContaining({
+      turn: 2, cashImpact: -80, description: expect.stringContaining('Cheque especial: Juros de 8%'),
+    }))
+  })
+
+  it('sem saldo negativo não há lançamento de juros', async () => {
+    setupOne(makeCharacter({ cash: 5000 }))
+    await processTurn('room-1')
+
+    expect(logs().some((l) => l.description.startsWith('Cheque especial'))).toBe(false)
+    expect(costsUpdate().data).toEqual({ cash: 4000, overdraftDebt: 0, isBankrupt: false })
+  })
+
+  it('dívida antiga (overdraftDebt) volta para o saldo e é zerada', async () => {
+    setupOne(makeCharacter({ cash: 2000, overdraftDebt: 500, housingCost: 1000 }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().data).toEqual({ cash: 500, overdraftDebt: 0, isBankrupt: false })
+  })
+
+  it('o snapshot conta o saldo negativo como dívida', async () => {
+    setupOne(makeCharacter({ cash: 100 }), {
+      cash: -900, overdraftDebt: 0, loanDebt: 0, fixedInvestments: [{ amount: 3000 }],
+    })
+    await processTurn('room-1')
+
+    expect(prismaMock.financialSnapshot.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ cash: -900, totalAssets: 3000, totalDebts: 900, netWorth: 2100 }),
+    }))
+  })
+
+  it('o resultado do mês inclui os juros no custo', async () => {
+    setupOne(makeCharacter({ cash: -1000, housingCost: 1000 }))
+    const { results } = await processTurn('room-1')
+
+    // custo = 1000 aluguel + 80 juros; evento é aleatório
+    const event = logs().find((l) => !l.description.startsWith('Aluguel') && !l.description.startsWith('Cheque'))
+    expect(results[0].cashDelta).toBeCloseTo(-1080 + event.cashImpact, 2)
   })
 })
 

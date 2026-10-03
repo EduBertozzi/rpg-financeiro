@@ -4,7 +4,7 @@ import api from '../services/api'
 import useGameStore from '../store/gameStore'
 import MareLogo from '../pages/Bank/MareLogo'
 import { MONTHS } from '../pages/Bank/bankData'
-import { paymentPreview } from '../pages/Bank/bankMath'
+import { OVERDRAFT_MONTHLY_RATE, overdraftInterest, paymentPreview } from '../pages/Bank/bankMath'
 import mercadinhoArt from '../assets/buildings/mercadinho.png'
 import utilitiesArt from '../assets/buildings/utilities.png'
 import internetArt from '../assets/buildings/internet.png'
@@ -102,7 +102,8 @@ export default function BillModal({ type, label, onClose, onComplete }) {
               </div>
               {preview.negative && (
                 <p className="rounded-[10px] bg-[#FDE2E5] px-3 py-2 text-[#9F1D2F]">
-                  Seu saldo não cobre a conta: a conta fica negativa e você entra no cheque especial. Resgate de uma caixinha antes, se puder.
+                  Seu saldo não cobre a conta: você entra no cheque especial, que cobra {OVERDRAFT_MONTHLY_RATE * 100}% ao mês.
+                  Se ficar assim até o fim do mês, são <b>{brl(overdraftInterest(preview.after))}</b> de juros. Resgate de uma caixinha antes, se puder.
                 </p>
               )}
             </div>

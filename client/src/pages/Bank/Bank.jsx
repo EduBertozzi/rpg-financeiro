@@ -8,6 +8,7 @@ import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
   reserveMonths as reserveMonthsOf, shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
+  OVERDRAFT_MONTHLY_RATE, overdraftInterest,
 } from './bankMath'
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -113,6 +114,10 @@ export default function Bank() {
   const total = cash + boxesTotal + stocksValue
   const monthlyYield = activeTypes.reduce((sum, t) => sum + boxYield(t), 0)
   const reserveGoal = reserveGoalOf(character)
+  // caixinha com mais dinheiro resgatável para cobrir o cheque especial
+  const coverType = activeTypes
+    .filter((t) => t !== 'DEBENTURE')
+    .reduce((best, t) => (boxValue(t) > boxValue(best) ? t : best), 'POUPANCA')
 
   // ── ações ──────────────────────────────────────────────────────────────
   const openMove = (type, mode = 'guardar') => setSheet({ kind: 'move', type, mode, value: '', error: '' })
@@ -173,7 +178,7 @@ export default function Bank() {
     .slice(0, 8)
 
   const parts = shares([
-    { name: 'Conta', value: cash, color: '#9FB3B0' },
+    { name: 'Conta', value: Math.max(cash, 0), color: '#9FB3B0' },
     ...activeTypes.map((t) => ({ name: boxByType(t).short, value: boxValue(t), color: boxByType(t).color })),
     { name: 'Ações', value: stocksValue, color: '#334155' },
   ])
@@ -211,12 +216,33 @@ export default function Bank() {
           </div>
 
           <div className="-mt-11 grid gap-4 px-4 pb-6 sm:px-7">
+            {cash < 0 && (
+              <section role="alert" className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-[#F5B8C0] bg-[#FDE2E5] p-5 text-[#7A1626] shadow-sm sm:p-6">
+                <div className="min-w-[14rem] flex-1">
+                  <p className="font-extrabold">Você está no cheque especial</p>
+                  <p className="mt-1 text-sm">
+                    Está usando <b className="tabular-nums">{money(-cash)}</b> do limite. Os juros são de {OVERDRAFT_MONTHLY_RATE * 100}% ao mês:
+                    se continuar assim, no fechamento do mês vêm mais <b className="tabular-nums">{money(overdraftInterest(cash))}</b> de dívida.
+                    Todo dinheiro que entra na conta abate a dívida primeiro.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openMove(coverType, 'resgatar')}
+                  className="rounded-[14px] bg-[#C4283D] px-5 py-3 font-extrabold text-white transition-colors hover:bg-[#9F1D2F] cursor-pointer"
+                >
+                  Cobrir com uma caixinha
+                </button>
+              </section>
+            )}
+
             {/* conta + patrimônio */}
             <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
               <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
                 <div className="min-w-[12rem]">
                   <p className="text-sm text-[#627673]">Saldo em conta</p>
-                  <p className="mt-1 text-4xl font-black tracking-tight tabular-nums">{money(cash)}</p>
+                  <p className={`mt-1 text-4xl font-black tracking-tight tabular-nums ${cash < 0 ? 'text-[#C4283D]' : ''}`}>{money(cash)}</p>
+                  {cash < 0 && <p className="mt-1 text-xs font-bold text-[#C4283D]">Usando o cheque especial</p>}
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-3">
                   {[
@@ -251,6 +277,12 @@ export default function Bank() {
                       <b className="tabular-nums">{money(p.value)}</b>
                     </div>
                   ))}
+                  {cash < 0 && (
+                    <div className="flex justify-between gap-3 text-[#C4283D]">
+                      <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-[3px] bg-[#C4283D]" />Cheque especial</span>
+                      <b className="tabular-nums">{money(cash)}</b>
+                    </div>
+                  )}
                 </div>
               </section>
             </div>

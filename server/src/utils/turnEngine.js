@@ -1,5 +1,5 @@
 const prisma = require('../lib/prisma')
-const { monthlyReturn, debentureReturn, nextStockPrice } = require('./finance')
+const { monthlyReturn, debentureReturn, nextStockPrice, closeMonth, balanceSheet, OVERDRAFT_MONTHLY_RATE } = require('./finance')
 
 const EVENTS = [
   { title: 'Resistência Queimada', description: 'A resistência do seu chuveiro queimou.', cashImpact: -200, category: 'daily' },
@@ -112,24 +112,25 @@ async function applyFixedCosts(character, turn) {
   // foodCost, utilitiesCost e transportCost agora são pagos manualmente pelo
   // jogador durante o mês (Mercadinho, Água e Luz, Internet e Celular — ver
   // billController.js); só o aluguel continua sendo descontado automaticamente.
+  // Antes dele, quem fechou o mês no negativo paga os juros do cheque especial.
   const totalCosts = Number(character.housingCost)
-
-  let newCash = Number(character.cash) - totalCosts
-  let overdraftDebt = Number(character.overdraftDebt)
-  let isBankrupt = character.isBankrupt
-
-  if (newCash < 0) {
-    overdraftDebt += Math.abs(newCash) * 0.12 // 12% de juros no cheque especial
-    newCash = 0
-    isBankrupt = true
-  } else {
-    isBankrupt = false
-  }
+  const month = closeMonth(character.cash, totalCosts, character.overdraftDebt)
 
   await prisma.character.update({
     where: { id: character.id },
-    data: { cash: newCash, overdraftDebt, isBankrupt }
+    data: { cash: month.closing, overdraftDebt: 0, isBankrupt: month.inOverdraft }
   })
+
+  if (month.interest > 0) {
+    await prisma.characterEventLog.create({
+      data: {
+        characterId: character.id,
+        turn,
+        cashImpact: -month.interest,
+        description: `Cheque especial: Juros de ${OVERDRAFT_MONTHLY_RATE * 100}% sobre R$ ${(-month.opening).toFixed(2)} (-R$ ${month.interest.toFixed(2)})`
+      }
+    })
+  }
 
   await prisma.characterEventLog.create({
     data: {
@@ -140,7 +141,7 @@ async function applyFixedCosts(character, turn) {
     }
   })
 
-  return { totalCosts, newCash, overdraftDebt }
+  return { totalCosts: totalCosts + month.interest, interest: month.interest, newCash: month.closing }
 }
 
 async function applyFixedIncomeReturns(character, turn) {
@@ -267,9 +268,9 @@ async function saveSnapshot(character, turn) {
 
   const fixedIncome = fresh.fixedInvestments.reduce((sum, i) => sum + Number(i.amount), 0)
   const debentures = fresh.debentures.reduce((sum, d) => sum + Number(d.amount), 0)
-  const totalDebts = Number(fresh.overdraftDebt) + Number(fresh.loanDebt)
-  const totalAssets = Number(fresh.cash) + fixedIncome + debentures
-  const netWorth = totalAssets - totalDebts
+  const { totalAssets, totalDebts, netWorth } = balanceSheet({
+    cash: fresh.cash, fixedIncome, debentures, overdraftDebt: fresh.overdraftDebt, loanDebt: fresh.loanDebt,
+  })
 
   await prisma.financialSnapshot.upsert({
     where: { characterId_turn: { characterId: character.id, turn } },

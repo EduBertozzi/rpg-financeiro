@@ -3,6 +3,7 @@ const {
   ANNUAL_RATES, SELIC_ANNUAL, cents, monthlyFromAnnual, getMonthlyRate, incomeTaxRate,
   monthlyReturn, principalOf, redemptionOf, planWithdrawal, debentureMaturity,
   debentureReturn, averagePrice, nextStockPrice,
+  OVERDRAFT_MONTHLY_RATE, overdraftInterest, closeMonth, balanceSheet,
 } = require('../src/utils/finance')
 
 // Simula o turnEngine: todo mês soma amount * monthlyRate em amount.
@@ -326,5 +327,109 @@ describe('cenário: 12 meses de caixinhas', () => {
     const r = redemptionOf({ type, amount, monthlyRate: rate, investedAt: 0 }, 12)
     const gain = 1000 * ANNUAL_RATES[type]
     expect(r.net).toBeCloseTo(1000 + gain * (1 - incomeTaxRate(type, 12)), 1)
+  })
+})
+
+// ─── cheque especial ──────────────────────────────────────────────────────────
+
+describe('overdraftInterest', () => {
+  it('a taxa é 8% ao mês', () => {
+    expect(OVERDRAFT_MONTHLY_RATE).toBe(0.08)
+  })
+
+  it.each([
+    [-1000, 80],
+    [-250.5, 20.04],
+    [-0.01, 0],
+    [-12345.67, 987.65],
+  ])('saldo de %p paga R$ %p de juros', (cash, interest) => {
+    expect(overdraftInterest(cash)).toBe(interest)
+  })
+
+  it('saldo zero ou positivo não paga juros', () => {
+    for (const cash of [0, 0.01, 5000, '300']) expect(overdraftInterest(cash)).toBe(0)
+  })
+
+  it('aceita o saldo como texto (Decimal do Prisma)', () => {
+    expect(overdraftInterest('-1000.00')).toBe(80)
+  })
+})
+
+describe('closeMonth', () => {
+  it('saldo positivo só paga o aluguel', () => {
+    expect(closeMonth(5000, 1500)).toEqual({ opening: 5000, interest: 0, closing: 3500, inOverdraft: false })
+  })
+
+  it('saldo que não cobre o aluguel fica negativo — a dívida é o valor inteiro', () => {
+    const m = closeMonth(100, 1500)
+    expect(m.closing).toBe(-1400)
+    expect(m.inOverdraft).toBe(true)
+    expect(m.interest).toBe(0) // juros só a partir do mês seguinte
+  })
+
+  it('saldo negativo paga 8% de juros antes do aluguel', () => {
+    expect(closeMonth(-1000, 1500)).toEqual({ opening: -1000, interest: 80, closing: -2580, inOverdraft: true })
+  })
+
+  it('pagar exatamente o aluguel zera sem entrar no cheque especial', () => {
+    expect(closeMonth(1500, 1500)).toEqual({ opening: 1500, interest: 0, closing: 0, inOverdraft: false })
+  })
+
+  it('dívida antiga guardada fora do saldo volta para o saldo', () => {
+    expect(closeMonth(0, 0, 500)).toEqual({ opening: -500, interest: 40, closing: -540, inOverdraft: true })
+    expect(closeMonth(2000, 1000, 500).closing).toBe(500)
+  })
+
+  it('fecha em centavos', () => {
+    const m = closeMonth(-333.33, 0.1)
+    expect(m.interest).toBe(26.67)
+    expect(m.closing).toBe(-360.1)
+  })
+
+  it('a dívida parada cresce em juros compostos de 8% ao mês', () => {
+    let cash = -1000
+    for (let i = 0; i < 12; i++) cash = closeMonth(cash, 0).closing
+    expect(cash).toBeCloseTo(-1000 * 1.08 ** 12, 0) // ≈ -2518,17: mais que dobra em um ano
+  })
+
+  it('ficar negativo nunca sai mais barato que pagar em dia', () => {
+    // mesmo gasto, um jogador paga com caixinha e outro deixa no negativo
+    for (const shortfall of [1, 100, 1400, 9999.99]) {
+      const inDebt = closeMonth(closeMonth(-shortfall, 0).closing, 0).closing
+      expect(inDebt).toBeLessThan(-shortfall)
+    }
+  })
+
+  it('dinheiro que entra abate a dívida antes de sobrar saldo', () => {
+    const afterMonth = closeMonth(-1000, 0).closing // -1080
+    expect(cents(afterMonth + 800)).toBe(-280)
+    expect(cents(afterMonth + 1500)).toBe(420)
+  })
+
+  it('cheque especial custa muito mais que a melhor caixinha rende', () => {
+    const best = Math.max(...Object.keys(ANNUAL_RATES).map(getMonthlyRate))
+    expect(OVERDRAFT_MONTHLY_RATE).toBeGreaterThan(best * 5)
+  })
+})
+
+describe('balanceSheet', () => {
+  it('saldo positivo é ativo', () => {
+    expect(balanceSheet({ cash: 1000, fixedIncome: 500, debentures: 200 }))
+      .toEqual({ totalAssets: 1700, totalDebts: 0, netWorth: 1700 })
+  })
+
+  it('saldo negativo é dívida, não ativo negativo', () => {
+    expect(balanceSheet({ cash: -1080, fixedIncome: 3000 }))
+      .toEqual({ totalAssets: 3000, totalDebts: 1080, netWorth: 1920 })
+  })
+
+  it('soma dívida antiga e empréstimos', () => {
+    expect(balanceSheet({ cash: '-100.50', overdraftDebt: '200', loanDebt: 300 }))
+      .toEqual({ totalAssets: 0, totalDebts: 600.5, netWorth: -600.5 })
+  })
+
+  it('patrimônio líquido é ativos menos dívidas em centavos', () => {
+    const b = balanceSheet({ cash: 0.1, fixedIncome: 0.2, debentures: 0, stocks: 0 })
+    expect(b.netWorth).toBe(0.3)
   })
 })

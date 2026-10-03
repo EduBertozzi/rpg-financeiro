@@ -15,6 +15,7 @@ const ANNUAL_RATES = {
 
 const DEBENTURE_TERM_MONTHS = 10
 const EARLY_REDEMPTION_MONTHS = 6
+const OVERDRAFT_MONTHLY_RATE = 0.08 // cheque especial: teto legal de 8% ao mês
 
 const cents = (n) => Math.round(n * 100) / 100
 
@@ -83,6 +84,29 @@ const debentureMaturity = (currentTurn, maxTurns) => Math.min(currentTurn + DEBE
 const debentureReturn = (amount, annualRate, months) =>
   cents(Number(amount) * Math.pow(1 + monthlyFromAnnual(Number(annualRate)), months))
 
+// Cheque especial: o saldo negativo é a dívida. No fechamento do mês ele cobra
+// juros sobre o valor usado, que entram como mais saldo negativo; qualquer
+// dinheiro que entra na conta abate a dívida antes de sobrar saldo.
+const overdraftInterest = (cash) => (Number(cash) < 0 ? cents(-Number(cash) * OVERDRAFT_MONTHLY_RATE) : 0)
+
+// Fechamento do mês da conta: juros do cheque especial sobre o saldo do mês e
+// depois o aluguel. `legacyDebt` é a dívida antiga guardada fora do saldo, que
+// volta para o saldo para seguir a mesma regra.
+function closeMonth(cash, rent, legacyDebt = 0) {
+  const opening = cents(Number(cash) - Number(legacyDebt))
+  const interest = overdraftInterest(opening)
+  const closing = cents(opening - interest - Number(rent))
+  return { opening, interest, closing, inOverdraft: closing < 0 }
+}
+
+// Balanço do patrimônio: saldo positivo é ativo, saldo negativo é dívida.
+function balanceSheet({ cash, fixedIncome = 0, debentures = 0, stocks = 0, overdraftDebt = 0, loanDebt = 0 }) {
+  const c = Number(cash)
+  const totalAssets = cents(Math.max(c, 0) + Number(fixedIncome) + Number(debentures) + Number(stocks))
+  const totalDebts = cents(Math.max(-c, 0) + Number(overdraftDebt) + Number(loanDebt))
+  return { totalAssets, totalDebts, netWorth: cents(totalAssets - totalDebts) }
+}
+
 // Preço médio ponderado depois de uma compra.
 const averagePrice = (qty, avg, boughtQty, price) =>
   (Number(avg) * qty + Number(price) * boughtQty) / (qty + boughtQty)
@@ -110,6 +134,7 @@ module.exports = {
   ANNUAL_RATES,
   DEBENTURE_TERM_MONTHS,
   EARLY_REDEMPTION_MONTHS,
+  OVERDRAFT_MONTHLY_RATE,
   cents,
   monthlyFromAnnual,
   getMonthlyRate,
@@ -120,6 +145,9 @@ module.exports = {
   planWithdrawal,
   debentureMaturity,
   debentureReturn,
+  overdraftInterest,
+  closeMonth,
+  balanceSheet,
   averagePrice,
   nextStockPrice,
 }

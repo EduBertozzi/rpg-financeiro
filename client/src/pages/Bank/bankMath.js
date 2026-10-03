@@ -62,3 +62,10 @@ export function paymentPreview(cash, amount) {
   const after = Math.round((Number(cash) - Number(amount)) * 100) / 100
   return { after, negative: after < 0 }
 }
+
+// Cheque especial: 8% ao mês sobre o saldo negativo, cobrados no fechamento do
+// mês (mesma regra do servidor, em server/src/utils/finance.js).
+export const OVERDRAFT_MONTHLY_RATE = 0.08
+
+export const overdraftInterest = (cash) =>
+  Number(cash) < 0 ? Math.round(-Number(cash) * OVERDRAFT_MONTHLY_RATE * 100) / 100 : 0

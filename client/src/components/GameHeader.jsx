@@ -171,6 +171,8 @@ function StatusCard({ icon, label, value, helper, tone = 'theme' }) {
           'mt-2 text-base font-black',
           tone === 'money'
             ? 'text-emerald-300'
+            : tone === 'debt'
+            ? 'text-red-400'
             : 'text-[var(--theme-secondary)]',
         ].join(' ')}
       >
@@ -311,8 +313,8 @@ export default function GameHeader() {
                   icon="wallet"
                   label="Caixa"
                   value={formatMoney(character.cash)}
-                  helper="Saldo atual"
-                  tone="money"
+                  helper={Number(character.cash) < 0 ? 'Cheque especial' : 'Saldo atual'}
+                  tone={Number(character.cash) < 0 ? 'debt' : 'money'}
                 />
 
                 <StatusCard
@@ -329,7 +331,7 @@ export default function GameHeader() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3">
-                <CompactStat icon="wallet" value={formatMoneyCompact(character.cash)} tone="text-emerald-300" />
+                <CompactStat icon="wallet" value={formatMoneyCompact(character.cash)} tone={Number(character.cash) < 0 ? 'text-red-400' : 'text-emerald-300'} />
                 <CompactStat icon="calendar" value={`${room?.currentTurn ?? 0}/12`} tone="text-[var(--theme-secondary)]" />
               </div>
             )}

@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   activeDebentures, debentureValue, debentureYield, fixedBoxValue, fixedBoxYield, monthlyBills,
-  monthlyFromAnnual, nextMaturity, parseAmount, paymentPreview, reserveGoal, reserveMonths, shares, stocksValue,
+  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, parseAmount, paymentPreview, reserveGoal, reserveMonths, shares, stocksValue,
 } from './bankMath.js'
 
 const close = (actual, expected, digits = 2) =>
@@ -129,5 +129,25 @@ describe('paymentPreview', () => {
 
   it('avisa quando o pagamento deixa a conta negativa', () => {
     assert.deepEqual(paymentPreview(300, 1000), { after: -700, negative: true })
+  })
+})
+
+describe('cheque especial', () => {
+  it('cobra 8% ao mês', () => assert.equal(OVERDRAFT_MONTHLY_RATE, 0.08))
+
+  it('juros sobre o saldo negativo, em centavos', () => {
+    assert.equal(overdraftInterest(-1000), 80)
+    assert.equal(overdraftInterest('-333.33'), 26.67)
+    assert.equal(overdraftInterest(-12345.67), 987.65)
+  })
+
+  it('saldo zero ou positivo não paga juros', () => {
+    for (const cash of [0, 0.01, 5000]) assert.equal(overdraftInterest(cash), 0)
+  })
+
+  it('a prévia de pagamento que fica negativa já mostra quanto de juros vem', () => {
+    const { after, negative } = paymentPreview(300, 1000)
+    assert.ok(negative)
+    assert.equal(overdraftInterest(after), 56)
   })
 })
