@@ -1,3 +1,6 @@
+import { useContext } from 'react'
+import { WeatherContext } from './weatherContext'
+import { treeColors } from './weather'
 import { HORIZON, PLOT, ROAD, ROAD_FRONT, iso, isoAt, plotRect, plotStart, pts, relPts, roadBack } from './geometry'
 import { BLOCKS, GRID_ROADS, MAIN_ROADS, RING_END, RING_START, pick, rng } from './cityData'
 
@@ -45,14 +48,16 @@ function House({ u, v, du, dv, h, rh = 14, wall, roof, lit }) {
 }
 
 export function Tree({ u, v, scale = 1, muted }) {
+  const weather = useContext(WeatherContext)
   const [x, y] = iso(u, v)
-  const [dark, light] = muted ? ['#6FA873', '#8CC08D'] : ['#2F9E44', '#51CF66']
+  const [dark, light] = treeColors(weather, { muted, u: Math.round(u / 40), v: Math.round(v / 40) })
   return (
     <g transform={`translate(${x} ${y}) scale(${scale})`}>
       <ellipse cx="0" cy="2" rx="20" ry="9" fill="rgba(0,0,0,0.22)" />
       <rect x="-3.5" y="-22" width="7" height="24" rx="2" fill="#8B5A2B" />
       <circle cx="0" cy="-38" r="20" fill={dark} />
       <circle cx="-7" cy="-44" r="11" fill={light} opacity="0.9" />
+      {weather?.snow && <path d="M-17 -48 a18 12 0 0 1 34 0 q-8 4 -17 2 q-9 2 -17 -2z" fill="#fff" opacity="0.95" />}
     </g>
   )
 }

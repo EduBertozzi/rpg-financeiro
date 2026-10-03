@@ -67,3 +67,12 @@ body {
   0% { opacity: 0; transform: scale(2.2) rotate(-12deg); }
   100% { opacity: .9; transform: scale(1) rotate(-12deg); }
 }
+
+/* cupom escondido no mapa */
+.coupon-ticket { cursor: pointer; outline: none; transform-box: fill-box; transform-origin: center; transition: transform .25s cubic-bezier(.2, 1.6, .4, 1); }
+.coupon-ticket:hover, .coupon-ticket:focus-visible { transform: scale(1.6); }
+.coupon-spark { opacity: 0; animation: coupon-spark 4.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.coupon-shine { animation: coupon-shine 2.6s ease-in-out infinite; }
+@keyframes coupon-spark { 0%, 78%, 100% { opacity: 0; transform: scale(.5) } 88% { opacity: 1; transform: scale(1.1) } }
+@keyframes coupon-shine { 0%, 55% { transform: translateX(-60px) skewX(-20deg) } 100% { transform: translateX(120px) skewX(-20deg) } }
+@media (prefers-reduced-motion: reduce) { .coupon-spark { animation: none; opacity: .6 } .coupon-shine { animation: none } }

@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { WeatherContext } from './weatherContext'
+import { weatherFor } from './weather'
+import WeatherLayer from './WeatherLayer'
+import CouponTicket from './CouponTicket'
 import { motion, useReducedMotion } from 'framer-motion'
 import { Balloon, Birds, Mountains, Plane, Skyline, WindTurbine } from './Scenery'
 import { BlockContent, BlockGrounds, GridRoads, IsoBox, Tree } from './CityBlocks'
@@ -311,9 +315,10 @@ function NameTag({ b, hovered }) {
     const top = labelY(b.id, y) - 26
     return (
       <g pointerEvents="none">
-        <rect x={x - dw / 2} y={top} width={dw} height="62" rx="16" fill="rgba(7,17,31,0.92)" stroke="rgba(255,255,255,0.25)" />
-        <text x={x} y={top + 26} textAnchor="middle" fontSize="21" fontWeight="900" fill="white">{b.name}</text>
-        <text x={x} y={top + 48} textAnchor="middle" fontSize="15" fill="#CBD5E1">{b.desc}</text>
+        <rect x={x - dw / 2} y={top + 6} width={dw} height="62" rx="18" fill="#E2D6BE" />
+        <rect x={x - dw / 2} y={top} width={dw} height="62" rx="18" fill="#FFFDF7" />
+        <text x={x} y={top + 27} textAnchor="middle" fontSize="23" fontWeight="800" fill="#24331F" fontFamily="'Baloo 2', Outfit, sans-serif">{b.name}</text>
+        <text x={x} y={top + 48} textAnchor="middle" fontSize="15" fill="#6B7A62">{b.desc}</text>
       </g>
     )
   }
@@ -338,7 +343,39 @@ function NameTag({ b, hovered }) {
   )
 }
 
-export default function CityScene({ buildings, onSelect, interactive = true }) {
+// Bandeirinhas de Festa Junina ou luzinhas de Natal cruzando a praça.
+function PlazaDeco({ kind }) {
+  const a = plotStart(1) + 14, b = plotStart(1) + PLOT - 14, c = plotStart(2) + 14, d = plotStart(2) + PLOT - 14
+  // duas cordas atravessando a praça, uma mais ao fundo e outra mais à frente
+  const strings = [[iso(a - 10, d - 40), iso(b - 40, c - 10)], [iso(a + 30, d + 10), iso(b + 10, c + 30)]]
+  const COLORS = ['#FF5C8A', '#FFC857', '#3DBE5A', '#5AA2FF', '#B884FF']
+  return (
+    <g pointerEvents="none">
+      {strings.map(([[x1, y1], [x2, y2]], si) => {
+        const top = 70
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - top + 34
+        const at = (t) => [(1 - t) ** 2 * x1 + 2 * (1 - t) * t * mx + t ** 2 * x2, (1 - t) ** 2 * (y1 - top) + 2 * (1 - t) * t * my + t ** 2 * (y2 - top)]
+        return (
+          <g key={si}>
+            <line x1={x1} y1={y1} x2={x1} y2={y1 - top} stroke="#7A5232" strokeWidth="3" />
+            <line x1={x2} y1={y2} x2={x2} y2={y2 - top} stroke="#7A5232" strokeWidth="3" />
+            <path d={`M${x1} ${y1 - top} Q${mx} ${my} ${x2} ${y2 - top}`} fill="none" stroke={kind === 'lights' ? '#2B3B2B' : '#7A5232'} strokeWidth="1.5" />
+            {Array.from({ length: 11 }, (_, i) => {
+              const [x, y] = at((i + 0.5) / 11)
+              const color = COLORS[(i + si) % COLORS.length]
+              return kind === 'lights'
+                ? <circle key={i} cx={x} cy={y + 5} r="4.5" fill={color}><animate attributeName="opacity" values="1;.35;1" dur={`${1.2 + (i % 3) * 0.4}s`} repeatCount="indefinite" /></circle>
+                : <path key={i} d={`M${x - 7} ${y} h14 l-7 14z`} fill={color} />
+            })}
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
+export default function CityScene({ buildings, onSelect, interactive = true, month = 0, coupon = null, onCoupon }) {
+  const weather = weatherFor(month)
   const phase = usePhase()
   const sky = SKIES[phase]
   const reduced = useReducedMotion()
@@ -411,6 +448,7 @@ export default function CityScene({ buildings, onSelect, interactive = true }) {
 
   return (
     // o zoom fica preso aqui dentro para não gerar barra de rolagem
+    <WeatherContext.Provider value={weather}>
     <div ref={rootRef} className="relative h-full w-full overflow-hidden">
     <motion.div
       className="relative h-full w-full"
@@ -522,6 +560,8 @@ export default function CityScene({ buildings, onSelect, interactive = true }) {
           <CloudShadow key={i} x0={x} y={y} duration={d} still={reduced} />
         ))}
 
+        {weather?.deco && <PlazaDeco kind={weather.deco} />}
+        {weather?.tint && <rect x={-FAR} y={-FAR} width={VB_W + 2 * FAR} height={VB_H + 2 * FAR} fill={weather.tint} pointerEvents="none" />}
         {sky.overlay > 0 && <rect x={-FAR} y={-FAR} width={VB_W + 2 * FAR} height={VB_H + 2 * FAR} fill="#0B1638" opacity={sky.overlay} pointerEvents="none" />}
         {lit && lamps.map(([u, v]) => <LampGlow key={`g${u}-${v}`} u={u} v={v} />)}
 
@@ -529,8 +569,13 @@ export default function CityScene({ buildings, onSelect, interactive = true }) {
         {buildings.filter((b) => PLOTS[b.id])
           .sort((a, b) => (a.id === hovered) - (b.id === hovered))
           .map((b) => <NameTag key={`n${b.id}`} b={b} hovered={hovered === b.id} />)}
+
+        {/* o cupom fica por cima de tudo, até do clima */}
+        {coupon && interactive && <CouponTicket spot={coupon.spot} onClaim={onCoupon} still={reduced} />}
       </svg>
     </motion.div>
+    {!reduced && <WeatherLayer fx={weather?.fx} />}
     </div>
+    </WeatherContext.Provider>
   )
 }

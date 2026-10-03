@@ -7,6 +7,8 @@ import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
 import BillModal from '../../components/BillModal'
 import CityScene from './CityScene'
+import CouponModal from '../../components/CouponModal'
+import { weatherFor } from './weather'
 import bankArt from '../../assets/buildings/bank.png'
 import leisureArt from '../../assets/buildings/leisure.png'
 import universityArt from '../../assets/buildings/university.png'
@@ -251,6 +253,32 @@ export default function Map() {
     }
   }
 
+  // cupom escondido do mês (o servidor só diz se tem e onde, nunca o prêmio)
+  const [couponState, setCoupon] = useState(null) // { turn, id, spot }
+  const [couponReward, setCouponReward] = useState(null)
+  const turnNow = room?.currentTurn ?? 0
+  const coupon = couponState?.turn === turnNow ? couponState : null
+
+  useEffect(() => {
+    if (!character?.id || !turnNow || room?.status !== 'active') return
+    api.get(`/characters/${character.id}/coupon/${turnNow}`)
+      .then(({ data }) => setCoupon(data.coupon ? { ...data.coupon, turn: turnNow } : null))
+      .catch(() => setCoupon(null))
+  }, [character?.id, turnNow, room?.status])
+
+  const handleCoupon = async () => {
+    try {
+      const { data } = await api.post(`/characters/${character.id}/coupon/${turnNow}/claim`)
+      setCoupon(null)
+      setCouponReward(data.reward)
+      const { data: fresh } = await api.get(`/characters/${character.id}`)
+      setCharacter(fresh)
+    } catch (err) {
+      setCoupon(null)
+      console.error(err)
+    }
+  }
+
   const handleBillComplete = async () => {
     setActiveBill(null)
 
@@ -272,6 +300,10 @@ export default function Map() {
   const isWaiting = room?.status === 'waiting'
   const activeBillBuilding = BUILDINGS.find((b) => b.route === `modal_bill_${activeBill}`)
   const monthName = MONTHS[currentTurn - 1]
+  // em desenvolvimento, /map?clima=7 mostra o clima de julho para conferir
+  const previewMonth = import.meta.env.DEV ? Number(new URLSearchParams(window.location.search).get('clima')) || 0 : 0
+  const sceneMonth = isWaiting ? 0 : previewMonth || currentTurn
+  const weather = weatherFor(sceneMonth)
 
   const sceneBuildings = BUILDINGS.map((b) => ({
     ...b,
@@ -287,7 +319,7 @@ export default function Map() {
       {/* A cidade é o fundo da tela; os painéis flutuam por cima dela. */}
       <div ref={mapScrollRef} className="fixed inset-y-0 left-20 right-0 z-0 overflow-x-auto overflow-y-hidden">
         <div className={`h-full min-w-[760px] transition-[filter,opacity] duration-500 ${isWaiting ? 'pointer-events-none opacity-60 blur-[3px]' : ''}`}>
-          <CityScene buildings={sceneBuildings} onSelect={handleBuilding} interactive={!isWaiting} />
+          <CityScene buildings={sceneBuildings} onSelect={handleBuilding} interactive={!isWaiting} month={sceneMonth} coupon={coupon} onCoupon={handleCoupon} />
         </div>
       </div>
 
@@ -305,9 +337,14 @@ export default function Map() {
           {!isWaiting && (
             <div className={`pointer-events-auto flex flex-col items-end gap-3 ${PANEL} px-5 py-4`}>
               <div className="text-right">
-                <p className="mb-1.5 font-toy text-[17px] font-extrabold text-[#24331F]">
+                <p className="font-toy text-[17px] font-extrabold text-[#24331F]">
                   {monthName ?? 'Mês'} · <span className="text-[#2457C5]">{currentTurn}</span><span className="text-[#A9B19E]"> / 12</span>
                 </p>
+                {weather && (
+                  <p className="mb-1.5 text-xs font-bold text-[#6B7A62]">
+                    <span aria-hidden="true">{weather.icon}</span> {weather.season} · {weather.label}
+                  </p>
+                )}
 
                 <div className="flex w-48 gap-1">
                   {Array.from({ length: 12 }).map((_, i) => {
@@ -405,6 +442,12 @@ export default function Map() {
                 </div>
 
                 <div className="flex flex-col gap-4">
+                  {coupon && (
+                    <div className="rounded-2xl border-2 border-dashed border-[#E0A100] bg-[#FFF3C4] px-3 py-2">
+                      <p className="text-sm font-extrabold text-[#7A5200]">Psiu…</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-[#7A5200]">Dizem que tem algo diferente na cidade este mês. Olhe com calma.</p>
+                    </div>
+                  )}
                   {GUIDE_TIPS.map((tip) => (
                     <div key={tip.title} className="border-l-[3px] border-[#EFE6D3] pl-3">
                       <p className="text-sm font-extrabold">{tip.title}</p>
@@ -420,6 +463,7 @@ export default function Map() {
                 className={`pointer-events-auto hidden items-center gap-2 lg:flex ${PANEL} px-4 py-2.5 font-toy text-[16px] font-extrabold transition-transform hover:-translate-y-0.5 cursor-pointer`}
               >
                 <IconGuide className="h-4 w-4 text-[#2457C5]" /> Guia rápido
+                {coupon && <span className="h-2.5 w-2.5 rounded-full bg-[#F2B53A]" aria-label="tem dica nova" />}
               </button>
             )}
           </div>
@@ -432,6 +476,8 @@ export default function Map() {
           onComplete={handleDilemmaComplete}
         />
       )}
+
+      {couponReward && <CouponModal reward={couponReward} onClose={() => setCouponReward(null)} />}
 
       {activeBill && activeBillBuilding && (
         <BillModal
