@@ -312,3 +312,110 @@ describe('POST chooseDilemma — erros', () => {
     expect(res.status).toBe(401)
   })
 })
+// ─── Trabalho em Equipe (Comunicação L2) ─────────────────────────────────────
+
+describe('POST chooseDilemma — Trabalho em Equipe', () => {
+  const team = { id: 'char-1', userId: 'user-1', cash: 5000, unlockedSkills: [{ skillNode: { path: 'communication', level: 2 } }] }
+
+  function setup(character = team) {
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+    prismaMock.character.findUnique.mockResolvedValue(character)
+    prismaMock.character.update.mockResolvedValue({})
+    prismaMock.characterEventLog.create.mockResolvedValue({})
+    prismaMock.characterSkillPoints.update.mockResolvedValue({})
+  }
+
+  const choose = (turn, optionIndex) => request(app)
+    .post(`/api/v1/characters/char-1/dilemma/${turn}/choose`)
+    .set(authHeader(TOKEN))
+    .send({ optionIndex })
+
+  it('busca o personagem com as habilidades desbloqueadas', async () => {
+    setup()
+    await choose(2, 1)
+
+    expect(prismaMock.character.findUnique).toHaveBeenCalledWith({
+      where: { id: 'char-1' },
+      include: { unlockedSkills: { include: { skillNode: true } } },
+    })
+  })
+
+  it('custo do dilema fica 30% menor: -600 vira -420', async () => {
+    setup()
+    const res = await choose(2, 1)
+
+    expect(res.status).toBe(200)
+    expect(res.body.cashImpact).toBe(-420)
+    expect(res.body.result).toBe('Você pagou R$ 420 (30% a menos com Trabalho em Equipe).')
+    expect(prismaMock.character.update).toHaveBeenCalledWith({ where: { id: 'char-1' }, data: { cash: { increment: -420 } } })
+  })
+
+  it('registra o valor com desconto no extrato', async () => {
+    setup()
+    await choose(2, 1)
+
+    expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ turn: 2, cashImpact: -420, description: expect.stringContaining('Você pagou R$ 420') }),
+    })
+  })
+
+  it('ganho do dilema não muda', async () => {
+    setup()
+    const res = await choose(1, 1)
+
+    expect(res.body.cashImpact).toBe(300)
+    expect(res.body.result).toBe('Você recebeu R$ 300!')
+  })
+
+  it('herança não muda', async () => {
+    setup()
+    const res = await choose(9, 0)
+
+    expect(res.body.cashImpact).toBe(6000)
+  })
+
+  it('opção sem custo continua sem custo', async () => {
+    setup()
+    const res = await choose(2, 0)
+
+    expect(res.body.cashImpact).toBe(0)
+    expect(prismaMock.character.update).not.toHaveBeenCalled()
+  })
+
+  it('calote do amigo também fica 30% menor: -1000 vira -700', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0.9)
+    setup()
+    const res = await choose(4, 0)
+
+    expect(res.body.cashImpact).toBe(-700)
+    expect(res.body.result).toBe('Seu amigo sumiu com seu dinheiro. -R$ 700 (30% a menos com Trabalho em Equipe)')
+    Math.random.mockRestore()
+  })
+
+  it('amigo que paga de volta continua pagando R$ 1.500', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0.1)
+    setup()
+    const res = await choose(4, 0)
+
+    expect(res.body.cashImpact).toBe(1500)
+    Math.random.mockRestore()
+  })
+
+  it('sem a habilidade o calote continua de R$ 1.000', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(0.9)
+    setup({ ...team, unlockedSkills: [{ skillNode: { path: 'communication', level: 1 } }] })
+    const res = await choose(4, 0)
+
+    expect(res.body.cashImpact).toBe(-1000)
+    expect(res.body.result).toBe('Seu amigo sumiu com seu dinheiro. -R$ 1.000')
+    Math.random.mockRestore()
+  })
+
+  it('outras habilidades não barateiam o dilema', async () => {
+    setup({ ...team, unlockedSkills: [{ skillNode: { path: 'communication', level: 1 } }, { skillNode: { path: 'management', level: 1 } }] })
+    const res = await choose(2, 1)
+
+    expect(res.body.cashImpact).toBe(-600)
+    expect(res.body.result).toBe('Você pagou R$ 600.')
+  })
+})

@@ -184,3 +184,144 @@ describe('POST /api/v1/characters/:id/bills/:turn/pay', () => {
     expect(res.status).toBe(401)
   })
 })
+
+// ─── descontos das habilidades ────────────────────────────────────────────────
+
+describe('contas com desconto das habilidades', () => {
+  const skill = (path, level) => ({ skillNode: { path, level } })
+  const withSkills = (...skills) => makeCharacter({ unlockedSkills: skills })
+
+  it('GET busca o personagem com as habilidades desbloqueadas', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    await request(app).get('/api/v1/characters/char-1/bills/1').set(authHeader(TOKEN))
+
+    expect(prismaMock.character.findUnique).toHaveBeenCalledWith({
+      where: { id: 'char-1' },
+      include: { unlockedSkills: { include: { skillNode: true } } },
+    })
+  })
+
+  it('GET sem habilidades mostra valor cheio e desconto zero', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ unlockedSkills: [] }))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).get('/api/v1/characters/char-1/bills/1').set(authHeader(TOKEN))
+
+    expect(res.body).toEqual([
+      { type: 'food', label: 'Mercadinho', amount: 1000, baseAmount: 1000, discount: 0, paid: false },
+      { type: 'utilities', label: 'Água e Luz', amount: 250, baseAmount: 250, discount: 0, paid: false },
+      { type: 'transport', label: 'Internet e Celular', amount: 250, baseAmount: 250, discount: 0, paid: false },
+    ])
+  })
+
+  it('GET com Comunicação Básica: Água e Luz e Internet 30% mais baratas', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(withSkills(skill('communication', 1)))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).get('/api/v1/characters/char-1/bills/1').set(authHeader(TOKEN))
+
+    expect(res.body.find(b => b.type === 'food')).toMatchObject({ amount: 1000, discount: 0 })
+    expect(res.body.find(b => b.type === 'utilities')).toMatchObject({ amount: 175, baseAmount: 250, discount: 0.3 })
+    expect(res.body.find(b => b.type === 'transport')).toMatchObject({ amount: 175, baseAmount: 250, discount: 0.3 })
+  })
+
+  it('GET com Organização Financeira: Mercadinho 15% mais barato', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(withSkills(skill('management', 1)))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).get('/api/v1/characters/char-1/bills/1').set(authHeader(TOKEN))
+
+    expect(res.body.find(b => b.type === 'food')).toMatchObject({ amount: 850, baseAmount: 1000, discount: 0.15 })
+    expect(res.body.find(b => b.type === 'utilities')).toMatchObject({ amount: 250, discount: 0 })
+  })
+
+  it('GET com as duas habilidades desconta as três contas', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(withSkills(skill('communication', 1), skill('management', 1)))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).get('/api/v1/characters/char-1/bills/1').set(authHeader(TOKEN))
+
+    expect(res.body.map(b => b.amount)).toEqual([850, 175, 175])
+  })
+
+  it('GET de conta já paga mostra o valor que foi cobrado', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(withSkills(skill('management', 1)))
+    prismaMock.characterEventLog.findFirst
+      .mockResolvedValueOnce({ id: 'log-1', cashImpact: '-1000' }) // pago antes da habilidade
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+
+    const res = await request(app).get('/api/v1/characters/char-1/bills/1').set(authHeader(TOKEN))
+
+    expect(res.body.find(b => b.type === 'food')).toMatchObject({ amount: 1000, paid: true })
+  })
+
+  it('POST busca o personagem com sala e habilidades', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type: 'food' })
+
+    expect(prismaMock.character.findUnique).toHaveBeenCalledWith({
+      where: { id: 'char-1' },
+      include: { room: true, unlockedSkills: { include: { skillNode: true } } },
+    })
+  })
+
+  it('POST cobra o Mercadinho com 15% de desconto', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(withSkills(skill('management', 1)))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type: 'food' })
+
+    expect(res.body).toEqual({ label: 'Mercadinho', amount: 850, cashAfter: 4150 })
+    expect(prismaMock.character.update).toHaveBeenCalledWith({ where: { id: 'char-1' }, data: { cash: { decrement: 850 } } })
+    expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith({
+      data: { characterId: 'char-1', turn: 1, cashImpact: -850, description: 'Conta: Mercadinho — Pago (-R$ 850)' }
+    })
+  })
+
+  it('POST cobra Água e Luz com 30% de desconto', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(withSkills(skill('communication', 1)))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type: 'utilities' })
+
+    expect(res.body).toEqual({ label: 'Água e Luz', amount: 175, cashAfter: 4825 })
+    expect(prismaMock.character.update).toHaveBeenCalledWith({ where: { id: 'char-1' }, data: { cash: { decrement: 175 } } })
+  })
+
+  it('POST cobra Internet e Celular com 30% de desconto, em centavos', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ transportCost: '199.99', unlockedSkills: [skill('communication', 1)] }))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type: 'transport' })
+
+    expect(res.body).toEqual({ label: 'Internet e Celular', amount: 139.99, cashAfter: 4860.01 })
+  })
+
+  it('POST: a habilidade de uma conta não barateia a outra', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(withSkills(skill('communication', 1)))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type: 'food' })
+
+    expect(res.body.amount).toBe(1000)
+  })
+
+  it('GET e POST mostram e cobram o mesmo valor', async () => {
+    const character = withSkills(skill('communication', 1), skill('management', 1))
+    for (const type of ['food', 'utilities', 'transport']) {
+      jest.clearAllMocks()
+      prismaMock.character.findUnique.mockResolvedValue(character)
+      prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+      const listed = await request(app).get('/api/v1/characters/char-1/bills/1').set(authHeader(TOKEN))
+      const paid = await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type })
+
+      expect(paid.body.amount).toBe(listed.body.find(b => b.type === type).amount)
+    }
+  })
+})

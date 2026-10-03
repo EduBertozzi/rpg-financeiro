@@ -10,7 +10,6 @@ import utilitiesArt from '../assets/buildings/utilities.png'
 import internetArt from '../assets/buildings/internet.png'
 
 const BILL_ART = { food: mercadinhoArt, utilities: utilitiesArt, transport: internetArt }
-const BILL_FIELD = { food: 'foodCost', utilities: 'utilitiesCost', transport: 'transportCost' }
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -22,10 +21,13 @@ export default function BillModal({ type, label, onClose, onComplete }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [receipt, setReceipt] = useState(null) // { amount, cashAfter, alreadyPaid }
+  const [bill, setBill] = useState(null) // { amount, baseAmount, discount } vindo do servidor
 
   const turn = room?.currentTurn ?? 0
   const month = MONTHS[turn - 1] ?? `mês ${turn}`
-  const amount = Number(character?.[BILL_FIELD[type]] ?? 0)
+  // o valor vem do servidor, já com o desconto das habilidades: é o mesmo que será cobrado
+  const amount = Number(bill?.amount ?? 0)
+  const discount = Number(bill?.discount ?? 0)
   const cash = Number(character?.cash ?? 0)
   const preview = paymentPreview(cash, amount)
 
@@ -34,10 +36,14 @@ export default function BillModal({ type, label, onClose, onComplete }) {
     if (!character?.id || !turn) return
     api.get(`/characters/${character.id}/bills/${turn}`)
       .then(({ data }) => {
-        const bill = data.find((b) => b.type === type)
-        if (bill?.paid) setReceipt({ amount: bill.amount, alreadyPaid: true })
+        const found = data.find((b) => b.type === type)
+        setBill(found ?? null)
+        if (found?.paid) setReceipt({ amount: found.amount, alreadyPaid: true })
       })
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err)
+        setError('Não deu para carregar a conta. Tente de novo.')
+      })
   }, [character?.id, turn, type])
 
   const handlePay = async () => {
@@ -87,7 +93,12 @@ export default function BillModal({ type, label, onClose, onComplete }) {
 
             <div className="grid gap-1 rounded-[18px] bg-white p-4 text-center shadow-sm">
               <p className="text-sm text-[#627673]">Valor</p>
-              <p className="text-4xl font-black tracking-tight tabular-nums">{brl(amount)}</p>
+              <p className="text-4xl font-black tracking-tight tabular-nums">{bill ? brl(amount) : '…'}</p>
+              {discount > 0 && (
+                <p className="text-xs font-bold text-[#0A7F75]">
+                  <s className="font-normal text-[#627673]">{brl(bill.baseAmount)}</s> · {Math.round(discount * 100)}% de desconto pelas suas habilidades
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2 rounded-[18px] bg-white p-4 text-sm shadow-sm">
@@ -113,10 +124,10 @@ export default function BillModal({ type, label, onClose, onComplete }) {
             <button
               type="button"
               onClick={handlePay}
-              disabled={loading}
+              disabled={loading || !bill}
               className="rounded-[14px] bg-[#12B5A6] py-3.5 font-extrabold text-white transition-colors hover:bg-[#0A7F75] disabled:opacity-60 cursor-pointer"
             >
-              {loading ? 'Pagando…' : `Pagar ${brl(amount)}`}
+              {loading ? 'Pagando…' : bill ? `Pagar ${brl(amount)}` : 'Carregando…'}
             </button>
             <button type="button" onClick={onClose} className="font-bold text-[#627673] cursor-pointer">Agora não</button>
           </div>

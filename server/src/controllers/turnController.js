@@ -1,5 +1,8 @@
 const { processTurn, DILEMMAS } = require('../utils/turnEngine')
 const prisma = require('../lib/prisma')
+const { perksOf, dilemmaImpact, percentLabel } = require('../utils/skills')
+
+const brl = (n) => Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
 
 exports.nextTurn = async (req, res) => {
   try {
@@ -65,20 +68,28 @@ exports.chooseDilemma = async (req, res) => {
     const option = dilemma.options[optionIndex]
     if (!option) return res.status(400).json({ error: 'Opção inválida' })
 
-    const character = await prisma.character.findUnique({ where: { id: characterId } })
+    const character = await prisma.character.findUnique({
+      where: { id: characterId },
+      include: { unlockedSkills: { include: { skillNode: true } } }
+    })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+
+    // Trabalho em Equipe: o que o dilema custa fica 30% mais barato
+    const perks = perksOf(character.unlockedSkills)
+    const discountNote = (value) =>
+      value < 0 && perks.leisureDiscount ? ` (${percentLabel(perks.leisureDiscount)} a menos com Trabalho em Equipe)` : ''
 
     let cashImpact = 0
     let resultMessage = option.text
 
     if (option.effectType === 'immediate_cash') {
-      cashImpact = option.effectValue
+      cashImpact = dilemmaImpact(option.effectValue, perks)
       await prisma.character.update({
         where: { id: characterId },
         data: { cash: { increment: cashImpact } }
       })
-      resultMessage = cashImpact > 0 ? `Você recebeu R$ ${cashImpact}!` : `Você pagou R$ ${Math.abs(cashImpact)}.`
+      resultMessage = cashImpact > 0 ? `Você recebeu R$ ${cashImpact}!` : `Você pagou R$ ${Math.abs(cashImpact)}${discountNote(cashImpact)}.`
     }
 
     if (option.effectType === 'inheritance') {
@@ -100,12 +111,12 @@ exports.chooseDilemma = async (req, res) => {
         })
         resultMessage = 'Seu amigo pagou de volta com juros! +R$ 1.500'
       } else {
-        cashImpact = option.effectValue
+        cashImpact = dilemmaImpact(option.effectValue, perks)
         await prisma.character.update({
           where: { id: characterId },
           data: { cash: { increment: cashImpact } }
         })
-        resultMessage = 'Seu amigo sumiu com seu dinheiro. -R$ 1.000'
+        resultMessage = `Seu amigo sumiu com seu dinheiro. -R$ ${brl(Math.abs(cashImpact))}${discountNote(cashImpact)}`
       }
     }
 

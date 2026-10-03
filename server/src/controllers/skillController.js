@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { perksOf, perkOf, stockTipsFor } = require('../utils/skills')
 
 exports.getAllSkills = async (req, res) => {
   try {
@@ -17,12 +18,15 @@ exports.getCharacterSkills = async (req, res) => {
       where: { id: req.params.id },
       include: {
         skillPoints: true,
-        unlockedSkills: { include: { skillNode: true } }
+        unlockedSkills: { include: { skillNode: true } },
+        room: true
       }
     })
 
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+
+    const perks = perksOf(character.unlockedSkills)
 
     res.json({
       totalPoints: character.skillPoints?.totalPoints ?? 0,
@@ -33,8 +37,12 @@ exports.getCharacterSkills = async (req, res) => {
         path: s.skillNode.path,
         level: s.skillNode.level,
         name: s.skillNode.name,
+        perk: perkOf(s.skillNode.path, s.skillNode.level)?.perk ?? null,
         unlockedAt: s.unlockedAt
-      }))
+      })),
+      perks,
+      // Visão de Mercado: o que vai acontecer com as ações na virada do mês
+      tips: perks.stockTips ? stockTipsFor(character.room?.currentTurn ?? 0) : []
     })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
@@ -66,9 +74,6 @@ exports.unlockSkill = async (req, res) => {
 
     // verifica pré-requisito (nível anterior do mesmo caminho)
     if (skill.level > 1) {
-      const prereq = character.unlockedSkills.some(s => {
-        return s.skillNodeId !== skill.id
-      })
       const prevSkill = await prisma.skillNode.findUnique({
         where: { path_level: { path: skill.path, level: skill.level - 1 } }
       })

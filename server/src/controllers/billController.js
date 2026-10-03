@@ -1,5 +1,9 @@
 const prisma = require('../lib/prisma')
 const { cents } = require('../utils/finance')
+const { perksOf, billAmount, billDiscount } = require('../utils/skills')
+
+// habilidades desbloqueadas, para aplicar os descontos das contas
+const withSkills = { unlockedSkills: { include: { skillNode: true } } }
 
 const BILL_TYPES = {
   food: { field: 'foodCost', label: 'Mercadinho' },
@@ -12,10 +16,11 @@ exports.getBills = async (req, res) => {
     const { id: characterId, turn } = req.params
     const parsedTurn = parseInt(turn)
 
-    const character = await prisma.character.findUnique({ where: { id: characterId } })
+    const character = await prisma.character.findUnique({ where: { id: characterId }, include: withSkills })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
 
+    const perks = perksOf(character.unlockedSkills)
     const bills = await Promise.all(
       Object.entries(BILL_TYPES).map(async ([type, config]) => {
         const paidEntry = await prisma.characterEventLog.findFirst({
@@ -26,10 +31,17 @@ exports.getBills = async (req, res) => {
           }
         })
 
+        // conta já paga mostra o que foi cobrado; senão, o valor com desconto
+        const amount = paidEntry?.cashImpact != null
+          ? cents(Math.abs(Number(paidEntry.cashImpact)))
+          : billAmount(type, character[config.field], perks)
+
         return {
           type,
           label: config.label,
-          amount: Number(character[config.field]),
+          amount,
+          baseAmount: cents(Number(character[config.field])),
+          discount: billDiscount(type, perks),
           paid: Boolean(paidEntry)
         }
       })
@@ -50,7 +62,7 @@ exports.payBill = async (req, res) => {
     const config = BILL_TYPES[type]
     if (!config) return res.status(400).json({ error: 'Tipo de conta inválido' })
 
-    const character = await prisma.character.findUnique({ where: { id: characterId }, include: { room: true } })
+    const character = await prisma.character.findUnique({ where: { id: characterId }, include: { room: true, ...withSkills } })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
     if (character.room && parsedTurn !== character.room.currentTurn) {
@@ -66,7 +78,7 @@ exports.payBill = async (req, res) => {
     })
     if (alreadyPaid) return res.status(400).json({ error: 'Conta já paga' })
 
-    const amount = cents(Number(character[config.field]))
+    const amount = billAmount(type, character[config.field], perksOf(character.unlockedSkills))
 
     // débito e registro juntos: ou a conta fica paga e descontada, ou nada muda
     await prisma.$transaction([

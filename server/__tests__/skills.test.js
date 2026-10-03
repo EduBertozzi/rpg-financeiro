@@ -217,3 +217,99 @@ describe('POST /api/v1/skills/character/:id/unlock/:skillId', () => {
     expect(res.status).toBe(401)
   })
 })
+// ─── vantagens e dicas no GET da árvore ──────────────────────────────────────
+
+describe('GET /api/v1/skills/character/:id — vantagens', () => {
+  const skill = (path, level, name = `${path}-${level}`) => ({ skillNodeId: `${path}-${level}`, unlockedAt: 1, skillNode: { path, level, name } })
+  const get = () => request(app).get('/api/v1/skills/character/char-1').set(authHeader(TOKEN))
+
+  it('busca o personagem com a sala (para o turno das dicas)', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
+    await get()
+
+    expect(prismaMock.character.findUnique).toHaveBeenCalledWith({
+      where: { id: 'char-1' },
+      include: { skillPoints: true, unlockedSkills: { include: { skillNode: true } }, room: true },
+    })
+  })
+
+  it('sem habilidades devolve vantagens neutras e nenhuma dica', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
+    const res = await get()
+
+    expect(res.body.perks).toMatchObject({
+      salaryBonus: 0, extraIncome: 0, rentDiscount: 0, foodDiscount: 0, utilitiesDiscount: 0,
+      leisureDiscount: 0, repairDiscount: 0, overdraftRate: 0.08, savingsBonusRate: 0, stockTips: false,
+    })
+    expect(res.body.tips).toEqual([])
+  })
+
+  it('cada habilidade desbloqueada vem com o texto da vantagem', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({
+      unlockedSkills: [skill('technical', 1, 'Fundamentos e Lógica'), skill('communication', 3, 'Negociação e Liderança')],
+    }))
+    const res = await get()
+
+    expect(res.body.unlocked.map(s => s.perk)).toEqual(['+R$ 150 por mês (freela)', 'Aluguel 20% mais barato'])
+    expect(res.body.perks).toMatchObject({ extraIncome: 150, rentDiscount: 0.2 })
+  })
+
+  it('nó desconhecido vem com perk null', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ unlockedSkills: [skill('economy', 1)] }))
+    const res = await get()
+
+    expect(res.body.unlocked[0].perk).toBeNull()
+  })
+
+  it('Gestão até L2 mostra cheque especial a 4% e 0,6% nas caixinhas, sem dicas', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ unlockedSkills: [skill('management', 1), skill('management', 2)] }))
+    const res = await get()
+
+    expect(res.body.perks).toMatchObject({ overdraftRate: 0.04, savingsBonusRate: 0.006, foodDiscount: 0.15, stockTips: false })
+    expect(res.body.tips).toEqual([])
+  })
+
+  it('Visão de Mercado no turno 2 avisa da alta da VALE3 no turno 3', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({
+      room: { currentTurn: 2 },
+      unlockedSkills: [skill('management', 1), skill('management', 2), skill('management', 3)],
+    }))
+    const res = await get()
+
+    expect(res.body.perks.stockTips).toBe(true)
+    expect(res.body.perks.savingsBonusRate).toBe(0.015)
+    expect(res.body.tips).toEqual([{
+      ticker: 'VALE3', turn: 3, direction: 'up', change: 0.4, text: 'VALE3 deve subir cerca de 40% no próximo mês',
+    }])
+  })
+
+  it('Visão de Mercado no turno 9 avisa da queda da PETR4', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { currentTurn: 9 }, unlockedSkills: [skill('management', 3)] }))
+    const res = await get()
+
+    expect(res.body.tips).toEqual([expect.objectContaining({ ticker: 'PETR4', direction: 'down', change: -0.35 })])
+  })
+
+  it('Visão de Mercado em mês sem evento não tem dica', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { currentTurn: 5 }, unlockedSkills: [skill('management', 3)] }))
+    const res = await get()
+
+    expect(res.body.tips).toEqual([])
+  })
+
+  it('sem Visão de Mercado não há dica nem no mês do evento', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { currentTurn: 2 }, unlockedSkills: [skill('management', 2)] }))
+    const res = await get()
+
+    expect(res.body.tips).toEqual([])
+  })
+
+  it('Gestão completa soma 2,7%', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({
+      unlockedSkills: [1, 2, 3, 4].map(l => skill('management', l)),
+    }))
+    const res = await get()
+
+    expect(res.body.perks.savingsBonusRate).toBe(0.027)
+  })
+})

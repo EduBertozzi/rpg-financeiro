@@ -401,3 +401,310 @@ describe('checkDebentures', () => {
     jest.spyOn(Math, 'random').mockRestore()
   })
 })
+// ─── vantagens da Árvore de Habilidades ───────────────────────────────────────
+
+describe('habilidades na virada do mês', () => {
+  const { EVENTS } = require('../src/utils/turnEngine')
+  const skill = (path, level) => ({ skillNode: { path, level, name: `${path}-${level}` } })
+  const all = (path) => [1, 2, 3, 4].map((level) => skill(path, level))
+
+  // índice do evento → valor de Math.random que o sorteia
+  const randomFor = (index) => (index + 0.5) / EVENTS.length
+  const QUIET = EVENTS.findIndex((e) => e.category === 'none')
+  const pickEvent = (title) => jest.spyOn(Math, 'random').mockReturnValue(randomFor(EVENTS.findIndex((e) => e.title === title)))
+
+  function setup(character, { investments = [] } = {}) {
+    prismaMock.room.findUnique.mockResolvedValueOnce({
+      id: 'room-1', currentTurn: 1, maxTurns: 12, status: 'active', characters: [character],
+    })
+    prismaMock.marketAsset.findMany.mockResolvedValue([])
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue(investments)
+    prismaMock.fixedIncomeInvestment.update.mockResolvedValue({})
+    prismaMock.debentureInvestment.findMany.mockResolvedValue([])
+    prismaMock.characterEventLog.create.mockResolvedValue({})
+    prismaMock.character.update.mockResolvedValue({})
+    prismaMock.character.findUnique.mockResolvedValue({
+      ...character, fixedInvestments: [], positions: [], debentures: [],
+    })
+    prismaMock.financialSnapshot.upsert.mockResolvedValue({})
+    prismaMock.room.update.mockResolvedValue({ currentTurn: 2, status: 'active' })
+  }
+
+  const costsUpdate = () => prismaMock.character.update.mock.calls.find(([args]) => 'isBankrupt' in (args?.data ?? {}))[0].data
+  const logs = () => prismaMock.characterEventLog.create.mock.calls.map(([args]) => args.data)
+  const logStarting = (prefix) => logs().filter((l) => l.description.startsWith(prefix))
+  const cashIncrements = () => prismaMock.character.update.mock.calls
+    .map(([args]) => args.data.cash)
+    .filter((c) => c && typeof c === 'object' && 'increment' in c)
+    .map((c) => c.increment)
+
+  beforeEach(() => jest.spyOn(Math, 'random').mockReturnValue(randomFor(QUIET)))
+  afterEach(() => Math.random.mockRestore())
+
+  it('os dois imprevistos de casa estão marcados como conserto', () => {
+    expect(EVENTS.filter((e) => e.repair).map((e) => e.title)).toEqual(['Resistência Queimada', 'Infiltração Grave'])
+  })
+
+  it('a carga inclui as habilidades desbloqueadas de cada personagem', async () => {
+    setup(makeCharacter({ unlockedSkills: [] }))
+    await processTurn('room-1')
+
+    expect(prismaMock.room.findUnique).toHaveBeenCalledWith({
+      where: { id: 'room-1' },
+      include: { characters: { include: { unlockedSkills: { include: { skillNode: true } } } } },
+    })
+  })
+
+  it('sem habilidades o mês fica igual: só salário de R$ 7.000 e aluguel cheio', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: [] }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6000)
+    expect(logs().map((l) => l.description.split(':')[0])).toEqual(['Salário', 'Aluguel', 'Nenhum imprevisto'])
+  })
+
+  it('personagem sem o campo unlockedSkills é tratado como sem habilidades', async () => {
+    const character = makeCharacter({ cash: 0, housingCost: 1000 })
+    delete character.unlockedSkills
+    setup(character)
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6000)
+  })
+
+  // ─── Técnico ────────────────────────────────────────────────────────────────
+
+  it('Fundamentos e Lógica: +R$ 150 de freela no saldo e no extrato', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: [skill('technical', 1)] }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6150)
+    expect(logStarting('Freela')).toEqual([
+      expect.objectContaining({ turn: 2, cashImpact: 150, description: 'Freela: Fundamentos e Lógica (+R$ 150.00)' }),
+    ])
+  })
+
+  it('Pensamento Analítico Avançado: salário +R$ 300 numa linha à parte', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: [skill('technical', 1), skill('technical', 2), skill('technical', 3)] }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6450) // 7000 + 300 + 150 - 1000
+    expect(logStarting('Salário')).toEqual([expect.objectContaining({ cashImpact: 7000 })])
+    expect(logStarting('Bônus salarial')).toEqual([
+      expect.objectContaining({ cashImpact: 300, description: 'Bônus salarial: Pensamento Analítico Avançado (+R$ 300.00)' }),
+    ])
+  })
+
+  it('Inovação e Otimização: +R$ 400 de projeto paralelo além do freela', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: all('technical') }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6850) // 7000 + 300 + 150 + 400 - 1000
+    expect(logStarting('Projeto paralelo')).toEqual([
+      expect.objectContaining({ cashImpact: 400, description: 'Projeto paralelo: Inovação e Otimização (+R$ 400.00)' }),
+    ])
+    expect(logStarting('Freela')).toHaveLength(1)
+  })
+
+  it('o resultado do mês soma salário, bônus e rendas extras', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: all('technical') }))
+    const { results } = await processTurn('room-1')
+
+    expect(results[0].cashDelta).toBe(7000 + 300 + 150 + 400 - 1000)
+  })
+
+  it('Resolução de Problemas: Resistência Queimada custa R$ 100', async () => {
+    pickEvent('Resistência Queimada')
+    setup(makeCharacter({ unlockedSkills: [skill('technical', 1), skill('technical', 2)] }))
+    await processTurn('room-1')
+
+    expect(cashIncrements()).toContain(-100)
+    expect(logStarting('Resistência Queimada')).toEqual([expect.objectContaining({ cashImpact: -100 })])
+    expect(logStarting('Resistência Queimada')[0].description).toContain('50%')
+  })
+
+  it('Resolução de Problemas: Infiltração Grave custa R$ 1.750', async () => {
+    pickEvent('Infiltração Grave')
+    setup(makeCharacter({ unlockedSkills: [skill('technical', 2)] }))
+    const { results } = await processTurn('room-1')
+
+    expect(cashIncrements()).toContain(-1750)
+    expect(logStarting('Infiltração Grave')).toEqual([expect.objectContaining({ cashImpact: -1750 })])
+    expect(results[0].cashDelta).toBe(7000 - 1000 - 1750)
+  })
+
+  it('sem Resolução de Problemas a Infiltração Grave custa R$ 3.500', async () => {
+    pickEvent('Infiltração Grave')
+    setup(makeCharacter({ unlockedSkills: [skill('technical', 1)] }))
+    await processTurn('room-1')
+
+    expect(cashIncrements()).toContain(-3500)
+    expect(logStarting('Infiltração Grave')[0].description).toBe('Infiltração Grave: Um cano estourou na parede.')
+  })
+
+  it('Resolução de Problemas não barateia outros imprevistos', async () => {
+    pickEvent('Emergência Veterinária')
+    setup(makeCharacter({ unlockedSkills: [skill('technical', 2)] }))
+    await processTurn('room-1')
+
+    expect(cashIncrements()).toContain(-600)
+  })
+
+  // ─── Comunicação ────────────────────────────────────────────────────────────
+
+  it('Negociação e Liderança: aluguel 20% mais barato no saldo e no extrato', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: 1500, unlockedSkills: [skill('communication', 3)] }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(5800) // 7000 - 1200
+    expect(logStarting('Aluguel')).toEqual([
+      expect.objectContaining({ cashImpact: -1200, description: 'Aluguel: Casa — Pago (-R$ 1200) com 20% de desconto' }),
+    ])
+  })
+
+  it('aluguel quebrado é arredondado em centavos', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: '1234.56', unlockedSkills: [skill('communication', 3)] }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6012.35) // 7000 - 987.65
+    expect(logStarting('Aluguel')[0].cashImpact).toBe(-987.65)
+  })
+
+  it('Liderança Estratégica: salário +R$ 400', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: all('communication') }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(6600) // 7000 + 400 - 800
+    expect(logStarting('Bônus salarial')).toEqual([
+      expect.objectContaining({ cashImpact: 400, description: 'Bônus salarial: Liderança Estratégica (+R$ 400.00)' }),
+    ])
+  })
+
+  it('os dois bônus de salário aparecem em linhas separadas', async () => {
+    setup(makeCharacter({ cash: 0, housingCost: 1000, unlockedSkills: [skill('technical', 3), skill('communication', 4)] }))
+    await processTurn('room-1')
+
+    expect(logStarting('Bônus salarial').map((l) => l.cashImpact)).toEqual([300, 400])
+    expect(costsUpdate().cash).toBe(6700)
+  })
+
+  // ─── Gestão ─────────────────────────────────────────────────────────────────
+
+  it('Planejamento e Produtividade: cheque especial cobra 4%', async () => {
+    setup(makeCharacter({ cash: -1000, housingCost: 1000, unlockedSkills: [skill('management', 1), skill('management', 2)] }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(4960) // -1000 - 40 + 7000 - 1000
+    expect(logStarting('Cheque especial')).toEqual([
+      expect.objectContaining({ cashImpact: -40, description: 'Cheque especial: Juros de 4% sobre R$ 1000.00 (-R$ 40.00)' }),
+    ])
+  })
+
+  it('sem Planejamento e Produtividade o cheque especial continua em 8%', async () => {
+    setup(makeCharacter({ cash: -1000, housingCost: 1000, unlockedSkills: [skill('management', 1)] }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().cash).toBe(4920)
+    expect(logStarting('Cheque especial')[0].description).toContain('Juros de 8%')
+  })
+
+  it('dívida antiga também paga 4% com a habilidade', async () => {
+    setup(makeCharacter({ cash: 0, overdraftDebt: 2500, housingCost: 1000, unlockedSkills: [skill('management', 2)] }))
+    await processTurn('room-1')
+
+    expect(costsUpdate()).toEqual({ cash: 3400, overdraftDebt: 0, isBankrupt: false }) // -2500 - 100 + 7000 - 1000
+  })
+
+  it('bônus de 0,6% sobre as caixinhas pago em dinheiro, depois do rendimento', async () => {
+    setup(makeCharacter({ unlockedSkills: [skill('management', 1), skill('management', 2)] }), {
+      investments: [{ id: 'fi-1', amount: 10000, monthlyRate: 0.01 }],
+    })
+    await processTurn('room-1')
+
+    // caixinha rende 100 → 10.100; bônus = 10.100 * 0,6% = 60,60
+    expect(prismaMock.fixedIncomeInvestment.update).toHaveBeenCalledWith({ where: { id: 'fi-1' }, data: { amount: { increment: 100 } } })
+    expect(cashIncrements()).toContain(60.6)
+    expect(logStarting('Gestão')).toEqual([
+      expect.objectContaining({ turn: 2, cashImpact: 60.6, description: 'Gestão: Bônus de 0,6% sobre as caixinhas (+R$ 60.60)' }),
+    ])
+  })
+
+  it('o bônus não entra no valor da caixinha', async () => {
+    setup(makeCharacter({ unlockedSkills: all('management') }), {
+      investments: [{ id: 'fi-1', amount: 10000, monthlyRate: 0.01 }],
+    })
+    await processTurn('room-1')
+
+    expect(prismaMock.fixedIncomeInvestment.update).toHaveBeenCalledTimes(1)
+    expect(prismaMock.fixedIncomeInvestment.update).toHaveBeenCalledWith({ where: { id: 'fi-1' }, data: { amount: { increment: 100 } } })
+  })
+
+  it('Gestão completa: 2,7% somando todas as caixinhas abertas', async () => {
+    setup(makeCharacter({ unlockedSkills: all('management') }), {
+      investments: [
+        { id: 'fi-1', amount: 10000, monthlyRate: 0.01 },
+        { id: 'fi-2', amount: '5000', monthlyRate: 0 },
+      ],
+    })
+    const { results } = await processTurn('room-1')
+
+    // (10.100 + 5.000) * 2,7% = 407,70
+    expect(logStarting('Gestão')).toEqual([
+      expect.objectContaining({ cashImpact: 407.7, description: 'Gestão: Bônus de 2,7% sobre as caixinhas (+R$ 407.70)' }),
+    ])
+    expect(results[0].cashDelta).toBeCloseTo(7000 - 1000 + 100 + 407.7, 2)
+  })
+
+  it('L2 + L3 pagam 1,5%', async () => {
+    setup(makeCharacter({ unlockedSkills: [skill('management', 2), skill('management', 3)] }), {
+      investments: [{ id: 'fi-1', amount: 2000, monthlyRate: 0 }],
+    })
+    await processTurn('room-1')
+
+    expect(logStarting('Gestão')).toEqual([
+      expect.objectContaining({ cashImpact: 30, description: 'Gestão: Bônus de 1,5% sobre as caixinhas (+R$ 30.00)' }),
+    ])
+  })
+
+  it('o bônus é arredondado em centavos', async () => {
+    setup(makeCharacter({ unlockedSkills: [skill('management', 2)] }), {
+      investments: [{ id: 'fi-1', amount: 1234.56, monthlyRate: 0 }],
+    })
+    await processTurn('room-1')
+
+    expect(logStarting('Gestão')[0].cashImpact).toBe(7.41)
+  })
+
+  it('sem caixinhas não há bônus nem linha no extrato', async () => {
+    setup(makeCharacter({ unlockedSkills: all('management') }))
+    await processTurn('room-1')
+
+    expect(logStarting('Gestão')).toEqual([])
+    expect(cashIncrements()).toEqual([])
+  })
+
+  it('caixinhas sem Gestão L2 não rendem bônus', async () => {
+    setup(makeCharacter({ unlockedSkills: [skill('management', 1)] }), {
+      investments: [{ id: 'fi-1', amount: 10000, monthlyRate: 0.01 }],
+    })
+    await processTurn('room-1')
+
+    expect(logStarting('Gestão')).toEqual([])
+  })
+
+  // ─── tudo junto ─────────────────────────────────────────────────────────────
+
+  it('árvore inteira num mês com Infiltração Grave', async () => {
+    pickEvent('Infiltração Grave')
+    setup(makeCharacter({
+      cash: -1000, housingCost: 1500,
+      unlockedSkills: [...all('technical'), ...all('communication'), ...all('management')],
+    }), { investments: [{ id: 'fi-1', amount: 10000, monthlyRate: 0 }] })
+    const { results } = await processTurn('room-1')
+
+    // -1000 - 40 (4%) + 7000 + 700 + 550 - 1200 = 6010
+    expect(costsUpdate().cash).toBe(6010)
+    expect(cashIncrements()).toEqual([270, -1750])
+    expect(results[0].cashDelta).toBeCloseTo(7000 + 700 + 550 - 1200 - 40 + 270 - 1750, 2)
+  })
+})

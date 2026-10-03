@@ -88,15 +88,17 @@ const debentureReturn = (amount, annualRate, months) =>
 // Cheque especial: o saldo negativo é a dívida. No fechamento do mês ele cobra
 // juros sobre o valor usado, que entram como mais saldo negativo; qualquer
 // dinheiro que entra na conta abate a dívida antes de sobrar saldo.
-const overdraftInterest = (cash) => (Number(cash) < 0 ? cents(-Number(cash) * OVERDRAFT_MONTHLY_RATE) : 0)
+// `rate` permite a taxa menor de quem tem a habilidade Planejamento e Produtividade.
+const overdraftInterest = (cash, rate = OVERDRAFT_MONTHLY_RATE) => (Number(cash) < 0 ? cents(-Number(cash) * rate) : 0)
 
 // Virada do mês na conta: juros do cheque especial sobre o saldo com que o mês
 // fechou, depois entra o salário do mês novo (que abate a dívida) e sai o
 // aluguel. `legacyDebt` é a dívida antiga guardada fora do saldo, que volta
-// para o saldo para seguir a mesma regra.
-function closeMonth(cash, rent, legacyDebt = 0, salary = 0) {
+// para o saldo para seguir a mesma regra. `overdraftRate` é a taxa do cheque
+// especial do personagem (8% por padrão).
+function closeMonth(cash, rent, legacyDebt = 0, salary = 0, overdraftRate = OVERDRAFT_MONTHLY_RATE) {
   const opening = cents(Number(cash) - Number(legacyDebt))
-  const interest = overdraftInterest(opening)
+  const interest = overdraftInterest(opening, overdraftRate)
   const closing = cents(opening - interest + Number(salary) - Number(rent))
   return { opening, interest, closing, inOverdraft: closing < 0 }
 }
@@ -152,5 +154,6 @@ module.exports = {
   closeMonth,
   balanceSheet,
   averagePrice,
+  STOCK_EVENTS,
   nextStockPrice,
 }

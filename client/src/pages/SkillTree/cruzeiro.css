@@ -1,0 +1,43 @@
+/* Animações da constelação Cruzeiro (Árvore de Habilidades). */
+.cz-node { cursor: pointer; outline: none; }
+.cz-node .cz-core { transition: transform .25s cubic-bezier(.2, 1.6, .4, 1); transform-box: fill-box; transform-origin: center; }
+.cz-node:hover .cz-core, .cz-node:focus-visible .cz-core { transform: scale(1.14); }
+.cz-node .cz-focus { opacity: 0; }
+.cz-node:focus-visible .cz-focus { opacity: 1; }
+.cz-node text { pointer-events: none; }
+
+.cz-flow { stroke-dasharray: 2 16; animation: cz-flow 1.6s linear infinite; }
+.cz-ready { animation: cz-ring 1.9s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+.cz-halo { animation: cz-breathe 3.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+
+.cz-intro .cz-ln { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: cz-draw .7s cubic-bezier(.6, 0, .2, 1) forwards; animation-delay: var(--d); }
+.cz-intro .cz-nd { opacity: 0; animation: cz-pop .55s cubic-bezier(.2, 1.5, .4, 1) forwards; animation-delay: var(--d); transform-box: fill-box; transform-origin: center; }
+.cz-intro .cz-lbl { opacity: 0; animation: cz-fade .6s ease forwards; animation-delay: var(--d); }
+.cz-intro .cz-vc { opacity: 0; animation: cz-ignite 1s cubic-bezier(.2, 1.4, .4, 1) forwards .35s; transform-box: fill-box; transform-origin: center; }
+.cz-intro .cz-shock { animation: cz-shock 1.3s ease-out forwards .5s; transform-box: fill-box; transform-origin: center; }
+.cz-shock { opacity: 0; }
+.cz-brand { animation: cz-rise 1s ease both; }
+.cz-intro-brand { animation-delay: 1.9s; }
+.cz-quick .cz-nd, .cz-quick .cz-lbl, .cz-quick .cz-ln { animation: cz-fade .5s ease both; }
+
+.cz-burst circle { animation: cz-burst .9s ease-out forwards; }
+.cz-just .cz-core { animation: cz-unlock .7s cubic-bezier(.2, 1.6, .4, 1); }
+.cz-drawnow { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: cz-draw .6s ease forwards; }
+
+@keyframes cz-flow { to { stroke-dashoffset: -36; } }
+@keyframes cz-ring { 0% { transform: scale(.85); opacity: .9 } 100% { transform: scale(1.6); opacity: 0 } }
+@keyframes cz-breathe { 50% { transform: scale(1.12); opacity: .55 } }
+@keyframes cz-draw { to { stroke-dashoffset: 0; } }
+@keyframes cz-pop { 0% { opacity: 0; transform: scale(.2) } 100% { opacity: 1; transform: scale(1) } }
+@keyframes cz-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes cz-ignite { 0% { opacity: 0; transform: scale(.1) } 60% { opacity: 1; transform: scale(1.25) } 100% { opacity: 1; transform: scale(1) } }
+@keyframes cz-shock { 0% { opacity: .9; transform: scale(.3) } 100% { opacity: 0; transform: scale(6) } }
+@keyframes cz-rise { from { opacity: 0; transform: translateY(8px); letter-spacing: .6em } to { opacity: 1; transform: none } }
+@keyframes cz-burst { 0% { opacity: 1; transform: translate(0, 0) scale(1) } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.3) } }
+@keyframes cz-unlock { 0% { transform: scale(.6) } 60% { transform: scale(1.45) } 100% { transform: scale(1) } }
+
+@media (prefers-reduced-motion: reduce) {
+  .cz-flow, .cz-ready, .cz-halo, .cz-burst circle, .cz-just .cz-core, .cz-brand { animation: none !important; }
+  .cz-intro .cz-ln, .cz-intro .cz-nd, .cz-intro .cz-lbl, .cz-intro .cz-vc, .cz-drawnow, .cz-quick * { animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; }
+  .cz-shock { display: none; }
+}
