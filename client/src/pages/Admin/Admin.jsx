@@ -222,6 +222,22 @@ export default function Admin() {
     }
   }
 
+  // dados da sala para pesquisa (CSV com jogadores anônimos)
+  const downloadData = async () => {
+    try {
+      const { data } = await api.get(`/rooms/${room.id}/export`, { responseType: 'blob' })
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `sala-${room.code}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      say('Planilha baixada')
+    } catch {
+      setError('Não deu para baixar os dados da sala.')
+    }
+  }
+
   const copyCode = () => {
     navigator.clipboard?.writeText(room.code).then(() => say('Código copiado'), () => say(`Código: ${room.code}`))
   }
@@ -334,6 +350,8 @@ export default function Admin() {
                   )}
                   <p className="text-sm text-[#6B7A62]">
                     Criada em {new Date(room.createdAt).toLocaleDateString('pt-BR')} · {playersLabel(room.players)}
+                    {' · '}
+                    <button type="button" onClick={downloadData} className="font-extrabold text-[#2457C5] hover:underline cursor-pointer">Baixar dados (planilha)</button>
                     {' · '}
                     <button type="button" onClick={() => setConfirm('delete')} className="font-extrabold text-[#C4283D] hover:underline cursor-pointer">Apagar sala</button>
                   </p>

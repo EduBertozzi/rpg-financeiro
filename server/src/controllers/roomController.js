@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma')
 const bcrypt = require('bcryptjs')
+const { roomCsv } = require('../utils/roomExport')
 const { cleanRoomName, playerProgress, roomSummary, CHARACTER_CHILD_MODELS, temporaryPassword } = require('../utils/roomAdmin')
 
 const generateCode = () => {
@@ -186,6 +187,24 @@ exports.resetPlayerPassword = async (req, res) => {
     const password = temporaryPassword()
     await prisma.user.update({ where: { id: character.userId }, data: { passwordHash: await bcrypt.hash(password, 10) } })
     res.json({ password, name: character.name })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+
+// Dados da sala para pesquisa (CSV, jogadores anônimos).
+exports.exportRoom = async (req, res) => {
+  try {
+    const room = await ownRoom(req, res)
+    if (!room) return
+    const characters = await prisma.character.findMany({
+      where: { roomId: room.id },
+      orderBy: { createdAt: 'asc' },
+      include: { eventLog: true, choices: true, snapshots: true, unlockedSkills: true }
+    })
+    res.set('Content-Type', 'text/csv; charset=utf-8')
+    res.set('Content-Disposition', `attachment; filename="sala-${room.code}.csv"`)
+    res.send(roomCsv(characters ?? [], room.maxTurns))
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
