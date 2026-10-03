@@ -1,196 +1,252 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import GameLayout from '../../components/GameLayout'
+import TownBackdrop from '../../components/town/TownBackdrop'
+import { TOY_BUTTON, TOY_CARD, TOY_GHOST } from '../../components/town/toy'
+import { getAvatarById } from '../../data/avatarTheme'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
+import { linePoints, niceMax, yearGain } from './yearChart'
 
-const MEDAL = ['🥇', '🥈', '🥉']
+const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+const brl0 = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 
-function formatCurrency(value) {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    maximumFractionDigits: 0,
-  }).format(value ?? 0)
+const BADGE_LOOK = {
+  never_overdraft: ['#3DBE5A', '✓'],
+  reserve_complete: ['#12B5A6', 'R'],
+  coupon_hunter: ['#F2B53A', '%'],
+  constellation: ['#8A5CF6', '★'],
+  investor: ['#2457C5', '$'],
+  bills_on_time: ['#EC4899', '✉'],
 }
-
-function NetWorthBar({ value, max, color }) {
-  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0
-  return (
-    <div className="w-full bg-darker rounded-full h-2 mt-1">
-      <div
-        className="h-2 rounded-full transition-all duration-1000"
-        style={{ width: `${pct}%`, backgroundColor: color }}
-      />
-    </div>
-  )
-}
-
-function WinnerCard({ player }) {
-  return (
-    <div
-      className="relative overflow-hidden rounded-2xl border-2 p-8 mb-10 text-center"
-      style={{ borderColor: '#FFD700', background: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 60%, #1A2540 100%)' }}
-    >
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.12) 0%, transparent 70%)' }}
-      />
-      <div className="relative z-10">
-        <div className="text-5xl mb-3">🏆</div>
-        <p className="text-yellow-400 text-sm font-semibold tracking-widest uppercase mb-1">Vencedor</p>
-        <h2 className="text-4xl font-bold text-white mb-2">{player.characterName}</h2>
-        <p className="text-3xl font-bold text-yellow-300">{formatCurrency(player.netWorth)}</p>
-        <p className="text-gray-400 text-sm mt-1">Patrimônio líquido final</p>
-      </div>
-    </div>
-  )
-}
-
-function RankingRow({ player, isSelf, index, maxNetWorth }) {
-  const colors = ['#FFD700', '#C0C0C0', '#CD7F32']
-  const barColor = colors[index] ?? '#4A90D9'
-  const isTop3 = index < 3
-
-  return (
-    <div className={`rounded-xl p-4 transition-all ${isSelf ? 'border-2 border-primary bg-card' : 'border border-border bg-card'}`}>
-      <div className="flex items-center gap-4">
-        <div className="w-10 text-center flex-shrink-0">
-          {isTop3 ? (
-            <span className="text-2xl">{MEDAL[index]}</span>
-          ) : (
-            <span className="text-gray-400 font-bold text-lg">#{player.rank}</span>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`font-semibold truncate ${isSelf ? 'text-primary' : 'text-white'}`}>
-              {player.characterName}
-            </span>
-            {isSelf && (
-              <span className="text-xs bg-primary text-white px-2 py-0.5 rounded-full flex-shrink-0">você</span>
-            )}
-          </div>
-          <NetWorthBar value={player.netWorth} max={maxNetWorth} color={barColor} />
-        </div>
-        <div className="text-right flex-shrink-0">
-          <p className="font-bold text-white">{formatCurrency(player.netWorth)}</p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DetailCard({ label, value, sub }) {
-  return (
-    <div className="bg-card border border-border rounded-xl p-4">
-      <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-white font-bold text-lg">{value}</p>
-      {sub && <p className="text-gray-500 text-xs mt-0.5">{sub}</p>}
-    </div>
-  )
-}
+const PODIUM = [
+  { place: 2, height: 120, color: '#C0C7D0' },
+  { place: 1, height: 160, color: '#F2B53A' },
+  { place: 3, height: 96, color: '#D98B4A' },
+]
 
 export default function Finished() {
   const navigate = useNavigate()
-  const { character, room, setCharacter, setRoom } = useGameStore()
-
-  const [leaderboard, setLeaderboard] = useState([])
-  const [loading, setLoading] = useState(!!room?.id)
-  const [error, setError] = useState(room?.id ? null : 'Sala não encontrada.')
+  const { character, setCharacter, setRoom } = useGameStore()
+  const [summary, setSummary] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!room?.id) return
+    if (!character?.id) return
+    api.get(`/characters/${character.id}/year-summary`)
+      .then(({ data }) => setSummary(data))
+      .catch(() => setError('Não deu para carregar o resultado do ano.'))
+  }, [character?.id])
 
-    api
-      .get(`/rooms/${room.id}/leaderboard`)
-      .then((res) => setLeaderboard(res.data))
-      .catch(() => setError('Não foi possível carregar o ranking.'))
-      .finally(() => setLoading(false))
-  }, [room?.id])
-
-  function handleVoltar() {
+  const newGame = () => {
     setCharacter(null)
     setRoom(null)
-    navigate('/lobby')
+    navigate('/character')
   }
 
-  const winner = leaderboard[0] ?? null
-  const maxNetWorth = winner?.netWorth ?? 1
-  const myRank = leaderboard.find((p) => p.characterId === character?.id)
-  const myPosition = myRank ? leaderboard.indexOf(myRank) + 1 : null
-
   return (
-    <GameLayout>
-      <div className="max-w-2xl mx-auto p-6 pb-16">
-        <div className="text-center mb-8 pt-4">
-          <h1 className="text-4xl font-bold text-white mb-1">Fim de Jogo!</h1>
-          <p className="text-gray-400">12 meses se passaram. Confira os resultados finais.</p>
-        </div>
+    <GameLayout light>
+      <TownBackdrop />
+      <div className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        {summary && <Confetti />}
+        <header className="grid justify-items-center gap-1 text-center">
+          <p className="rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold tracking-[0.18em] text-[#6B7A62]">FIM DO ANO EM SANTA RITA</p>
+          <h1 className="font-toy text-[clamp(38px,6vw,58px)] font-extrabold leading-none text-[#2457C5] [text-shadow:0_4px_0_#BFD3FF]">Fechou o ano!</h1>
+          <p className="text-[#4A5A42]">12 meses depois, quem cuidou melhor do dinheiro?</p>
+        </header>
 
-        {loading && (
-          <div className="text-center py-20 text-gray-400">
-            <div className="text-4xl mb-4 animate-pulse">⏳</div>
-            <p>Carregando resultados...</p>
-          </div>
-        )}
+        {error && <p className={`${TOY_CARD} mx-auto mt-8 max-w-md p-6 text-center text-[#9F1D2F]`}>{error}</p>}
+        {!summary && !error && <p className="mt-16 text-center font-toy text-xl text-[#6B7A62]">Somando o ano…</p>}
 
-        {error && !loading && (
-          <div className="text-center py-20 text-red-400">
-            <div className="text-4xl mb-4">⚠️</div>
-            <p>{error}</p>
-          </div>
-        )}
-
-        {!loading && !error && (
+        {summary && (
           <>
-            {winner && <WinnerCard player={winner} />}
-
-            {myRank && (
-              <div className="mb-8">
-                <h2 className="text-lg font-semibold text-gray-300 mb-3">Seu desempenho</h2>
-                <div className="grid grid-cols-2 gap-3">
-                  <DetailCard
-                    label="Posição final"
-                    value={`#${myPosition}`}
-                    sub={`de ${leaderboard.length} jogadores`}
-                  />
-                  <DetailCard
-                    label="Patrimônio final"
-                    value={formatCurrency(myRank.netWorth)}
-                    sub={myPosition === 1 ? 'Você venceu!' : `${formatCurrency(winner.netWorth - myRank.netWorth)} atrás do 1º`}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="mb-10">
-              <h2 className="text-lg font-semibold text-gray-300 mb-3">Ranking final</h2>
-              <div className="flex flex-col gap-3">
-                {leaderboard.map((player, i) => (
-                  <RankingRow
-                    key={player.characterId}
-                    player={player}
-                    index={i}
-                    isSelf={player.characterId === character?.id}
-                    maxNetWorth={maxNetWorth}
-                  />
-                ))}
+            <Podium players={summary.players} />
+            <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+              <MyYear summary={summary} />
+              <div className="grid content-start gap-5">
+                <Badges badges={summary.badges} />
+                <section className={`${TOY_CARD} grid gap-3 p-5`}>
+                  <h2 className="font-toy text-xl font-extrabold">Ranking da sala</h2>
+                  <ol className="grid">
+                    {summary.players.map((p, i) => (
+                      <li key={p.characterId} className={`flex items-center justify-between gap-3 border-t border-[#EFE6D3] px-2 py-2 text-sm ${p.isSelf ? 'rounded-lg bg-[#E2F4E5] font-extrabold' : ''}`}>
+                        <span>{i + 1}º · {p.name}{p.isSelf ? ' (você)' : ''}</span>
+                        <b className="tabular-nums">{brl0(p.netWorth)}</b>
+                      </li>
+                    ))}
+                  </ol>
+                  <div className="flex flex-wrap gap-3">
+                    <button type="button" onClick={() => navigate('/bank')} className={`${TOY_BUTTON} w-auto flex-1`}>Ver o extrato do ano</button>
+                    <button type="button" onClick={newGame} className={TOY_GHOST}>Nova partida</button>
+                  </div>
+                </section>
               </div>
             </div>
           </>
         )}
-
-        {/* Botão sempre visível — inclusive em caso de erro */}
-        {!loading && (
-          <button
-            onClick={handleVoltar}
-            className="w-full py-4 rounded-xl font-bold text-lg bg-primary hover:bg-blue-600 transition-colors text-white"
-          >
-            Voltar ao Lobby
-          </button>
-        )}
       </div>
     </GameLayout>
   )
+}
+
+function Podium({ players }) {
+  return (
+    <div className="mt-6 flex flex-wrap items-end justify-center gap-4">
+      {PODIUM.map(({ place, height, color }) => {
+        const p = players[place - 1]
+        if (!p) return null
+        return (
+          <div key={place} className="grid w-[150px] justify-items-center gap-1.5">
+            <span className="grid h-20 w-20 place-items-end overflow-hidden rounded-full border-4 border-white bg-[#DDE6F5] shadow-[0_4px_0_#E2D6BE]">
+              <img src={getAvatarById(p.avatarId ?? 1).image} alt="" className="w-[118%] max-w-none" />
+            </span>
+            <b className="font-toy text-lg leading-none">{p.name}{p.isSelf ? ' (você)' : ''}</b>
+            <small className="text-[13px] font-extrabold tabular-nums text-[#6B7A62]">{brl0(p.netWorth)}</small>
+            <div className="grid w-full place-items-center rounded-[18px_18px_8px_8px] font-toy text-4xl font-extrabold text-white shadow-[0_6px_0_rgba(0,0,0,0.15)]" style={{ height, background: color }}>
+              {place}º
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function MyYear({ summary }) {
+  const { months, roomAverage, breakdown, rank, players } = summary
+  const X0 = 56, X1 = 600, Y0 = 200, Y1 = 16
+  const max = niceMax([...months, ...roomAverage].map((p) => Number(p.netWorth)))
+  const box = { x0: X0, x1: X1, y0: Y0, y1: Y1, max }
+  const me = linePoints(months, box)
+  const avg = linePoints(roomAverage, box)
+  const last = months[months.length - 1]
+  const gain = yearGain(months)
+  const parts = [
+    ['Conta', Math.max(Number(breakdown.cash), 0), '#9FB3B0'],
+    ['Caixinhas', breakdown.fixedIncome, '#2457C5'],
+    ['Debêntures', breakdown.debentures, '#8A5CF6'],
+    ['Ações', breakdown.stocks, '#334155'],
+  ]
+  const total = parts.reduce((s, p) => s + Number(p[1]), 0)
+
+  return (
+    <section className={`${TOY_CARD} grid content-start gap-4 p-5`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.2em] text-[#8A9680]">Seu patrimônio final</p>
+          <p className="font-toy text-[42px] font-extrabold leading-none tabular-nums text-[#2B8C41]">{brl0(breakdown.netWorth)}</p>
+        </div>
+        <span className="rounded-full bg-[#E2F4E5] px-3 py-1 text-xs font-extrabold text-[#2B8C41]">
+          {rank}º de {players.length} · {gain >= 0 ? '+' : ''}{brl0(gain)} no ano
+        </span>
+      </div>
+
+      {months.length < 2 ? (
+        <p className="rounded-2xl border-2 border-dashed border-[#EFE6D3] px-4 py-10 text-center text-sm text-[#8A9680]">
+          O gráfico do ano aparece quando pelo menos dois meses tiverem sido fechados.
+        </p>
+      ) : (
+      <svg viewBox="0 0 640 230" className="h-auto w-full" role="img" aria-label="Seu patrimônio mês a mês comparado com a média da sala">
+        {[0, 0.25, 0.5, 0.75, 1].map((f) => {
+          const y = Y0 - (Y0 - Y1) * f
+          return (
+            <g key={f}>
+              <line x1={X0} x2={X1} y1={y} y2={y} stroke="#EFE6D3" />
+              <text x={X0 - 8} y={y + 4} textAnchor="end" fontSize="11" fill="#8A9680">{brl0(max * f).replace('R$', '').trim()}</text>
+            </g>
+          )
+        })}
+        {MONTHS.map((m, i) => (i % 2 === 0 || i === 11) && (
+          <text key={m} x={X0 + ((X1 - X0) * i) / 11} y={Y0 + 18} textAnchor="middle" fontSize="11" fill="#8A9680">{m}</text>
+        ))}
+        {me && <polygon points={`${X0},${Y0} ${me} ${me.split(' ').at(-1).split(',')[0]},${Y0}`} fill="#3DBE5A" opacity="0.12" />}
+        {avg && <polyline points={avg} fill="none" stroke="#A9B19E" strokeWidth="2" strokeDasharray="5 5" />}
+        {me && <polyline points={me} fill="none" stroke="#2B8C41" strokeWidth="3" strokeLinejoin="round" />}
+        {last && (() => {
+          const [x, y] = me.split(' ').at(-1).split(',').map(Number)
+          return (
+            <g>
+              <circle cx={x} cy={y} r="5" fill="#2B8C41" />
+              <text x={x - 8} y={y - 10} textAnchor="end" fontSize="11" fontWeight="800" fill="#2B8C41">você</text>
+            </g>
+          )
+        })()}
+        {avg && (() => {
+          const [x, y] = avg.split(' ').at(-1).split(',').map(Number)
+          return <text x={x - 8} y={y + 16} textAnchor="end" fontSize="11" fill="#8A9680">média da sala</text>
+        })()}
+      </svg>
+      )}
+
+      <div className="flex h-3 overflow-hidden rounded-md bg-[#EFE6D3]">
+        {total > 0 && parts.map(([name, v, color]) => <span key={name} style={{ width: `${(Number(v) / total) * 100}%`, background: color }} />)}
+      </div>
+      <dl className="grid gap-1 text-sm">
+        {parts.map(([name, v, color]) => (
+          <div key={name} className="flex justify-between gap-3">
+            <dt className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-[3px]" style={{ background: color }} />{name}</dt>
+            <dd className="font-bold tabular-nums">{brl0(v)}</dd>
+          </div>
+        ))}
+        <div className="flex justify-between gap-3 text-[#C4283D]">
+          <dt className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-[3px] bg-[#C4283D]" />Dívidas</dt>
+          <dd className="font-bold tabular-nums">{brl0(breakdown.debts)}</dd>
+        </div>
+      </dl>
+    </section>
+  )
+}
+
+function Badges({ badges }) {
+  return (
+    <section className={`${TOY_CARD} grid gap-3 p-5`}>
+      <h2 className="font-toy text-xl font-extrabold">Conquistas</h2>
+      <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+        {badges.map((b) => {
+          const [color, icon] = BADGE_LOOK[b.id] ?? ['#8A9680', '•']
+          return (
+            <li key={b.id} className={`grid justify-items-center gap-1 rounded-[18px] border-[3px] border-[#EFE6D3] bg-white px-2 py-3 text-center ${b.earned ? '' : 'opacity-45 grayscale'}`}>
+              <span className="grid h-10 w-10 place-items-center rounded-full font-toy text-lg font-extrabold text-white shadow-[0_3px_0_rgba(0,0,0,0.18)]" style={{ background: color }}>{icon}</span>
+              <b className="text-[13px] leading-tight">{b.title}</b>
+              <small className="text-[11px] leading-snug text-[#8A9680]">{b.description}</small>
+              <span className="sr-only">{b.earned ? 'Conquistada' : 'Não conquistada'}</span>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+// Chuva de confete quando o resultado aparece.
+function Confetti() {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+    const canvas = ref.current
+    const ctx = canvas.getContext('2d')
+    const r = canvas.getBoundingClientRect()
+    const d = Math.min(window.devicePixelRatio || 1, 2)
+    canvas.width = r.width * d; canvas.height = r.height * d
+    ctx.setTransform(d, 0, 0, d, 0, 0)
+    const colors = ['#FF5C8A', '#FFC857', '#3DBE5A', '#5AA2FF', '#B884FF']
+    const parts = Array.from({ length: 170 }, () => ({
+      x: r.width / 2 + (Math.random() - 0.5) * 240, y: 140, vx: (Math.random() - 0.5) * 13, vy: -Math.random() * 13 - 4,
+      a: Math.random() * 6, c: colors[Math.floor(Math.random() * 5)],
+    }))
+    const start = performance.now()
+    let frame = 0
+    const step = (now) => {
+      ctx.clearRect(0, 0, r.width, r.height)
+      for (const p of parts) {
+        p.vy += 0.28; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.a += 0.15
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-4, -6, 8, 12); ctx.restore()
+      }
+      if (now - start < 4500) frame = requestAnimationFrame(step)
+      else ctx.clearRect(0, 0, r.width, r.height)
+    }
+    frame = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(frame)
+  }, [])
+  return <canvas ref={ref} aria-hidden="true" className="pointer-events-none absolute inset-0 z-20 h-[80vh] w-full" />
 }

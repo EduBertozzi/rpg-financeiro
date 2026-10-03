@@ -210,9 +210,9 @@ describe('contas com desconto das habilidades', () => {
     const res = await request(app).get('/api/v1/characters/char-1/bills/1').set(authHeader(TOKEN))
 
     expect(res.body).toEqual([
-      { type: 'food', label: 'Mercadinho', amount: 1000, baseAmount: 1000, discount: 0, paid: false },
-      { type: 'utilities', label: 'Água e Luz', amount: 250, baseAmount: 250, discount: 0, paid: false },
-      { type: 'transport', label: 'Internet e Celular', amount: 250, baseAmount: 250, discount: 0, paid: false },
+      { type: 'food', label: 'Mercadinho', amount: 1000, baseAmount: 1000, discount: 0, coupon: false, paid: false },
+      { type: 'utilities', label: 'Água e Luz', amount: 250, baseAmount: 250, discount: 0, coupon: false, paid: false },
+      { type: 'transport', label: 'Internet e Celular', amount: 250, baseAmount: 250, discount: 0, coupon: false, paid: false },
     ])
   })
 

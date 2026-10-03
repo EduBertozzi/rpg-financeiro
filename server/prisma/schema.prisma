@@ -68,6 +68,7 @@ model Character {
   eventLog          CharacterEventLog[]
   snapshots         FinancialSnapshot[]
   leaderboard       Leaderboard?
+  coupons           CharacterCoupon[]
 
   @@unique([userId, roomId])
 }
@@ -228,4 +229,20 @@ model Leaderboard {
   updatedAt   DateTime  @default(now())
 
   @@id([roomId, characterId])
+}
+
+// Cupons escondidos no mapa (easter egg): 3 por personagem, um em cada fase do
+// ano. `reward` é food_discount, cashback ou skill_point (ver utils/coupons.js);
+// `value` é quanto o cupom valeu em reais (null para ponto de habilidade).
+model CharacterCoupon {
+  id          String    @id @default(uuid())
+  character   Character @relation(fields: [characterId], references: [id])
+  characterId String
+  turn        Int
+  spot        String
+  reward      String
+  claimedAt   DateTime?
+  value       Decimal?
+
+  @@unique([characterId, turn])
 }

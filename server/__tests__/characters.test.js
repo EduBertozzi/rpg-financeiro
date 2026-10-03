@@ -322,3 +322,51 @@ describe('PATCH /api/v1/characters/:id/ready', () => {
     expect(res.status).toBe(401)
   })
 })
+// ─── cupons escondidos na criação ─────────────────────────────────────────────
+
+describe('POST /api/v1/characters — cupons escondidos', () => {
+  const create = () => request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send(validBody)
+
+  beforeEach(() => {
+    prismaMock.room.findUnique.mockResolvedValue({ id: 'room-1', status: 'waiting' })
+    prismaMock.character.findUnique.mockResolvedValue(null)
+    prismaMock.character.create.mockResolvedValue({ id: 'char-1', name: 'Dudu' })
+    prismaMock.characterSkillPoints.create.mockResolvedValue({})
+    prismaMock.characterCoupon.createMany.mockReset()
+  })
+
+  it('cria o plano de 3 cupons do personagem', async () => {
+    const res = await create()
+
+    expect(res.status).toBe(201)
+    expect(prismaMock.characterCoupon.createMany).toHaveBeenCalledTimes(1)
+    const { data } = prismaMock.characterCoupon.createMany.mock.calls[0][0]
+    expect(data).toHaveLength(3)
+    for (const c of data) expect(c.characterId).toBe('char-1')
+    expect(data.map(c => c.reward).sort()).toEqual(['cashback', 'food_discount', 'skill_point'])
+    expect(data[0].turn).toBeGreaterThanOrEqual(2)
+    expect(data[0].turn).toBeLessThanOrEqual(4)
+    expect(data[1].turn).toBeGreaterThanOrEqual(5)
+    expect(data[1].turn).toBeLessThanOrEqual(8)
+    expect(data[2].turn).toBeGreaterThanOrEqual(9)
+    expect(data[2].turn).toBeLessThanOrEqual(12)
+  })
+
+  it('o prêmio dos cupons não vai na resposta da criação', async () => {
+    const res = await create()
+    expect(JSON.stringify(res.body)).not.toMatch(/cashback|food_discount|skill_point/)
+  })
+
+  it('se criar os cupons falhar, o personagem é criado mesmo assim', async () => {
+    prismaMock.characterCoupon.createMany.mockRejectedValue(new Error('tabela não existe'))
+    const res = await create()
+    expect(res.status).toBe(201)
+  })
+
+  it('não cria cupons quando a criação do personagem é recusada', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({ id: 'existente' })
+    const res = await create()
+    expect(res.status).toBe(409)
+    expect(prismaMock.characterCoupon.createMany).not.toHaveBeenCalled()
+  })
+})

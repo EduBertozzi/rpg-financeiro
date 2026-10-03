@@ -1,6 +1,7 @@
 const prisma = require('../lib/prisma')
 const { SALARY } = require('../utils/finance')
 const { isValidGift, startingCosts, startingSkillPoints } = require('../utils/gifts')
+const { createCouponPlan } = require('./couponController')
 
 // gênero saiu da criação de personagem; a coluna continua obrigatória no
 // banco, então guardamos um valor neutro quando não vem
@@ -42,6 +43,12 @@ exports.createCharacter = async (req, res) => {
     await prisma.characterSkillPoints.create({
       data: { characterId: character.id, ...startingSkillPoints(gift) } // Inteligente: 2 pontos, limite 10
     })
+
+    // cupons escondidos da partida (easter egg). Se falhar, o personagem não
+    // fica sem: o plano é criado na primeira consulta de cupom.
+    try {
+      await createCouponPlan(character.id)
+    } catch (_err) { /* ver ensureCouponPlan */ }
 
     res.status(201).json(character)
   } catch (err) {

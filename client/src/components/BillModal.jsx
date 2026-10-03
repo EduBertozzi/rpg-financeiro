@@ -96,7 +96,7 @@ export default function BillModal({ type, label, onClose, onComplete }) {
               <p className="text-4xl font-black tracking-tight tabular-nums">{bill ? brl(amount) : '…'}</p>
               {discount > 0 && (
                 <p className="text-xs font-bold text-[#0A7F75]">
-                  <s className="font-normal text-[#627673]">{brl(bill.baseAmount)}</s> · {Math.round(discount * 100)}% de desconto pelas suas habilidades
+                  <s className="font-normal text-[#627673]">{brl(bill.baseAmount)}</s> · {Math.round(discount * 100)}% de desconto {bill.coupon ? (discount > 0.2 + 1e-9 ? 'pelas habilidades e pelo cupom' : 'pelo cupom') : 'pelas suas habilidades'}
                 </p>
               )}
             </div>
