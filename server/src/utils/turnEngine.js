@@ -5,6 +5,7 @@ const { giftIncome, giftIncomeEntry, giftEventImpact } = require('./gifts')
 const { eventsFor } = require('./events')
 const { dilemmaFor, summarizeEffects, installmentDebt, resolveDilemma, inertiaOption } = require('./dilemmas')
 const { leisureFor, leisurePrice } = require('./leisure')
+const { latestPrices, stocksValueOf } = require('./yearSummary')
 const { BILLS, LATE_FEE, LATE_INTEREST, lateBillAmount, pendingForMonth } = require('./settle')
 
 const brl = (n) => Number(n).toFixed(2)
@@ -268,7 +269,9 @@ async function checkDebentures(character, turn) {
   }
 }
 
-async function saveSnapshot(character, turn) {
+// Patrimônio na virada: saldo, caixinhas, debêntures e ações (pelo preço do
+// mês novo, `priceMap`), menos dívidas e parcelas que faltam.
+async function saveSnapshot(character, turn, priceMap = {}) {
   const fresh = await prisma.character.findUnique({
     where: { id: character.id },
     include: {
@@ -281,8 +284,9 @@ async function saveSnapshot(character, turn) {
 
   const fixedIncome = fresh.fixedInvestments.reduce((sum, i) => sum + Number(i.amount), 0)
   const debentures = fresh.debentures.reduce((sum, d) => sum + Number(d.amount), 0)
+  const stocks = stocksValueOf(fresh.positions ?? [], priceMap)
   const { totalAssets, totalDebts, netWorth } = balanceSheet({
-    cash: fresh.cash, fixedIncome, debentures, overdraftDebt: fresh.overdraftDebt, loanDebt: fresh.loanDebt,
+    cash: fresh.cash, fixedIncome, debentures, stocks, overdraftDebt: fresh.overdraftDebt, loanDebt: fresh.loanDebt,
     installmentDebt: installmentDebt(fresh.effects ?? []),
   })
 
@@ -292,7 +296,7 @@ async function saveSnapshot(character, turn) {
     create: { characterId: character.id, turn, cash: Number(fresh.cash), fixedIncome, debentures, totalAssets, totalDebts, netWorth }
   })
 
-  return { netWorth, cash: Number(fresh.cash), fixedIncome, debentures }
+  return { netWorth, cash: Number(fresh.cash), fixedIncome, debentures, stocks }
 }
 
 async function processTurn(roomId) {
@@ -309,6 +313,7 @@ async function processTurn(roomId) {
   const results = []
 
   await generateAssetPrices(roomId, nextTurn)
+  const priceMap = latestPrices((await prisma.assetPrice.findMany({ where: { roomId, turn: nextTurn } })) ?? [])
 
   for (const character of room.characters) {
     const perks = perksOf(character.unlockedSkills)
@@ -330,7 +335,7 @@ async function processTurn(roomId) {
     const bonus = await applySavingsBonus(character, nextTurn, balance, perks)
     const eventResult = final ? { events: [], cashImpact: 0 } : await applyEvents(character, nextTurn, perks)
     await checkDebentures(character, nextTurn)
-    const snapshot = await saveSnapshot(character, nextTurn)
+    const snapshot = await saveSnapshot(character, nextTurn, priceMap)
 
     results.push({
       characterId: character.id,

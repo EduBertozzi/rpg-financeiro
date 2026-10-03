@@ -3,13 +3,18 @@ const { BOTS, GIFTS, PATHS, PRUDENT, CARELESS, SHREWD, dilemmaChoice, investable
 const { DILEMMAS } = require('../src/utils/dilemmas')
 
 describe('turma de robôs', () => {
-  it('11 robôs com nome, jeito de jogar e id único', () => {
-    expect(BOTS).toHaveLength(11)
-    expect(new Set(BOTS.map((b) => b.id)).size).toBe(11)
+  it('12 robôs com nome, jeito de jogar e id único', () => {
+    expect(BOTS).toHaveLength(12)
+    expect(new Set(BOTS.map((b) => b.id)).size).toBe(12)
     for (const b of BOTS) {
       expect(b.name).toEqual(expect.any(String))
       expect(b.bio.length).toBeGreaterThan(20)
     }
+  })
+
+  it('o Seu Cofrinho é o controle: decide bem e não investe', () => {
+    const c = BOTS.find((b) => b.id === 'cofrinho')
+    expect([c.dilemma, c.invest]).toEqual(['prudente', 'nada'])
   })
 
   it('só o Dorminhoco não joga', () => {

@@ -1300,3 +1300,45 @@ describe('virada cobra o que ficou em aberto', () => {
     expect(lazyCost).toBeGreaterThan(1000 + 250 + 250 + 200)
   })
 })
+
+// ─── patrimônio com ações ─────────────────────────────────────────────────────
+
+describe('snapshot conta as ações', () => {
+  function setup(fresh, prices) {
+    const character = makeCharacter()
+    prismaMock.room.findUnique.mockResolvedValueOnce({ id: 'room-1', currentTurn: 4, maxTurns: 12, status: 'active', characters: [character] })
+    prismaMock.marketAsset.findMany.mockResolvedValue([])
+    prismaMock.assetPrice.findMany.mockResolvedValue(prices)
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([])
+    prismaMock.debentureInvestment.findMany.mockResolvedValue([])
+    prismaMock.scheduledEffect.findMany.mockResolvedValue([])
+    prismaMock.characterEventLog.create.mockResolvedValue({})
+    prismaMock.character.update.mockResolvedValue({})
+    prismaMock.character.findUnique.mockResolvedValue({ ...character, fixedInvestments: [], debentures: [], effects: [], ...fresh })
+    prismaMock.financialSnapshot.upsert.mockResolvedValue({})
+    prismaMock.room.update.mockResolvedValue({})
+  }
+  beforeEach(() => jest.spyOn(Math, 'random').mockReturnValue(0.1))
+  afterEach(() => Math.random.mockRestore())
+
+  it('ações entram no patrimônio pelo preço do mês novo', async () => {
+    setup({ cash: 1000, positions: [{ assetId: 1, quantity: 10 }, { assetId: 2, quantity: 2 }] }, [{ assetId: 1, turn: 5, price: '16.50' }, { assetId: 2, turn: 5, price: 80 }])
+    const { results } = await processTurn('room-1')
+
+    expect(prismaMock.assetPrice.findMany).toHaveBeenCalledWith({ where: { roomId: 'room-1', turn: 5 } })
+    expect(prismaMock.financialSnapshot.upsert.mock.calls[0][0].create).toEqual(expect.objectContaining({ totalAssets: 1325, netWorth: 1325 }))
+    expect(results[0].netWorth).toBe(1325)
+  })
+
+  it('sem ações, nada muda', async () => {
+    setup({ cash: 1000, positions: [] }, [])
+    await processTurn('room-1')
+    expect(prismaMock.financialSnapshot.upsert.mock.calls[0][0].create.netWorth).toBe(1000)
+  })
+
+  it('o ranking final usa o patrimônio com as ações', async () => {
+    setup({ cash: 1000, positions: [{ assetId: 1, quantity: 100 }] }, [{ assetId: 1, turn: 5, price: 20 }])
+    await processTurn('room-1')
+    expect(prismaMock.financialSnapshot.upsert.mock.calls[0][0].create.totalAssets).toBe(3000)
+  })
+})

@@ -17,6 +17,7 @@ const BOTS = [
   { id: 'cuponete', name: 'Cuponete', bio: 'Caça todos os cupons do mapa, decide com cuidado e guarda no CDB.', dilemma: 'esperto', invest: 'cdb', reserveMonths: 1, coversOverdraft: true, huntsCoupons: true },
   { id: 'drjuros', name: 'Dr. Juros', bio: 'Só investimento isento de IR: LCA e LCI.', dilemma: 'esperto', invest: 'isentos', reserveMonths: 1, coversOverdraft: true },
   { id: 'debi', name: 'Debi Debênture', bio: 'Aposta alto na debênture (18% ao ano, risco de calote).', dilemma: 'prudente', invest: 'debenture', reserveMonths: 1, coversOverdraft: true },
+  { id: 'cofrinho', name: 'Seu Cofrinho', bio: 'Controle da turma: decide os dilemas com cuidado, mas deixa todo o dinheiro parado na conta.', dilemma: 'prudente', invest: 'nada', reserveMonths: 0 },
   { id: 'dorminhoco', name: 'Dorminhoco', bio: 'Esquece de jogar: não responde nada, não paga nada. O administrador fecha o mês mesmo assim.', idle: true },
 ]
 
