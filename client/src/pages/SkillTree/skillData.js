@@ -39,7 +39,7 @@ export const SPOTS = {
 export const STATUS_TEXT = {
   on: 'Já é sua',
   locked: 'Desbloqueie o nível anterior primeiro',
-  poor: 'Faltam pontos. Ganhe mais no Lazer',
+  poor: 'Faltam pontos. Cada dilema respondido dá 1',
   cap: 'Limite de pontos atingido',
   ready: 'Pronta para desbloquear',
 }

@@ -374,7 +374,7 @@ function Detail({ skill, status, cost, unlocked, tips, busy, error, onUnlock }) 
               <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: PATHS[s.path]?.hex }} />
               {perkOf(s).perk}
             </li>
-          )) : <li className="text-[#8EA0B8]">Nenhuma ainda. Ganhe pontos respondendo o Lazer de cada mês.</li>}
+          )) : <li className="text-[#8EA0B8]">Nenhuma ainda. Cada dilema respondido dá 1 ponto.</li>}
         </ul>
       </div>
     </aside>

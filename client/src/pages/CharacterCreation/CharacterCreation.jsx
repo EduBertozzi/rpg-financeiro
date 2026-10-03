@@ -193,7 +193,7 @@ export default function CharacterCreation() {
                 </div>
                 <dl className="grid gap-2 rounded-[20px] border-2 border-[#EFE6D3] bg-white p-4 text-[15px]">
                   <Row label="Salário" value="R$ 7.000 por mês" />
-                  <Row label="Saldo inicial" value="R$ 7.000 (salário de janeiro)" />
+                  <Row label="Saldo inicial" value="Salário de janeiro + um PIX da família" />
                   <Row label="Profissão" value={form.course} />
                   <Row label="Dom" value={gift?.name} />
                   <Row label="Sala" value={form.roomCode.trim()} mono />
