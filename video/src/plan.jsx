@@ -62,12 +62,16 @@ const BILLS = (rate = 2.6, from = 76.4, to = 99.5) => clip({
   coins: [[(94.4 - from) / rate, [960, 560], [140, 300]]],
 })
 
-const HUD = clip({
-  src: 'player.webm', from: 101.6, to: 105.3, rate: 1, hue: C.pink,
+const HUD = (rate = 1.3) => clip({
+  src: 'hud.webm', from: 5.0, to: 13.6, rate, hue: C.pink,
   sticker: { text: 'A barra é sua', color: '#fff', x: 760 },
-  captions: [{ t: 0.3, dur: 3.2, text: 'Patrimônio, tarefas do mês e lugar na sala', accent: '📊' }],
-  zooms: [{ at: 0, x: 330, y: 470, s: 1.55 }],
-  sfx: [[0.1, 'swoosh']],
+  captions: [
+    { t: 0.3, dur: (9.4 - 5.0) / rate - 0.3, text: 'Patrimônio igual ao do banco, com o gráfico do ano', accent: '📊' },
+    { t: (9.4 - 5.0) / rate, dur: (12.2 - 9.4) / rate, text: 'Tarefas do mês e quem da turma já terminou', accent: '✅' },
+    { t: (12.2 - 5.0) / rate, dur: (13.6 - 12.2) / rate, text: 'Pontos para gastar', accent: '⭐' },
+  ],
+  zooms: [{ at: 0.6 / rate, x: 330, y: 480, s: 1.6 }],
+  sfx: [[0.1, 'swoosh'], [(12.4 - 5.0) / rate, 'sparkle']],
 })
 
 const BANK = (rate = 2, from = 105.3, to = 119.5) => clip({
@@ -130,7 +134,7 @@ export const FULL = [
   DILEMMA(),
   LEISURE,
   BILLS(),
-  HUD,
+  HUD(),
   BANK(),
   TURN(),
   SKILLS(),
@@ -146,7 +150,7 @@ export const SHORT = [
   CREATE(2.8, 9.8, 22),
   DILEMMA(2, 58, 65),
   BILLS(3.4, 84, 99.5),
-  HUD,
+  HUD(2.4),
   BANK(3.2, 108, 119),
   TURN(124.6, 131.8),
   SKILLS(2, 145, 152.5),
