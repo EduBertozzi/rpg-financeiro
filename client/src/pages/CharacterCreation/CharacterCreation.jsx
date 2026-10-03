@@ -1,110 +1,51 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
-import { Avatar } from '../../components/Avatars'
-import { AVATARS, applyAvatarTheme, getAvatarById } from '../../data/avatarTheme'
+import { AVATARS, applyAvatarTheme } from '../../data/avatarTheme'
+import { GIFTS, PROFESSIONS, giftById } from '../../data/gifts'
+import TownBackdrop from '../../components/town/TownBackdrop'
+import GiftIcon from '../../components/town/GiftIcon'
+import ProfessionalCard from '../../components/town/ProfessionalCard'
+import { TOY_BUTTON, TOY_CARD, TOY_ERROR, TOY_GHOST, TOY_INPUT, TOY_LABEL } from '../../components/town/toy'
 
-const COURSES = [
-  'Engenharia Biomédica',
-  'Engenharia de Computação',
-  'Engenharia de Controle e Automação',
-  'Engenharia de Produção',
-  'Engenharia de Software',
-  'Engenharia de Telecomunicações',
-  'Engenharia Elétrica',
-]
-
-const GIFTS = [
-  {
-    id: 'frugal',
-    name: 'Mão de Vaca Estratégico',
-    focus: 'Retenção de Capital',
-    effect: 'Todos os custos fixos mensais são 15% menores.',
-    icon: '💰',
-    type: 'Passivo',
-    rarity: 'Comum',
-  },
-  {
-    id: 'agile',
-    name: 'Desenrolado',
-    focus: 'Renda Ativa',
-    effect: 'Valores recebidos em eventos positivos são 20% maiores.',
-    icon: '⚡',
-    type: 'Bônus',
-    rarity: 'Raro',
-  },
-  {
-    id: 'smart',
-    name: 'Inteligente',
-    focus: 'Desenvolvimento Pessoal',
-    effect: 'Habilidades na Skill Tree custam 20% menos pontos.',
-    icon: '🧠',
-    type: 'Evolução',
-    rarity: 'Épico',
-  },
-]
+const STEPS = ['Quem é você', 'Seu dom', 'Sua carteira']
+const brl0 = (n) => `R$ ${Math.round(n).toLocaleString('pt-BR')}`
 
 export default function CharacterCreation() {
   const navigate = useNavigate()
   const { setCharacter, setRoom } = useGameStore()
-
   const [step, setStep] = useState(1)
-
-  const [form, setForm] = useState({
-    name: '',
-    gender: '',
-    avatarId: 1,
-    course: '',
-    gift: '',
-    roomCode: '',
-  })
-
+  const [form, setForm] = useState({ name: '', avatarId: 1, course: PROFESSIONS[0], gift: '', roomCode: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const selectedAvatar = useMemo(() => getAvatarById(form.avatarId), [form.avatarId])
-  const selectedGift = useMemo(
-    () => GIFTS.find((gift) => gift.id === form.gift),
-    [form.gift]
-  )
-
-  const set = (patch) => {
-    setForm((current) => ({
-      ...current,
-      ...patch,
-    }))
-  }
+  const set = (patch) => setForm((current) => ({ ...current, ...patch }))
 
   useEffect(() => {
     applyAvatarTheme(form.avatarId)
   }, [form.avatarId])
 
-  const canGoStep2 = Boolean(form.name && form.gender && form.course && form.roomCode)
+  const canGoStep2 = Boolean(form.name.trim() && form.course && form.roomCode.trim())
   const canGoStep3 = Boolean(form.gift)
+  const gift = giftById(form.gift)
 
   const handleSubmit = async () => {
     setError('')
     setLoading(true)
-
     try {
-      const { data: room } = await api.get(`/rooms/${form.roomCode}`)
-
+      const { data: room } = await api.get(`/rooms/${form.roomCode.trim()}`)
       const { data: character } = await api.post('/characters', {
         roomId: room.id,
-        name: form.name,
-        gender: form.gender,
+        name: form.name.trim(),
         avatarId: form.avatarId,
         course: form.course,
         gift: form.gift,
       })
-
       const { data: fullCharacter } = await api.get(`/characters/${character.id}`)
-
       setRoom(room)
       setCharacter(fullCharacter)
       applyAvatarTheme(fullCharacter.avatarId || form.avatarId)
-
       setTimeout(() => navigate('/map'), 100)
     } catch (err) {
       setError(err.response?.data?.error || 'Erro ao criar personagem')
@@ -113,494 +54,172 @@ export default function CharacterCreation() {
     }
   }
 
-  const inputCls =
-    'w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all'
-
-  const primaryButtonCls =
-    'w-full py-3.5 bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 text-white font-semibold rounded-xl transition-all shadow-[0_0_24px_var(--theme-glow)]'
-
-  const secondaryButtonCls =
-    'flex-1 py-3 border border-white/10 text-gray-400 hover:text-white hover:border-primary/60 active:scale-[0.98] rounded-xl transition-all'
+  const card = (
+    <ProfessionalCard
+      avatarId={form.avatarId}
+      name={form.name.trim()}
+      profession={form.course}
+      gift={form.gift}
+      roomCode={form.roomCode.trim()}
+      stamped={step === 3}
+    />
+  )
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[var(--theme-bg)] text-white transition-colors duration-300">
-      <div className="absolute inset-0 opacity-40">
-        <div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-[var(--theme-primary)] blur-[110px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-[var(--theme-secondary)] blur-[110px]" />
-      </div>
+    <main className="relative min-h-screen overflow-hidden px-4 py-10">
+      <TownBackdrop />
 
-      <div className="perspective-grid absolute inset-x-0 bottom-0 h-1/2 opacity-40" />
-
-      <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-5 py-10">
-        <div className="w-full overflow-hidden rounded-3xl border border-white/10 bg-[var(--theme-surface)]/85 shadow-2xl shadow-black/40 backdrop-blur-xl">
-          <div className="border-b border-white/10 bg-black/20 px-6 py-5 sm:px-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--theme-muted)]">
-                  RPG Financeiro
-                </p>
-                <h1 className="mt-1 text-3xl font-black tracking-tight">
-                  Criar Personagem
-                </h1>
-              </div>
-
-              <div className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-gray-300">
-                Passo <span className="font-bold text-white">{step}</span> de 3
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-2">
-              {[1, 2, 3].map((s) => (
-                <div
-                  key={s}
-                  className={`h-2 rounded-full transition-all duration-300 ${s <= step
-                    ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-[0_0_16px_var(--theme-glow)]'
-                    : 'bg-white/10'
-                    }`}
-                />
-              ))}
-            </div>
+      <section className={`${TOY_CARD} relative z-10 mx-auto w-full max-w-5xl p-6 sm:p-8 animate-fade-in-up`}>
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-extrabold tracking-[0.22em] text-[#6B7A62]">SANTA RITA · NOVO MORADOR</p>
+            <h1 className="font-toy text-4xl font-extrabold leading-tight text-[#24331F]">Criar personagem</h1>
           </div>
+          <ol className="flex flex-wrap gap-2" aria-label="Passos">
+            {STEPS.map((label, i) => {
+              const n = i + 1
+              const state = n === step ? 'bg-[#3DBE5A] text-white shadow-[0_3px_0_#2B8C41]' : n < step ? 'bg-[#E2F4E5] text-[#2B8C41]' : 'bg-[#F1EBDD] text-[#8A9680]'
+              return (
+                <li key={label} aria-current={n === step ? 'step' : undefined} className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 font-toy text-[15px] font-extrabold ${state}`}>
+                  <span className="grid h-5 w-5 place-items-center rounded-full bg-white/30 text-xs">{n < step ? '✓' : n}</span>
+                  {label}
+                </li>
+              )
+            })}
+          </ol>
+        </header>
 
-          <div className="p-6 sm:p-8">
-            {step === 1 && (
-              <div className="animate-fade-in-up grid gap-7 lg:grid-cols-[1fr_300px]">
-                <div className="space-y-7">
-                  <div>
-                    <h2 className="text-2xl font-black">Sua Identidade</h2>
-                    <p className="mt-1 text-sm text-gray-400">
-                      Defina seu estilo de jogo, nome, curso e sala para começar.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="mb-3 block text-sm font-semibold text-gray-300">
-                      Escolha seu arquétipo
-                    </label>
-
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                      {AVATARS.map((avatar) => {
-                        const selected = form.avatarId === avatar.id
-
-                        return (
-                          <button
-                            key={avatar.id}
-                            type="button"
-                            onClick={() => {
-                              set({ avatarId: avatar.id })
-                              applyAvatarTheme(avatar.id)
-                            }}
-                            aria-pressed={selected}
-                            className={`group relative grid place-items-center rounded-2xl border p-3 transition-all duration-300 active:scale-95 ${selected
-                              ? 'border-primary bg-white/[0.04] shadow-[0_0_18px_var(--theme-glow)]'
-                              : 'border-white/10 bg-black/20 opacity-80 hover:-translate-y-1 hover:border-primary/60 hover:opacity-100'
-                              }`}
-                          >
-                            <Avatar
-                              id={avatar.id}
-                              size={76}
-                              selected={selected}
-                              className="h-[76px] w-[76px]"
-                            />
-
-                            <span className="mt-2 text-center text-xs font-bold text-white">
-                              {avatar.name}
-                            </span>
-
-                            <span className="mt-0.5 text-center text-[10px] font-medium text-gray-400">
-                              {avatar.archetype}
-                            </span>
-
-                            {selected && (
-                              <span className="absolute right-2 top-2 grid h-5 w-5 place-items-center rounded-full border border-white/20 bg-[var(--theme-primary)] text-xs font-black text-white shadow-[0_0_12px_var(--theme-glow)]">
-                                ✓
-                              </span>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
-                      Nome do personagem
-                    </label>
-                    <input
-                      value={form.name}
-                      onChange={(event) => set({ name: event.target.value })}
-                      className={inputCls}
-                      placeholder="Como você quer ser chamado?"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
-                      Gênero
-                    </label>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { id: 'male', label: 'Masculino' },
-                        { id: 'female', label: 'Feminino' },
-                      ].map((gender) => (
+        <div className="mt-7">
+          {step === 1 && (
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="grid content-start gap-6">
+                <fieldset className="grid gap-3">
+                  <legend className="mb-3 font-toy text-2xl font-extrabold">Escolha seu personagem</legend>
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-3 xl:grid-cols-6">
+                    {AVATARS.map((a) => {
+                      const selected = form.avatarId === a.id
+                      return (
                         <button
-                          key={gender.id}
+                          key={a.id}
                           type="button"
-                          onClick={() => set({ gender: gender.id })}
-                          className={`rounded-xl border py-3 font-medium transition-all active:scale-[0.98] ${form.gender === gender.id
-                            ? 'border-primary bg-primary text-white shadow-[0_0_18px_var(--theme-glow)]'
-                            : 'border-white/10 bg-black/20 text-gray-400 hover:border-primary/60'
-                            }`}
+                          onClick={() => set({ avatarId: a.id })}
+                          aria-pressed={selected}
+                          className={`grid justify-items-center gap-1.5 rounded-[20px] border-[3px] bg-white px-1.5 pb-2 pt-2.5 transition-transform hover:-translate-y-0.5 cursor-pointer ${selected ? 'border-[#3DBE5A] shadow-[0_5px_0_#3DBE5A]' : 'border-[#EFE6D3]'}`}
                         >
-                          {gender.label}
+                          <span className="grid h-16 w-16 place-items-end overflow-hidden rounded-full bg-[#DDE6F5]">
+                            <img src={a.image} alt="" className="w-[115%] max-w-none" />
+                          </span>
+                          <span className="text-center text-[12px] font-extrabold leading-tight">{a.name}</span>
+                          <span className="text-center text-[10.5px] leading-tight text-[#6B7A62]">{a.archetype}</span>
                         </button>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
+                </fieldset>
 
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
-                      Curso de Engenharia
-                    </label>
-
-                    <select
-                      value={form.course}
-                      onChange={(event) => set({ course: event.target.value })}
-                      className={`${inputCls} appearance-none`}
-                    >
-                      <option value="">Selecione seu curso</option>
-                      {COURSES.map((course) => (
-                        <option key={course} value={course}>
-                          {course}
-                        </option>
-                      ))}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label htmlFor="cc-name" className={`${TOY_LABEL} sm:col-span-2`}>
+                    Nome
+                    <input id="cc-name" value={form.name} onChange={(e) => set({ name: e.target.value })} className={TOY_INPUT} placeholder="Como você quer ser chamado?" maxLength={40} />
+                  </label>
+                  <label htmlFor="cc-profession" className={TOY_LABEL}>
+                    Profissão
+                    <select id="cc-profession" value={form.course} onChange={(e) => set({ course: e.target.value })} className={`${TOY_INPUT} cursor-pointer`}>
+                      {PROFESSIONS.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-semibold text-gray-300">
-                      Código da Sala
-                    </label>
-
-                    <input
-                      value={form.roomCode}
-                      onChange={(event) =>
-                        set({ roomCode: event.target.value.toUpperCase() })
-                      }
-                      className={`${inputCls} font-mono tracking-widest`}
-                      placeholder="Ex: XYK940"
-                      maxLength={6}
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    disabled={!canGoStep2}
-                    className={primaryButtonCls}
-                  >
-                    Próximo
-                  </button>
+                  </label>
+                  <label htmlFor="cc-room" className={TOY_LABEL}>
+                    Código da sala
+                    <input id="cc-room" value={form.roomCode} onChange={(e) => set({ roomCode: e.target.value.toUpperCase() })} className={`${TOY_INPUT} font-mono tracking-[0.2em]`} placeholder="ABC123" maxLength={10} />
+                  </label>
                 </div>
 
-                <aside className="space-y-4">
-                  <CharacterPreview
-                    avatar={selectedAvatar}
-                    form={form}
-                    selectedGift={selectedGift}
-                  />
-
-                  <Checklist form={form} />
-                </aside>
+                <button type="button" onClick={() => setStep(2)} disabled={!canGoStep2} className={TOY_BUTTON}>
+                  Próximo: escolher o dom
+                </button>
               </div>
-            )}
 
-            {step === 2 && (
-              <div className="animate-fade-in-up space-y-7">
+              <aside className="grid content-start gap-3">
+                <p className="text-xs font-extrabold tracking-[0.18em] text-[#6B7A62]">SUA CARTEIRA PROFISSIONAL</p>
+                <div className="rotate-[-1.5deg]">{card}</div>
+                <p className="text-sm text-[#6B7A62]">Ela vai se preenchendo enquanto você monta o personagem.</p>
+              </aside>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="grid gap-6">
+              <div>
+                <h2 className="font-toy text-3xl font-extrabold">Qual é o seu dom?</h2>
+                <p className="text-[#6B7A62]">Os três valem quase o mesmo no ano. Muda o jeito: um é garantido, outro depende da sorte, outro acelera a Universidade. Você escolhe só um, e não dá para trocar depois.</p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                {GIFTS.map((g) => {
+                  const selected = form.gift === g.id
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => set({ gift: g.id })}
+                      aria-pressed={selected}
+                      className="grid content-start justify-items-start gap-3 rounded-[24px] border-[3px] bg-white p-5 text-left transition-transform hover:-translate-y-1 cursor-pointer"
+                      style={{ borderColor: selected ? g.color : '#EFE6D3', boxShadow: selected ? `0 6px 0 ${g.color}` : undefined }}
+                    >
+                      <GiftIcon gift={g.id} size={76} />
+                      <span className="font-toy text-[22px] font-extrabold leading-tight">{g.name}</span>
+                      <span className="text-[15px] leading-snug text-[#4A5A42]">{g.effect}</span>
+                      <span className="rounded-full px-3 py-1 text-xs font-extrabold" style={{ background: `color-mix(in srgb, ${g.color} 16%, #fff)` }}>
+                        ≈ {brl0(g.year)} no ano · {g.style}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button type="button" onClick={() => setStep(1)} className={TOY_GHOST}>Voltar</button>
+                <button type="button" onClick={() => setStep(3)} disabled={!canGoStep3} className={`${TOY_BUTTON} flex-1`}>
+                  Próximo: ver a carteira
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <div className="mx-auto w-full max-w-[440px] rotate-[-2deg]">{card}</div>
+              <div className="grid gap-5">
                 <div>
-                  <h2 className="text-2xl font-black">Escolha seu Dom</h2>
-                  <p className="mt-1 text-sm text-gray-400">
-                    Você só pode escolher 1 dom e não pode mudar depois.
-                  </p>
+                  <h2 className="font-toy text-3xl font-extrabold">Tudo pronto, {form.name.trim().split(' ')[0]}!</h2>
+                  <p className="text-[#6B7A62]">Você acabou de se formar e se mudou para Santa Rita. Agora é cuidar do dinheiro por 12 meses.</p>
                 </div>
-
-                <div className="grid gap-4">
-                  {GIFTS.map((gift) => {
-                    const selected = form.gift === gift.id
-
-                    return (
-                      <button
-                        key={gift.id}
-                        type="button"
-                        onClick={() => set({ gift: gift.id })}
-                        className={`group w-full rounded-2xl border p-5 text-left transition-all duration-300 active:scale-[0.99] ${selected
-                          ? 'border-primary bg-primary/10 shadow-[0_0_22px_var(--theme-glow)]'
-                          : 'border-white/10 bg-black/20 hover:-translate-y-1 hover:border-primary/50'
-                          }`}
-                      >
-                        <div className="flex items-start gap-4">
-                          <div
-                            className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-2xl transition-all ${selected
-                              ? 'bg-primary/20 shadow-[0_0_18px_var(--theme-glow)]'
-                              : 'bg-white/5 group-hover:bg-white/10'
-                              }`}
-                          >
-                            {gift.icon}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-2 flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-primary/15 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-[var(--theme-secondary)]">
-                                {gift.type}
-                              </span>
-
-                              <span className="rounded-full border border-white/10 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
-                                {gift.rarity}
-                              </span>
-                            </div>
-
-                            <h3 className="text-lg font-black text-white">{gift.name}</h3>
-
-                            <p className="mt-0.5 text-sm font-semibold text-[var(--theme-muted)]">
-                              {gift.focus}
-                            </p>
-
-                            <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                              {gift.effect}
-                            </p>
-                          </div>
-
-                          {selected && (
-                            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-sm font-black text-white">
-                              ✓
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {selectedGift && (
-                  <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-gray-300">
-                    <span className="font-bold text-white">{selectedGift.name}</span>{' '}
-                    combina com jogadores focados em{' '}
-                    <span className="font-semibold text-[var(--theme-secondary)]">
-                      {selectedGift.focus.toLowerCase()}
-                    </span>
-                    .
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className={secondaryButtonCls}
-                  >
-                    Voltar
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    disabled={!canGoStep3}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] py-3 font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100"
-                  >
-                    Próximo
+                <dl className="grid gap-2 rounded-[20px] border-2 border-[#EFE6D3] bg-white p-4 text-[15px]">
+                  <Row label="Salário" value="R$ 7.000 por mês" />
+                  <Row label="Saldo inicial" value="R$ 7.000 (salário de janeiro)" />
+                  <Row label="Profissão" value={form.course} />
+                  <Row label="Dom" value={gift?.name} />
+                  <Row label="Sala" value={form.roomCode.trim()} mono />
+                </dl>
+                {error && <p className={TOY_ERROR}>{error}</p>}
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" onClick={() => setStep(2)} className={TOY_GHOST}>Voltar</button>
+                  <button type="button" onClick={handleSubmit} disabled={loading} className={`${TOY_BUTTON} flex-1`}>
+                    {loading ? 'Entrando na cidade…' : 'Começar o jogo'}
                   </button>
                 </div>
               </div>
-            )}
-
-            {step === 3 && (
-              <div className="animate-fade-in-up space-y-7">
-                <div>
-                  <h2 className="text-2xl font-black">Ficha do Personagem</h2>
-                  <p className="mt-1 text-sm text-gray-400">
-                    Confere se está tudo certo antes de começar sua jornada financeira.
-                  </p>
-                </div>
-
-                <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/20">
-                  <div className="relative border-b border-white/10 bg-gradient-to-r from-[var(--theme-primary)]/25 to-[var(--theme-secondary)]/15 p-6">
-                    <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-[var(--theme-secondary)] opacity-20 blur-3xl" />
-
-                    <div className="relative flex items-center gap-5">
-                      <Avatar id={form.avatarId} size={82} selected />
-
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-[0.25em] text-[var(--theme-muted)]">
-                          Personagem criado
-                        </p>
-
-                        <h3 className="mt-1 text-3xl font-black">
-                          {form.name}
-                        </h3>
-
-                        <p className="mt-1 text-sm text-gray-300">
-                          {selectedAvatar.name} · {selectedAvatar.archetype}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-3 p-5 sm:grid-cols-2">
-                    <InfoCard label="Curso" value={form.course} />
-                    <InfoCard
-                      label="Gênero"
-                      value={form.gender === 'male' ? 'Masculino' : 'Feminino'}
-                    />
-                    <InfoCard label="Sala" value={form.roomCode} />
-                    <InfoCard label="Salário inicial" value="R$ 7.000,00/mês" />
-                    <InfoCard label="Dom" value={selectedGift?.name} />
-                    <InfoCard label="Tipo do dom" value={selectedGift?.type} />
-                  </div>
-
-                  <div className="mx-5 mb-5 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm leading-relaxed text-gray-300">
-                    <span className="font-bold text-white">
-                      {form.name}
-                    </span>{' '}
-                    está pronto para começar a vida financeira com o perfil{' '}
-                    <span className="font-semibold text-[var(--theme-secondary)]">
-                      {selectedAvatar.archetype}
-                    </span>
-                    .
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-                    {error}
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className={secondaryButtonCls}
-                  >
-                    Voltar
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="flex-1 rounded-xl bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] py-3 font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100 shadow-[0_0_24px_var(--theme-glow)]"
-                  >
-                    {loading ? 'Criando...' : 'Começar Jogo!'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </section>
     </main>
   )
 }
 
-function CharacterPreview({ avatar, form, selectedGift }) {
+function Row({ label, value, mono = false }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-5 shadow-xl shadow-black/20">
-      <div className="flex items-center gap-4">
-        <Avatar id={form.avatarId} size={76} selected />
-
-        <div className="min-w-0">
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--theme-muted)]">
-            Preview
-          </p>
-
-          <h3 className="mt-1 truncate text-xl font-black">
-            {form.name || 'Seu personagem'}
-          </h3>
-
-          <p className="truncate text-sm text-gray-400">
-            {form.course || 'Curso ainda não escolhido'}
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-muted)]">
-          Arquétipo
-        </p>
-
-        <p className="mt-2 font-bold text-white">
-          {avatar.name}
-        </p>
-
-        <p className="mt-1 text-sm text-gray-400">
-          {avatar.description}
-        </p>
-      </div>
-
-      <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-muted)]">
-          Dom inicial
-        </p>
-
-        <p className="mt-2 font-bold text-white">
-          {selectedGift?.name || 'Ainda não escolhido'}
-        </p>
-
-        <p className="mt-1 text-sm text-gray-400">
-          {selectedGift?.effect || 'Escolha um dom no próximo passo.'}
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function Checklist({ form }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-black/25 p-5">
-      <p className="text-sm font-black uppercase tracking-[0.22em] text-[var(--theme-muted)]">
-        Progresso
-      </p>
-
-      <div className="mt-4 space-y-3 text-sm">
-        <CheckItem done={Boolean(form.name)}>Nome definido</CheckItem>
-        <CheckItem done={Boolean(form.gender)}>Gênero escolhido</CheckItem>
-        <CheckItem done={Boolean(form.course)}>Curso selecionado</CheckItem>
-        <CheckItem done={Boolean(form.roomCode)}>Sala informada</CheckItem>
-      </div>
-    </div>
-  )
-}
-
-function CheckItem({ done, children }) {
-  return (
-    <div className="flex items-center gap-2">
-      <span
-        className={`grid h-5 w-5 place-items-center rounded-full text-xs font-black transition-all ${done
-          ? 'bg-primary text-white shadow-[0_0_12px_var(--theme-glow)]'
-          : 'bg-white/10 text-gray-500'
-          }`}
-      >
-        {done ? '✓' : '•'}
-      </span>
-
-      <span className={done ? 'text-white' : 'text-gray-500'}>
-        {children}
-      </span>
-    </div>
-  )
-}
-
-function InfoCard({ label, value }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--theme-muted)]">
-        {label}
-      </p>
-
-      <p className="mt-2 font-bold text-white">
-        {value || '—'}
-      </p>
+    <div className="flex justify-between gap-4">
+      <dt className="text-[#6B7A62]">{label}</dt>
+      <dd className={`text-right font-bold ${mono ? 'font-mono tracking-[0.15em]' : ''}`}>{value}</dd>
     </div>
   )
 }

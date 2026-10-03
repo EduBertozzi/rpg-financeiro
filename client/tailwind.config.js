@@ -16,6 +16,8 @@ export default {
       },
       fontFamily: {
         sans: ['Outfit', 'sans-serif'],
+        toy: ['"Baloo 2"', 'Outfit', 'sans-serif'],
+        mono: ['"Space Mono"', 'ui-monospace', 'monospace'],
       },
       animation: {
         'fade-in-up': 'fadeInUp 0.4s ease-out',
