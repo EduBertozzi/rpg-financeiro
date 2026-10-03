@@ -9,7 +9,7 @@ const { cents } = require('./finance')
 const COUPON_PHASES = Object.freeze([
   Object.freeze({ from: 2, to: 4 }),
   Object.freeze({ from: 5, to: 8 }),
-  Object.freeze({ from: 9, to: 11 }), // o mês 12 nunca é jogado: a partida acaba na virada do 11 para o 12
+  Object.freeze({ from: 9, to: 12 }), // dezembro é jogado: a partida acaba no fechamento dele
 ])
 
 // lugares do mapa onde o cupom pode estar escondido

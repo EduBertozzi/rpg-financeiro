@@ -66,8 +66,8 @@ describe('shuffle', () => {
 })
 
 describe('planCoupons', () => {
-  it('fases oficiais: meses 2–4, 5–8 e 9–11', () => {
-    expect(COUPON_PHASES).toEqual([{ from: 2, to: 4 }, { from: 5, to: 8 }, { from: 9, to: 11 }])
+  it('fases oficiais: meses 2–4, 5–8 e 9–12', () => {
+    expect(COUPON_PHASES).toEqual([{ from: 2, to: 4 }, { from: 5, to: 8 }, { from: 9, to: 12 }])
   })
 
   it('lugares oficiais do mapa', () => {
@@ -114,7 +114,7 @@ describe('planCoupons', () => {
   it('com o tempo, todo mês de cada fase aparece', () => {
     const seen = new Set()
     for (let i = 0; i < 3000; i++) planCoupons().forEach(c => seen.add(c.turn))
-    expect([...seen].sort((a, b) => a - b)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+    expect([...seen].sort((a, b) => a - b)).toEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
   })
 
   it('com o tempo, os 4 lugares aparecem', () => {
@@ -137,7 +137,7 @@ describe('planCoupons', () => {
 
   it('random quase 1: último mês de cada fase, sempre na fonte', () => {
     const plan = planCoupons(constant(0.99999))
-    expect(plan.map(c => c.turn)).toEqual([4, 8, 11])
+    expect(plan.map(c => c.turn)).toEqual([4, 8, 12])
     expect(plan.map(c => c.spot)).toEqual(['fountain', 'fountain', 'fountain'])
   })
 
@@ -153,7 +153,7 @@ describe('planCoupons', () => {
     expect(plan).toEqual([
       { turn: 3, spot: 'balloon', reward: 'cashback' },
       { turn: 7, spot: 'tree', reward: 'skill_point' },
-      { turn: 10, spot: 'fountain', reward: 'food_discount' }, // 9 + floor(0,5 × 3)
+      { turn: 11, spot: 'fountain', reward: 'food_discount' }, // 9 + floor(0,5 × 4)
     ])
   })
 })
@@ -955,10 +955,15 @@ describe('Cupom do Mercadinho nas contas', () => {
 })
 
 describe('o último cupom sempre cai num mês jogável', () => {
-  it('nunca sorteia o mês 12, que não chega a ser jogado', () => {
+  it('nunca passa de dezembro (mês 12, o último jogado)', () => {
     for (let i = 0; i < 500; i++) {
       const plan = planCoupons()
-      expect(Math.max(...plan.map(c => c.turn))).toBeLessThanOrEqual(11)
+      expect(Math.max(...plan.map(c => c.turn))).toBeLessThanOrEqual(12)
     }
+  })
+
+  it('dezembro pode ter cupom', () => {
+    const plan = planCoupons(() => 0.99999)
+    expect(plan[2].turn).toBe(12)
   })
 })
