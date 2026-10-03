@@ -1342,3 +1342,32 @@ describe('snapshot conta as ações', () => {
     expect(prismaMock.financialSnapshot.upsert.mock.calls[0][0].create.totalAssets).toBe(3000)
   })
 })
+
+// ─── turma grande: fecha vários personagens ao mesmo tempo ────────────────────
+
+describe('virada com a turma inteira', () => {
+  beforeEach(() => jest.spyOn(Math, 'random').mockReturnValue(0.1))
+  afterEach(() => Math.random.mockRestore())
+
+  it('fecha os 40 jogadores, um resultado para cada, na ordem da sala', async () => {
+    const chars = Array.from({ length: 40 }, (_, i) => makeCharacter({ id: `c${i}`, name: `Jogador ${i}` }))
+    prismaMock.room.findUnique.mockResolvedValueOnce({ id: 'room-1', currentTurn: 3, maxTurns: 12, status: 'active', characters: chars })
+    prismaMock.marketAsset.findMany.mockResolvedValue([])
+    prismaMock.assetPrice.findMany.mockResolvedValue([])
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([])
+    prismaMock.debentureInvestment.findMany.mockResolvedValue([])
+    prismaMock.scheduledEffect.findMany.mockResolvedValue([])
+    prismaMock.characterEventLog.create.mockResolvedValue({})
+    prismaMock.character.update.mockResolvedValue({})
+    prismaMock.character.findUnique.mockImplementation(({ where }) => Promise.resolve({ ...makeCharacter({ id: where.id }), fixedInvestments: [], positions: [], debentures: [], effects: [] }))
+    prismaMock.financialSnapshot.upsert.mockResolvedValue({})
+    prismaMock.room.update.mockResolvedValue({})
+
+    const { results } = await processTurn('room-1')
+
+    expect(results.map((r) => r.characterId)).toEqual(chars.map((c) => c.id))
+    expect(prismaMock.financialSnapshot.upsert).toHaveBeenCalledTimes(40)
+    // o salário de cada um entrou uma vez só
+    expect(prismaMock.characterEventLog.create.mock.calls.filter(([a]) => a.data.description.startsWith('Salário'))).toHaveLength(40)
+  })
+})

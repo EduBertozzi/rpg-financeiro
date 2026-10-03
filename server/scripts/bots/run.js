@@ -24,6 +24,8 @@ const OUT = path.resolve(arg('out', path.join(__dirname, '../../bots-out')))
 // experimento de balanceamento: multiplica o bônus das caixinhas da Gestão só
 // nesta simulação (o jogo não muda). Ex.: --management-mult 1.5
 const MANAGEMENT_MULT = Number(arg('management-mult', 1))
+// teste de carga: quantos jogadores por sala (os robôs se repetem em ciclo)
+const PER_ROOM = Number(arg('per-room', 0)) || null
 const MONTHS = 12
 const BILL_TYPES = ['food', 'utilities', 'transport']
 
@@ -90,12 +92,15 @@ async function main() {
 
   const results = []
   const started = Date.now()
+  const closeTimes = [] // ms de cada fechamento de mês (next-turn)
+  const monthTimes = [] // ms para a sala inteira jogar um mês em paralelo
 
   for (let r = 0; r < ROOMS; r++) {
     const room = (await call(adminToken, 'POST', '/rooms', { name: `Robôs ${r + 1}` })).data
     const players = []
-    for (let i = 0; i < BOTS.length; i++) {
-      const bot = BOTS[i]
+    const seats = PER_ROOM ?? BOTS.length
+    for (let i = 0; i < seats; i++) {
+      const bot = BOTS[i % BOTS.length]
       const token = await makeUser(bot.name, 'player')
       // dom e caminho giram entre as salas para cada robô passar por todos
       const gift = GIFTS[(r + i) % GIFTS.length]
@@ -106,8 +111,15 @@ async function main() {
     await call(adminToken, 'POST', `/rooms/${room.id}/start`)
 
     for (let turn = 1; turn <= MONTHS; turn++) {
-      for (const p of players) await playMonth(p, turn, room)
+      // teste de carga (--per-room): todos jogam ao mesmo tempo, como numa
+      // turma de verdade. Sem ele, um de cada vez, para o sorteio repetir igual.
+      const t0 = Date.now()
+      if (PER_ROOM) await Promise.all(players.map((p) => playMonth(p, turn, room)))
+      else for (const p of players) await playMonth(p, turn, room)
+      monthTimes.push(Date.now() - t0)
+      const t1 = Date.now()
       await call(adminToken, 'POST', `/rooms/${room.id}/next-turn`)
+      closeTimes.push(Date.now() - t1)
     }
 
     for (const p of players) {
@@ -237,6 +249,9 @@ async function main() {
     botYears: results.length,
     seconds: Math.round((Date.now() - started) / 1000),
     failures: failures.length,
+    perRoom: PER_ROOM ?? BOTS.length,
+    closeMs: stats(closeTimes),
+    monthMs: stats(monthTimes),
     failureSamples: failures.slice(0, 20),
     bots: BOTS.map(({ id, name, bio }) => ({ id, name, bio })),
     byBot: groupBy('bot'),
@@ -255,6 +270,8 @@ async function main() {
   fs.writeFileSync(path.join(OUT, 'results.json'), JSON.stringify(results, null, 1))
   fs.writeFileSync(path.join(OUT, 'summary.json'), JSON.stringify(summary, null, 2))
   console.log(`\n${results.length} anos jogados em ${summary.seconds}s · falhas: ${failures.length}`)
+  console.log(`fechar o mês (${summary.perRoom} jogadores): média ${summary.closeMs.mean} ms · pior ${summary.closeMs.max} ms`)
+  console.log(`jogar o mês em paralelo: média ${summary.monthMs.mean} ms · pior ${summary.monthMs.max} ms`)
   for (const b of BOTS) {
     const s = summary.byBot[b.id]?.netWorth
     if (s) console.log(`${b.name.padEnd(18)} média ${s.mean.toFixed(0).padStart(7)} · p10 ${String(s.p10).padStart(9)} · p90 ${String(s.p90).padStart(9)} · vence ${summary.byBot[b.id].winsPct}%`)

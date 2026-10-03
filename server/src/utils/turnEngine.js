@@ -10,6 +10,9 @@ const { BILLS, LATE_FEE, LATE_INTEREST, lateBillAmount, pendingForMonth } = requ
 
 const brl = (n) => Number(n).toFixed(2)
 
+// quantos personagens fecham o mês ao mesmo tempo
+const CLOSE_CONCURRENCY = 8
+
 // O que ficou em aberto no mês que está fechando (ver settle.js): conta não
 // paga vira conta atrasada com multa e juros, lazer não escolhido é cobrado e
 // dilema sem resposta é decidido pela inércia. Quem marcou "pronto" já
@@ -315,7 +318,10 @@ async function processTurn(roomId) {
   await generateAssetPrices(roomId, nextTurn)
   const priceMap = latestPrices((await prisma.assetPrice.findMany({ where: { roomId, turn: nextTurn } })) ?? [])
 
-  for (const character of room.characters) {
+  // Um personagem não mexe no outro: fecha o mês de vários ao mesmo tempo.
+  // Com o banco na nuvem (Turso), cada consulta paga a ida e volta da rede; um
+  // de cada vez, uma turma de 40 levaria dezenas de segundos para virar.
+  const closeCharacter = async (character) => {
     const perks = perksOf(character.unlockedSkills)
     // o que ficou em aberto no mês que fecha
     const settled = await settleMonth(character, room.currentTurn, perks)
@@ -337,14 +343,18 @@ async function processTurn(roomId) {
     await checkDebentures(character, nextTurn)
     const snapshot = await saveSnapshot(character, nextTurn, priceMap)
 
-    results.push({
+    return {
       characterId: character.id,
       characterName: character.name,
       cashDelta: cents(settled + costs.salary - costs.totalCosts + costs.effectsCash + returns + bonus + eventResult.cashImpact),
       event: eventResult.events[0] ?? null,
       events: eventResult.events,
       netWorth: snapshot.netWorth
-    })
+    }
+  }
+  for (let i = 0; i < room.characters.length; i += CLOSE_CONCURRENCY) {
+    const batch = room.characters.slice(i, i + CLOSE_CONCURRENCY)
+    results.push(...(await Promise.all(batch.map(closeCharacter))))
   }
 
   const isFinished = final
