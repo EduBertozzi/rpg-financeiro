@@ -143,7 +143,13 @@ describe('POST /api/v1/auth/register-admin', () => {
     expect((await send(body({ inviteCode: `  ${INVITE} ` }))).status).toBe(201)
   })
 
-  it.each(['errado', '', 'santa-rita-2026', 123])('código inválido (%p) é recusado', async (inviteCode) => {
+  it('maiúsculas e minúsculas não importam', async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null)
+    prismaMock.user.create.mockResolvedValue({ id: 'u-ana', name: 'Prof. Ana', role: 'admin' })
+    expect((await send(body({ inviteCode: 'santa-rita-2026' }))).status).toBe(201)
+  })
+
+  it.each(['errado', '', 'SANTA-RITA-2025', 123])('código inválido (%p) é recusado', async (inviteCode) => {
     const res = await send(body({ inviteCode }))
     expect([400, 403]).toContain(res.status)
     expect(prismaMock.user.create).not.toHaveBeenCalled()

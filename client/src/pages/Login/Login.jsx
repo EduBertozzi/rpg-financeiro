@@ -67,8 +67,16 @@ export default function Login() {
 
       <p className="text-sm text-[#6B7A62]">
         Primeira vez aqui?{' '}
-        <Link to="/register" className="font-extrabold text-[#2457C5] underline-offset-2 hover:underline">Criar conta</Link>
+        <Link to="/register" className="font-extrabold text-[#2457C5] underline-offset-2 hover:underline">Criar conta de jogador</Link>
       </p>
+
+      <div className="flex items-center gap-3 border-t-2 border-dashed border-[#EFE6D3] pt-3 text-left">
+        <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#DCE7FB] text-lg">🗂️</span>
+        <p className="text-[13px] text-[#6B7A62]">
+          Vai organizar uma turma?{' '}
+          <Link to="/register-admin" className="font-extrabold text-[#2457C5] underline-offset-2 hover:underline">Criar conta de administrador</Link>
+        </p>
+      </div>
     </AuthShell>
   )
 }

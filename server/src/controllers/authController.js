@@ -40,11 +40,12 @@ exports.login = async (req, res) => {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
 }
-// Compara o código de convite sem vazar pelo tempo de resposta.
+// Compara o código de convite sem vazar pelo tempo de resposta. Maiúsculas e
+// minúsculas não importam (o campo mostra tudo em maiúsculas).
 function inviteMatches(given, expected) {
   if (typeof given !== 'string' || !expected) return false
-  const a = crypto.createHash('sha256').update(given.trim()).digest()
-  const b = crypto.createHash('sha256').update(expected).digest()
+  const a = crypto.createHash('sha256').update(given.trim().toUpperCase()).digest()
+  const b = crypto.createHash('sha256').update(expected.trim().toUpperCase()).digest()
   return crypto.timingSafeEqual(a, b)
 }
 

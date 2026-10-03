@@ -4,6 +4,7 @@ import useGameStore from './store/gameStore'
 
 import Login from './pages/Login/Login'
 import Register from './pages/Register/Register'
+import RegisterAdmin from './pages/RegisterAdmin/RegisterAdmin'
 import CharacterCreation from './pages/CharacterCreation/CharacterCreation'
 import Map from './pages/Map/Map'
 import Bank from './pages/Bank/Bank'
@@ -52,6 +53,7 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/register-admin" element={<RegisterAdmin />} />
 
         <Route
           path="/character"
