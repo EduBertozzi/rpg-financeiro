@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { cents } = require('../utils/finance')
 
 const BILL_TYPES = {
   food: { field: 'foodCost', label: 'Mercadinho' },
@@ -49,9 +50,12 @@ exports.payBill = async (req, res) => {
     const config = BILL_TYPES[type]
     if (!config) return res.status(400).json({ error: 'Tipo de conta inválido' })
 
-    const character = await prisma.character.findUnique({ where: { id: characterId } })
+    const character = await prisma.character.findUnique({ where: { id: characterId }, include: { room: true } })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+    if (character.room && parsedTurn !== character.room.currentTurn) {
+      return res.status(400).json({ error: 'Só dá para pagar as contas do mês atual' })
+    }
 
     const alreadyPaid = await prisma.characterEventLog.findFirst({
       where: {
@@ -62,23 +66,25 @@ exports.payBill = async (req, res) => {
     })
     if (alreadyPaid) return res.status(400).json({ error: 'Conta já paga' })
 
-    const amount = Number(character[config.field])
+    const amount = cents(Number(character[config.field]))
 
-    await prisma.character.update({
-      where: { id: characterId },
-      data: { cash: { decrement: amount } }
-    })
+    // débito e registro juntos: ou a conta fica paga e descontada, ou nada muda
+    await prisma.$transaction([
+      prisma.character.update({
+        where: { id: characterId },
+        data: { cash: { decrement: amount } }
+      }),
+      prisma.characterEventLog.create({
+        data: {
+          characterId,
+          turn: parsedTurn,
+          cashImpact: -amount,
+          description: `Conta: ${config.label} — Pago (-R$ ${amount})`
+        }
+      })
+    ])
 
-    await prisma.characterEventLog.create({
-      data: {
-        characterId,
-        turn: parsedTurn,
-        cashImpact: -amount,
-        description: `Conta: ${config.label} — Pago (-R$ ${amount})`
-      }
-    })
-
-    res.json({ label: config.label, amount })
+    res.json({ label: config.label, amount, cashAfter: cents(Number(character.cash) - amount) })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }

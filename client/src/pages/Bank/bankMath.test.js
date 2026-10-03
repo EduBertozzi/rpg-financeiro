@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   activeDebentures, debentureValue, debentureYield, fixedBoxValue, fixedBoxYield, monthlyBills,
-  monthlyFromAnnual, nextMaturity, parseAmount, reserveGoal, reserveMonths, shares, stocksValue,
+  monthlyFromAnnual, nextMaturity, parseAmount, paymentPreview, reserveGoal, reserveMonths, shares, stocksValue,
 } from './bankMath.js'
 
 const close = (actual, expected, digits = 2) =>
@@ -110,5 +110,24 @@ describe('patrimônio', () => {
 
   it('sem patrimônio todas as fatias são 0', () => {
     assert.deepEqual(shares([{ name: 'Conta', value: 0 }]).map((p) => p.pct), [0])
+  })
+})
+
+describe('paymentPreview', () => {
+  it('desconta o valor do saldo', () => {
+    assert.deepEqual(paymentPreview(4816.21, 1000), { after: 3816.21, negative: false })
+  })
+
+  it('fecha em centavos mesmo com valores quebrados', () => {
+    assert.equal(paymentPreview(0.3, 0.1).after, 0.2)
+    assert.equal(paymentPreview('1000.10', '250.05').after, 750.05)
+  })
+
+  it('pagar exatamente o saldo zera a conta sem ficar negativo', () => {
+    assert.deepEqual(paymentPreview(250, 250), { after: 0, negative: false })
+  })
+
+  it('avisa quando o pagamento deixa a conta negativa', () => {
+    assert.deepEqual(paymentPreview(300, 1000), { after: -700, negative: true })
   })
 })

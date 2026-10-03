@@ -13,6 +13,8 @@ const TOKEN = makeToken({ id: 'user-1' })
 const makeCharacter = (overrides = {}) => ({
   id: 'char-1',
   userId: 'user-1',
+  cash: 5000,
+  room: { id: 'room-1', currentTurn: 1 },
   foodCost: 1000,
   utilitiesCost: 250,
   transportCost: 250,
@@ -81,11 +83,53 @@ describe('POST /api/v1/characters/:id/bills/:turn/pay', () => {
       .send({ type: 'food' })
 
     expect(res.status).toBe(200)
-    expect(res.body).toEqual({ label: 'Mercadinho', amount: 1000 })
+    expect(res.body).toEqual({ label: 'Mercadinho', amount: 1000, cashAfter: 4000 })
     expect(prismaMock.character.update).toHaveBeenCalledWith({
       where: { id: 'char-1' },
       data: { cash: { decrement: 1000 } }
     })
+  })
+
+  it('registra o pagamento no extrato do mês, junto com o débito', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type: 'utilities' })
+
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
+    expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith({
+      data: { characterId: 'char-1', turn: 1, cashImpact: -250, description: 'Conta: Água e Luz — Pago (-R$ 250)' }
+    })
+  })
+
+  it('cobra o valor da conta do personagem em centavos', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ transportCost: '249.995' }))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type: 'transport' })
+
+    expect(res.body).toMatchObject({ label: 'Internet e Celular', amount: 250, cashAfter: 4750 })
+  })
+
+  it('permite pagar mesmo com saldo menor que a conta (fica negativo)', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ cash: 300 }))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).post('/api/v1/characters/char-1/bills/1/pay').set(authHeader(TOKEN)).send({ type: 'food' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.cashAfter).toBe(-700)
+  })
+
+  it('não deixa pagar conta de outro mês', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 3 } }))
+    prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
+
+    const res = await request(app).post('/api/v1/characters/char-1/bills/5/pay').set(authHeader(TOKEN)).send({ type: 'food' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Só dá para pagar as contas do mês atual')
+    expect(prismaMock.character.update).not.toHaveBeenCalled()
   })
 
   it('retorna 400 para tipo de conta inválido', async () => {

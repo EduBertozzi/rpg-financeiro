@@ -56,3 +56,9 @@ export const shares = (parts) => {
   const total = parts.reduce((sum, p) => sum + p.value, 0)
   return parts.map((p) => ({ ...p, pct: total ? (p.value / total) * 100 : 0 }))
 }
+
+// Prévia de um pagamento pela conta: saldo depois e se vai ficar negativo.
+export function paymentPreview(cash, amount) {
+  const after = Math.round((Number(cash) - Number(amount)) * 100) / 100
+  return { after, negative: after < 0 }
+}
