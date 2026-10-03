@@ -6,6 +6,7 @@ import socket from '../../services/socket'
 import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
 import BillModal from '../../components/BillModal'
+import CityScene from './CityScene'
 import bankArt from '../../assets/buildings/bank.png'
 import leisureArt from '../../assets/buildings/leisure.png'
 import universityArt from '../../assets/buildings/university.png'
@@ -13,11 +14,6 @@ import mercadinhoArt from '../../assets/buildings/mercadinho.png'
 import utilitiesArt from '../../assets/buildings/utilities.png'
 import internetArt from '../../assets/buildings/internet.png'
 
-const IconArrow = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M5 12h14M13 6l6 6-6 6" />
-  </svg>
-)
 const IconCheck = (p) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
     <path d="m5 13 4 4L19 7" />
@@ -30,6 +26,14 @@ const IconGuide = (p) => (
     <path d="M3 17l9 4 9-4" />
   </svg>
 )
+
+const IconClose = (p) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
+    <path d="M6 6l12 12M18 6 6 18" />
+  </svg>
+)
+
+const PANEL = 'rounded-2xl border border-white/15 bg-[color-mix(in_srgb,var(--theme-bg)_82%,transparent)] shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md'
 
 const GUIDE_TIPS = [
   {
@@ -45,10 +49,12 @@ const GUIDE_TIPS = [
     desc: 'Ao final do mês 12, quem tiver o maior patrimônio líquido vence a partida.',
   },
   {
-    title: 'Estude na Universidade',
+    title: 'Árvore de Habilidades',
     desc: 'A árvore de habilidades desbloqueia vantagens que ajudam sua estratégia financeira.',
   },
 ]
+
+const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const BUILDINGS = [
   {
@@ -57,8 +63,6 @@ const BUILDINGS = [
     desc: 'Renda Fixa, Ações e Empresas',
     art: bankArt,
     glow: 'rgba(59,130,246,0.55)',
-    ring: 'group-hover:border-blue-400/60',
-    badge: 'text-blue-300 bg-blue-500/10 border-blue-400/30',
     route: '/bank',
   },
   {
@@ -67,8 +71,6 @@ const BUILDINGS = [
     desc: 'Eventos mensais obrigatórios',
     art: leisureArt,
     glow: 'rgba(236,72,153,0.55)',
-    ring: 'group-hover:border-pink-400/60',
-    badge: 'text-pink-300 bg-pink-500/10 border-pink-400/30',
     route: 'modal_dilemma',
     requiredPrefix: 'Dilema',
   },
@@ -78,8 +80,6 @@ const BUILDINGS = [
     desc: 'Compras do mês',
     art: mercadinhoArt,
     glow: 'rgba(34,197,94,0.55)',
-    ring: 'group-hover:border-green-400/60',
-    badge: 'text-green-300 bg-green-500/10 border-green-400/30',
     route: 'modal_bill_food',
     requiredPrefix: 'Conta: Mercadinho',
   },
@@ -89,8 +89,6 @@ const BUILDINGS = [
     desc: 'Conta mensal fixa',
     art: utilitiesArt,
     glow: 'rgba(234,179,8,0.55)',
-    ring: 'group-hover:border-yellow-400/60',
-    badge: 'text-yellow-300 bg-yellow-500/10 border-yellow-400/30',
     route: 'modal_bill_utilities',
     requiredPrefix: 'Conta: Água e Luz',
   },
@@ -100,19 +98,15 @@ const BUILDINGS = [
     desc: 'Conta mensal fixa',
     art: internetArt,
     glow: 'rgba(34,211,238,0.55)',
-    ring: 'group-hover:border-cyan-400/60',
-    badge: 'text-cyan-300 bg-cyan-500/10 border-cyan-400/30',
     route: 'modal_bill_transport',
     requiredPrefix: 'Conta: Internet e Celular',
   },
   {
     id: 'university',
-    name: 'Universidade',
-    desc: 'Árvore de Habilidades',
+    name: 'Árvore de Habilidades',
+    desc: 'Desbloqueie vantagens para sua estratégia',
     art: universityArt,
     glow: 'rgba(168,85,247,0.55)',
-    ring: 'group-hover:border-purple-400/60',
-    badge: 'text-purple-300 bg-purple-500/10 border-purple-400/30',
     route: '/skills',
   },
 ]
@@ -124,6 +118,28 @@ export default function Map() {
   const roomRef = useRef(room)
   const [showDilemmaModal, setShowDilemmaModal] = useState(false)
   const [activeBill, setActiveBill] = useState(null)
+  const [showGuide, setShowGuideState] = useState(() => {
+    try {
+      return localStorage.getItem('map:showGuide') === '1'
+    } catch {
+      return false
+    }
+  })
+  const setShowGuide = (open) => {
+    setShowGuideState(open)
+    try {
+      localStorage.setItem('map:showGuide', open ? '1' : '0')
+    } catch {
+      // sem storage: só não lembra a preferência
+    }
+  }
+  const mapScrollRef = useRef(null)
+
+  // no celular o mapa rola na horizontal; começa centralizado na cidade
+  useEffect(() => {
+    const el = mapScrollRef.current
+    if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
+  }, [])
 
   useEffect(() => {
     characterRef.current = character
@@ -255,31 +271,42 @@ export default function Map() {
   const currentTurn = room?.currentTurn ?? 0
   const isWaiting = room?.status === 'waiting'
   const activeBillBuilding = BUILDINGS.find((b) => b.route === `modal_bill_${activeBill}`)
+  const monthName = MONTHS[currentTurn - 1]
+
+  const sceneBuildings = BUILDINGS.map((b) => ({
+    ...b,
+    name: b.id === 'leisure' && monthName ? `Lazer de ${monthName}` : b.name,
+    required: !!b.requiredPrefix && currentTurn > 0,
+    done: !!b.requiredPrefix && isActionDone(b.requiredPrefix),
+  }))
+  const checklist = sceneBuildings.filter((b) => b.required)
+  const doneCount = checklist.filter((b) => b.done).length
 
   return (
     <GameLayout>
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 xl:flex xl:items-start xl:gap-6">
-      <div className="min-w-0 flex-1">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">
-              Mapa
-            </p>
+      {/* A cidade é o fundo da tela; os painéis flutuam por cima dela. */}
+      <div ref={mapScrollRef} className="fixed inset-y-0 left-20 right-0 z-0 overflow-x-auto overflow-y-hidden">
+        <div className={`h-full min-w-[760px] transition-[filter,opacity] duration-500 ${isWaiting ? 'pointer-events-none opacity-60 blur-[3px]' : ''}`}>
+          <CityScene buildings={sceneBuildings} onSelect={handleBuilding} interactive={!isWaiting} />
+        </div>
+      </div>
 
-            <h2 className="mt-1 text-3xl font-black tracking-tight">
-              Cidade de Santa Rita
-            </h2>
+      <div className="pointer-events-none relative z-10 flex min-h-screen flex-col justify-between gap-4 p-4 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex w-full max-w-xs flex-col gap-3">
+            <div className={`pointer-events-auto ${PANEL} px-5 py-4`}>
+              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">Mapa</p>
+              <h2 className="mt-0.5 text-2xl font-black tracking-tight">Cidade de Santa Rita</h2>
+              <p className="mt-1 hidden text-xs text-gray-300 sm:block">Passe o mouse pela cidade e clique num prédio para entrar.</p>
+            </div>
 
-            <p className="mt-1 text-sm text-gray-400">
-              Escolha um prédio para interagir.
-            </p>
           </div>
 
           {!isWaiting && (
-            <div className="flex flex-col items-end gap-3">
+            <div className={`pointer-events-auto flex flex-col items-end gap-3 ${PANEL} px-5 py-4`}>
               <div className="text-right">
-                <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-gray-400">
-                  Mês <span className="text-[var(--theme-secondary)]">{currentTurn}</span> / 12
+                <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-gray-300">
+                  {monthName ?? 'Mês'} · <span className="text-[var(--theme-secondary)]">{currentTurn}</span> / 12
                 </p>
 
                 <div className="flex w-48 gap-1">
@@ -295,7 +322,7 @@ export default function Map() {
                             ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-[0_0_8px_var(--theme-glow)]'
                             : done
                               ? 'bg-primary/70'
-                              : 'bg-white/10'
+                              : 'bg-white/15'
                           }`}
                       />
                     )
@@ -309,7 +336,7 @@ export default function Map() {
                 disabled={character?.turnReady}
                 className={`rounded-2xl border px-5 py-2.5 text-sm font-black transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
                     ? 'border-green-500/30 bg-green-600/15 text-green-300'
-                    : 'border-primary/40 bg-primary/15 text-white shadow-[0_0_18px_var(--theme-glow)] hover:bg-primary/25 hover:border-primary/70 hover:shadow-[0_0_28px_var(--theme-glow)] hover:-translate-y-0.5'
+                    : 'border-primary/40 bg-primary/25 text-white shadow-[0_0_18px_var(--theme-glow)] hover:bg-primary/40 hover:border-primary/70 hover:shadow-[0_0_28px_var(--theme-glow)] hover:-translate-y-0.5'
                   }`}
               >
                 {character?.turnReady ? 'Mês finalizado' : 'Encerrar mês'}
@@ -318,99 +345,85 @@ export default function Map() {
           )}
         </div>
 
-        {isWaiting ? (
-          <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-b from-[var(--theme-surface)]/80 to-black/30 p-10 text-center shadow-[0_18px_70px_rgba(0,0,0,0.55)] ring-1 ring-white/5 animate-fade-in-up sm:p-16">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06),transparent_45%)]" />
-            <div className="relative mx-auto max-w-md">
-              <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-300">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 animate-pulse">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M12 7v5l3 3" />
-                </svg>
-              </span>
-              <h3 className="mt-4 text-xl font-black text-white">Aguardando início da partida</h3>
-              <p className="mt-2 text-sm text-gray-400">
-                O administrador ainda não iniciou a sala. Assim que a partida começar, a cidade fica disponível e o mês 1 tem início automaticamente.
-              </p>
-              <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-muted)]">
-                Sala {room?.code}
-              </p>
-            </div>
+        {isWaiting && (
+          <div className="pointer-events-auto mx-auto max-w-md rounded-3xl border border-white/10 bg-[var(--theme-bg)]/90 p-8 text-center backdrop-blur-md animate-fade-in-up">
+            <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-300">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 animate-pulse">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 3" />
+              </svg>
+            </span>
+            <h3 className="mt-4 text-xl font-black text-white">Aguardando início da partida</h3>
+            <p className="mt-2 text-sm text-gray-400">
+              O administrador ainda não iniciou a sala. Assim que a partida começar, a cidade fica disponível e o mês 1 tem início automaticamente.
+            </p>
+            <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-muted)]">
+              Sala {room?.code}
+            </p>
           </div>
-        ) : (
-        <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-gradient-to-b from-[var(--theme-surface)]/80 to-black/30 p-6 shadow-[0_18px_70px_rgba(0,0,0,0.55)] ring-1 ring-white/5 animate-fade-in-up sm:p-8">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.06),transparent_45%)]" />
-
-          <div className="relative grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {BUILDINGS.map((b, index) => {
-              const done = b.requiredPrefix && isActionDone(b.requiredPrefix)
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => handleBuilding(b)}
-                  className={`group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] text-left transition-all duration-300 hover:-translate-y-1.5 cursor-pointer active:scale-[0.98] ${b.ring} animate-fade-in-up`}
-                  style={{ animationDelay: `${index * 0.08}s` }}
-                >
-                  <div
-                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-                    style={{ boxShadow: `inset 0 0 70px ${b.glow}` }}
-                  />
-
-                  <div className="relative flex h-48 items-center justify-center overflow-hidden bg-black/20">
-                    <div
-                      className="absolute inset-0 opacity-60 transition-opacity duration-300 group-hover:opacity-90"
-                      style={{ background: `radial-gradient(circle at 50% 40%, ${b.glow}, transparent 65%)` }}
-                    />
-                    <img
-                      src={b.art}
-                      alt=""
-                      className="relative h-40 w-40 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1"
-                    />
-                  </div>
-
-                  <div className="relative flex flex-1 items-center justify-between gap-3 p-5">
-                    <div className="min-w-0">
-                      {done ? (
-                        <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-green-300 bg-green-500/10 border-green-400/30">
-                          <IconCheck className="h-3 w-3" /> Concluído
-                        </span>
-                      ) : (
-                        <span className={`inline-block rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${b.badge}`}>
-                          {b.requiredPrefix ? 'Obrigatório' : 'Distrito'}
-                        </span>
-                      )}
-                      <h4 className="mt-1.5 text-lg font-black text-white">{b.name}</h4>
-                      <p className="mt-0.5 text-sm text-gray-400">{b.desc}</p>
-                    </div>
-
-                    <IconArrow className="h-5 w-5 shrink-0 text-gray-600 transition-all group-hover:translate-x-1 group-hover:text-white" />
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
         )}
-      </div>
 
-      <aside className="mt-6 hidden xl:mt-0 xl:block xl:w-72 xl:shrink-0">
-        <div className="sticky top-8 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-[var(--theme-surface)]/80 to-black/30 p-5 shadow-[0_18px_70px_rgba(0,0,0,0.4)] ring-1 ring-white/5">
-          <div className="mb-4 flex items-center gap-2">
-            <IconGuide className="h-5 w-5 text-[var(--theme-secondary)]" />
-            <h3 className="text-sm font-black uppercase tracking-[0.2em] text-white">Guia Rápido</h3>
-          </div>
+        <div className="flex items-end justify-between gap-4">
+          {!isWaiting && checklist.length > 0 && (
+            <div className={`pointer-events-auto hidden w-64 sm:block ${PANEL} p-4`}>
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--theme-muted)]">
+                Checklist de {monthName}
+              </p>
+              <p className="mt-0.5 text-sm font-black text-white">{doneCount}/{checklist.length} concluídos</p>
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {checklist.map((b) => (
+                  <li key={b.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleBuilding(b)}
+                      className="flex w-full items-center gap-2 rounded-lg px-1 py-0.5 text-left text-xs transition-colors hover:bg-white/5 cursor-pointer"
+                    >
+                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${b.done ? 'border-green-400 bg-green-500 text-white' : 'border-yellow-400/60 text-transparent'}`}>
+                        <IconCheck className="h-3 w-3" />
+                      </span>
+                      <span className={b.done ? 'text-gray-500 line-through' : 'text-gray-200'}>{b.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="ml-auto">
+            {showGuide ? (
+              <div className={`pointer-events-auto hidden w-72 lg:block ${PANEL} p-5 animate-fade-in-up`}>
+                <div className="mb-4 flex items-center gap-2">
+                  <IconGuide className="h-5 w-5 text-[var(--theme-secondary)]" />
+                  <h3 className="flex-1 text-sm font-black uppercase tracking-[0.2em] text-white">Guia Rápido</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowGuide(false)}
+                    aria-label="Fechar guia rápido"
+                    className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
+                  >
+                    <IconClose className="h-4 w-4" />
+                  </button>
+                </div>
 
-          <div className="flex flex-col gap-4">
-            {GUIDE_TIPS.map((tip) => (
-              <div key={tip.title} className="border-l-2 border-white/10 pl-3">
-                <p className="text-sm font-bold text-white">{tip.title}</p>
-                <p className="mt-0.5 text-xs leading-relaxed text-gray-400">{tip.desc}</p>
+                <div className="flex flex-col gap-4">
+                  {GUIDE_TIPS.map((tip) => (
+                    <div key={tip.title} className="border-l-2 border-white/15 pl-3">
+                      <p className="text-sm font-bold text-white">{tip.title}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-gray-300">{tip.desc}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowGuide(true)}
+                className={`pointer-events-auto hidden items-center gap-2 lg:flex ${PANEL} px-4 py-2.5 text-xs font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/10 cursor-pointer`}
+              >
+                <IconGuide className="h-4 w-4 text-[var(--theme-secondary)]" /> Guia Rápido
+              </button>
+            )}
           </div>
         </div>
-      </aside>
       </div>
 
       {showDilemmaModal && (
