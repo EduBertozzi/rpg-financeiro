@@ -269,6 +269,7 @@ export default function Notebook() {
         type="button"
         onClick={openBook}
         aria-label="Abrir o caderninho"
+        data-tour="caderninho"
         className="group fixed bottom-5 right-5 z-30 grid justify-items-center gap-1.5 cursor-pointer"
       >
         <span className="relative block h-[84px] w-[68px] rounded-[6px_12px_12px_6px] bg-[linear-gradient(90deg,#173A8A_0_10px,#2457C5_10px)] shadow-[0_6px_0_#173A8A,0_14px_24px_rgba(0,0,0,0.25)] transition-transform group-hover:-translate-y-1 group-hover:-rotate-3">

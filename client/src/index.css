@@ -100,3 +100,8 @@ body {
 .turn-pop { animation: turn-pop .35s cubic-bezier(.2,.9,.3,1.2); }
 .turn-event { animation: turn-event .6s .2s cubic-bezier(.2,.9,.3,1.3) both; }
 @media (prefers-reduced-motion: reduce) { .turn-pop, .turn-event { animation: none; } }
+
+/* tour do primeiro mês */
+@keyframes tour-card { from { transform: translateY(10px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.tour-card { animation: tour-card .25s ease-out; }
+@media (prefers-reduced-motion: reduce) { .tour-card { animation: none; } .tour-spot { transition: none; } }

@@ -7,6 +7,8 @@ import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
 import LeisureModal from '../../components/LeisureModal'
 import TurnSummaryModal from '../../components/TurnSummaryModal'
+import Tour from '../../components/Tour'
+import { tourKey } from './tourSteps'
 import WalkLock from '../../components/WalkLock'
 import { loadWalkLock, saveWalkLock } from '../../components/walkTimer'
 import BillModal from '../../components/BillModal'
@@ -99,6 +101,22 @@ function summarySeen(characterId, turn) {
     return false
   }
 }
+// o tour do primeiro mês abre uma vez por personagem
+function tourSeen(characterId) {
+  try {
+    return localStorage.getItem(tourKey(characterId)) === '1'
+  } catch {
+    return false
+  }
+}
+function markTourSeen(characterId) {
+  try {
+    localStorage.setItem(tourKey(characterId), '1')
+  } catch {
+    // sem storage: o tour pode abrir de novo
+  }
+}
+
 function markSummarySeen(characterId, turn) {
   try {
     localStorage.setItem(summaryKey(characterId, turn), '1')
@@ -242,6 +260,7 @@ export default function Map() {
   const [turnSummary, setTurnSummary] = useState(null)
   const [showSummary, setShowSummary] = useState(false)
   const [dilemmaPending, setDilemmaPending] = useState(false)
+  const [showTour, setShowTour] = useState(false)
   useEffect(() => {
     if (!character?.id || !room?.currentTurn || room?.status !== 'active') return
     const turn = room.currentTurn
@@ -259,14 +278,28 @@ export default function Map() {
         if (summary && !summarySeen(character.id, turn)) {
           setDilemmaPending(pending)
           setShowSummary(true)
+        } else if (turn === 1 && !tourSeen(character.id)) {
+          setDilemmaPending(pending)
+          setShowTour(true)
         } else if (pending) setShowDilemmaModal(true)
       })
       .catch(() => setDilemmaInfo(null))
   }, [character?.id, room?.currentTurn, room?.status])
 
+  const closeTour = () => {
+    setShowTour(false)
+    markTourSeen(character.id)
+    if (dilemmaPending) {
+      setDilemmaPending(false)
+      setShowDilemmaModal(true)
+    }
+  }
+
   const closeSummary = () => {
     setShowSummary(false)
     markSummarySeen(character.id, room.currentTurn)
+    // janeiro: o tour do mês de aprender vem antes do primeiro dilema
+    if (room.currentTurn === 1 && !tourSeen(character.id)) return setShowTour(true)
     if (dilemmaPending) {
       setDilemmaPending(false)
       setShowDilemmaModal(true)
@@ -370,6 +403,11 @@ export default function Map() {
                     <span aria-hidden="true">{weather.icon}</span> {weather.season} · {weather.label}
                   </p>
                 )}
+                {currentTurn === 1 && (
+                  <button type="button" onClick={() => setShowTour(true)} className="mb-1.5 mr-3 text-xs font-extrabold text-[#2457C5] underline decoration-dotted underline-offset-2 cursor-pointer">
+                    Rever o tour
+                  </button>
+                )}
                 {turnSummary?.turn === currentTurn && (
                   <button type="button" onClick={() => setShowSummary(true)} className="mb-1.5 text-xs font-extrabold text-[#2457C5] underline decoration-dotted underline-offset-2 cursor-pointer">
                     O que aconteceu na virada
@@ -400,6 +438,7 @@ export default function Map() {
               <button
                 type="button"
                 onClick={handleFinishMonth}
+                data-tour="encerrar"
                 disabled={character?.turnReady}
                 className={`rounded-[16px] px-5 py-2 font-toy text-[17px] font-extrabold transition-transform cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
                     ? 'bg-[#E2F4E5] text-[#2B8C41]'
@@ -432,7 +471,7 @@ export default function Map() {
 
         <div className="flex items-end justify-between gap-4">
           {!isWaiting && checklist.length > 0 && (
-            <div className={`pointer-events-auto hidden w-64 sm:block ${PANEL} p-4`}>
+            <div data-tour="checklist" className={`pointer-events-auto hidden w-64 sm:block ${PANEL} p-4`}>
               <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">
                 Checklist de {monthName}
               </p>
@@ -466,6 +505,8 @@ export default function Map() {
       )}
 
       {showSummary && turnSummary && <TurnSummaryModal summary={turnSummary} onClose={closeSummary} />}
+
+      {showTour && <Tour onDone={closeTour} />}
 
       {showLeisure && (
         <LeisureModal

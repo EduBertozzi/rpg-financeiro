@@ -237,7 +237,7 @@ export default function GameHeader() {
         <div className="min-h-0 flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="space-y-5 pb-3">
             {sidebarExpanded ? (
-              <div className="grid grid-cols-2 gap-3">
+              <div data-tour="saldo" className="grid grid-cols-2 gap-3">
                 <StatusCard
                   icon="wallet"
                   label="Caixa"
@@ -253,13 +253,13 @@ export default function GameHeader() {
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3">
+              <div data-tour="saldo" className="flex flex-col items-center gap-3">
                 <CompactStat icon="wallet" value={formatMoneyCompact(character.cash)} color={negative ? '#C4283D' : '#2B8C41'} />
                 <CompactStat icon="calendar" value={`${Math.min(room?.currentTurn ?? 0, 12)}/12`} color="#2457C5" />
               </div>
             )}
 
-            <nav aria-label="Lugares">
+            <nav aria-label="Lugares" data-tour="lugares">
               {sidebarExpanded && <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">Lugares</p>}
               <div className={sidebarExpanded ? 'space-y-2' : 'flex flex-col items-center gap-3'}>
                 {navItems.map((item) => (
