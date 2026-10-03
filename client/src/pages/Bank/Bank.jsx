@@ -9,7 +9,7 @@ import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
   reserveMonths as reserveMonthsOf, shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
-  OVERDRAFT_MONTHLY_RATE, overdraftInterest,
+  overdraftRateFor, ratePercent, overdraftInterest,
 } from './bankMath'
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -110,6 +110,7 @@ export default function Bank() {
     .map((b) => b.type)
 
   const cash = Number(character?.cash ?? 0)
+  const overdraftRate = overdraftRateFor(character?.unlockedSkills ?? [])
   const stocksValue = stocksValueOf(portfolio)
   const boxesTotal = activeTypes.reduce((sum, t) => sum + boxValue(t), 0)
   const total = cash + boxesTotal + stocksValue
@@ -222,8 +223,8 @@ export default function Bank() {
                 <div className="min-w-[14rem] flex-1">
                   <p className="font-extrabold">Você está no cheque especial</p>
                   <p className="mt-1 text-sm">
-                    Está usando <b className="tabular-nums">{money(-cash)}</b> do limite. Os juros são de {OVERDRAFT_MONTHLY_RATE * 100}% ao mês:
-                    se continuar assim, no fechamento do mês vêm mais <b className="tabular-nums">{money(overdraftInterest(cash))}</b> de dívida.
+                    Está usando <b className="tabular-nums">{money(-cash)}</b> do limite. Os juros são de {ratePercent(overdraftRate)} ao mês:
+                    se continuar assim, no fechamento do mês vêm mais <b className="tabular-nums">{money(overdraftInterest(cash, overdraftRate))}</b> de dívida.
                     Todo dinheiro que entra na conta abate a dívida primeiro.
                   </p>
                 </div>

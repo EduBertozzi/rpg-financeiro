@@ -67,5 +67,16 @@ export function paymentPreview(cash, amount) {
 // mês (mesma regra do servidor, em server/src/utils/finance.js).
 export const OVERDRAFT_MONTHLY_RATE = 0.08
 
-export const overdraftInterest = (cash) =>
-  Number(cash) < 0 ? Math.round(-Number(cash) * OVERDRAFT_MONTHLY_RATE * 100) / 100 : 0
+export const REDUCED_OVERDRAFT_RATE = 0.04 // com Planejamento e Produtividade (Gestão nível 2)
+
+// taxa do cheque especial do personagem: 4% com Gestão nível 2, senão 8%
+export const overdraftRateFor = (unlockedSkills = []) =>
+  unlockedSkills.some((s) => s.skillNode?.path === 'management' && s.skillNode?.level === 2)
+    ? REDUCED_OVERDRAFT_RATE
+    : OVERDRAFT_MONTHLY_RATE
+
+export const overdraftInterest = (cash, rate = OVERDRAFT_MONTHLY_RATE) =>
+  Number(cash) < 0 ? Math.round(-Number(cash) * rate * 100) / 100 : 0
+
+// "8%" / "4%" para os textos
+export const ratePercent = (rate) => `${Math.round(rate * 100)}%`

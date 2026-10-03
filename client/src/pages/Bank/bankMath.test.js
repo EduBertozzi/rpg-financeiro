@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   activeDebentures, debentureValue, debentureYield, fixedBoxValue, fixedBoxYield, monthlyBills,
-  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, parseAmount, paymentPreview, reserveGoal, reserveMonths, shares, stocksValue,
+  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, stocksValue,
 } from './bankMath.js'
 
 const close = (actual, expected, digits = 2) =>
@@ -149,5 +149,28 @@ describe('cheque especial', () => {
     const { after, negative } = paymentPreview(300, 1000)
     assert.ok(negative)
     assert.equal(overdraftInterest(after), 56)
+  })
+})
+
+describe('taxa do cheque especial do personagem', () => {
+  const node = (path, level) => ({ skillNode: { path, level } })
+
+  it('8% sem habilidade e 4% com Gestão nível 2', () => {
+    assert.equal(overdraftRateFor([]), 0.08)
+    assert.equal(overdraftRateFor([node('management', 1)]), 0.08)
+    assert.equal(overdraftRateFor([node('management', 1), node('management', 2)]), 0.04)
+    assert.equal(overdraftRateFor([node('communication', 2)]), 0.08)
+    assert.equal(overdraftRateFor(), 0.08)
+  })
+
+  it('juros usam a taxa do personagem', () => {
+    assert.equal(overdraftInterest(-1000), 80)
+    assert.equal(overdraftInterest(-1000, 0.04), 40)
+    assert.equal(overdraftInterest(500, 0.04), 0)
+  })
+
+  it('texto da taxa', () => {
+    assert.equal(ratePercent(0.08), '8%')
+    assert.equal(ratePercent(0.04), '4%')
   })
 })
