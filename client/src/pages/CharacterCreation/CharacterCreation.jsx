@@ -5,6 +5,7 @@ import useGameStore from '../../store/gameStore'
 import { AVATARS, applyAvatarTheme } from '../../data/avatarTheme'
 import { GIFTS, PROFESSIONS, giftById } from '../../data/gifts'
 import TownBackdrop from '../../components/town/TownBackdrop'
+import { sfx } from '../../services/sound'
 import GiftIcon from '../../components/town/GiftIcon'
 import ProfessionalCard from '../../components/town/ProfessionalCard'
 import { TOY_BUTTON, TOY_CARD, TOY_ERROR, TOY_GHOST, TOY_INPUT, TOY_LABEL } from '../../components/town/toy'
@@ -77,7 +78,7 @@ export default function CharacterCreation() {
           <ol className="flex flex-wrap gap-2" aria-label="Passos">
             {STEPS.map((label, i) => {
               const n = i + 1
-              const state = n === step ? 'bg-[#3DBE5A] text-white shadow-[0_3px_0_#2B8C41]' : n < step ? 'bg-[#E2F4E5] text-[#2B8C41]' : 'bg-[#F1EBDD] text-[#8A9680]'
+              const state = n === step ? 'bg-[var(--theme-primary)] text-white shadow-[0_3px_0_color-mix(in_srgb,var(--theme-primary)_70%,black)]' : n < step ? 'bg-[color-mix(in_srgb,var(--theme-secondary)_25%,white)] text-[var(--theme-primary)]' : 'bg-[#F1EBDD] text-[#8A9680]'
               return (
                 <li key={label} aria-current={n === step ? 'step' : undefined} className={`flex items-center gap-2 rounded-full px-3.5 py-1.5 font-toy text-[15px] font-extrabold ${state}`}>
                   <span className="grid h-5 w-5 place-items-center rounded-full bg-white/30 text-xs">{n < step ? '✓' : n}</span>
@@ -101,11 +102,17 @@ export default function CharacterCreation() {
                         <button
                           key={a.id}
                           type="button"
-                          onClick={() => set({ avatarId: a.id })}
+                          onClick={() => { sfx.pop(); set({ avatarId: a.id }) }}
+                          // passar o mouse já pinta a tela com a cor do personagem
+                          onMouseEnter={() => applyAvatarTheme(a.id)}
+                          onMouseLeave={() => applyAvatarTheme(form.avatarId)}
+                          onFocus={() => applyAvatarTheme(a.id)}
+                          onBlur={() => applyAvatarTheme(form.avatarId)}
                           aria-pressed={selected}
-                          className={`grid justify-items-center gap-1.5 rounded-[20px] border-[3px] bg-white px-1.5 pb-2 pt-2.5 transition-transform hover:-translate-y-0.5 cursor-pointer ${selected ? 'border-[#3DBE5A] shadow-[0_5px_0_#3DBE5A]' : 'border-[#EFE6D3]'}`}
+                          style={{ '--c': a.theme.primary, '--c2': a.theme.secondary }}
+                          className={`group grid justify-items-center gap-1.5 rounded-[20px] border-[3px] px-1.5 pb-2 pt-2.5 transition-[transform,border-color,background-color,box-shadow] duration-200 hover:-translate-y-1 hover:border-[var(--c)] hover:bg-[color-mix(in_srgb,var(--c2)_16%,white)] hover:shadow-[0_5px_0_var(--c)] cursor-pointer ${selected ? 'border-[var(--c)] bg-[color-mix(in_srgb,var(--c2)_16%,white)] shadow-[0_5px_0_var(--c)]' : 'border-[#EFE6D3] bg-white'}`}
                         >
-                          <span className="grid h-16 w-16 place-items-end overflow-hidden rounded-full bg-[#DDE6F5]">
+                          <span className="grid h-16 w-16 place-items-end overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--c2)_35%,white)] transition-transform duration-200 group-hover:-rotate-3 group-hover:scale-110">
                             <img src={a.image} alt="" className="w-[115%] max-w-none" />
                           </span>
                           <span className="text-center text-[12px] font-extrabold leading-tight">{a.name}</span>

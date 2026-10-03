@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { sfx } from '../services/sound'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import useGameStore from '../store/gameStore'
@@ -57,6 +58,7 @@ export default function BillModal({ type, label, onClose, onComplete }) {
     try {
       const { data } = await api.post(`/characters/${character.id}/bills/${turn}/pay`, { type })
       setReceipt({ amount: data.amount, cashAfter: data.cashAfter })
+      sfx.coin()
     } catch (err) {
       setError(err.response?.data?.error || 'Não deu para pagar agora. Tente de novo.')
     } finally {

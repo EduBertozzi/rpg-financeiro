@@ -1,7 +1,7 @@
 const prisma = require('../lib/prisma')
 const bcrypt = require('bcryptjs')
 const { roomCsv } = require('../utils/roomExport')
-const { cleanRoomName, playerProgress, roomSummary, CHARACTER_CHILD_MODELS, temporaryPassword } = require('../utils/roomAdmin')
+const { cleanRoomName, playerProgress, roomSummary, roomStanding, CHARACTER_CHILD_MODELS, temporaryPassword } = require('../utils/roomAdmin')
 
 const generateCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -85,6 +85,30 @@ exports.getLeaderboard = async (req, res) => {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
 }
+// Posição do jogador na turma e quantos já encerraram o mês (barra lateral).
+// Só quem joga na sala pode ver.
+exports.getStanding = async (req, res) => {
+  try {
+    const room = await prisma.room.findUnique({
+      where: { id: req.params.id },
+      include: {
+        characters: {
+          select: {
+            id: true, userId: true, turnReady: true,
+            snapshots: { orderBy: { turn: 'desc' }, take: 1, select: { netWorth: true } },
+          },
+        },
+      },
+    })
+    if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
+    const mine = room.characters.find((c) => c.userId === req.user.id)
+    if (!mine) return res.status(403).json({ error: 'Você não joga nesta sala' })
+    res.json({ ...roomStanding(room.characters, mine.id), turn: room.currentTurn, status: room.status })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+
 // Sala do administrador logado, ou responde o erro e devolve null.
 async function ownRoom(req, res) {
   const room = await prisma.room.findUnique({ where: { id: req.params.id } })

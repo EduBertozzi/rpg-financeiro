@@ -1,6 +1,7 @@
 import useGameStore from '../store/gameStore'
 import GameHeader from './GameHeader'
 import Notebook from './Notebook'
+import Celebrations from './Celebrations'
 
 // `light`: fundo claro de manhã, para telas claras como o banco Maré.
 export default function GameLayout({ children, light = false }) {
@@ -28,6 +29,7 @@ export default function GameLayout({ children, light = false }) {
 
       {/* o caderninho fica sempre no canto, em todas as telas do jogo */}
       <Notebook />
+      <Celebrations />
     </div>
   )
 }

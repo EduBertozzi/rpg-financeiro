@@ -19,7 +19,7 @@ const readIntro = () => {
 }
 
 export default function SkillTree() {
-  const { character } = useGameStore()
+  const { character, setCharacter } = useGameStore()
   const [skills, setSkills] = useState([])
   const [mine, setMine] = useState({ totalPoints: 0, usedPoints: 0, maxPoints: 8, unlocked: [] })
   const [selected, setSelected] = useState(null)
@@ -60,6 +60,8 @@ export default function SkillTree() {
       setJustUnlocked(current.id)
       setIntro(false)
       setMine(data)
+      // a barra lateral (pontos sobrando) e o confete olham o personagem
+      api.get(`/characters/${character.id}`).then(({ data: fresh }) => setCharacter(fresh)).catch(() => {})
     } catch (err) {
       setError(err.response?.data?.error || 'Não deu para desbloquear agora.')
     } finally {

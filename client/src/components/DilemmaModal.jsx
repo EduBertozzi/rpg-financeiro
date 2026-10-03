@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { sfx } from '../services/sound'
 import api from '../services/api'
 import useGameStore from '../store/gameStore'
 import { TOY_CARD, TOY_ERROR } from './town/toy'
@@ -41,6 +42,7 @@ export default function DilemmaModal({ onClose, onComplete }) {
 
   useEffect(() => {
     if (!character?.id || !turn) return
+    sfx.letter()
 
     api.get(`/characters/${character.id}/dilemma/${turn}`)
       .then(({ data }) => {
@@ -64,6 +66,7 @@ export default function DilemmaModal({ onClose, onComplete }) {
     try {
       const { data } = await api.post(`/characters/${character.id}/dilemma/${turn}/choose`, { optionIndex })
       setResult({ ...data, choice: dilemma.options[optionIndex].text })
+      sfx.pop()
     } catch (err) {
       setError(err.response?.data?.error || 'Não deu para registrar sua escolha. Tente de novo.')
     } finally {

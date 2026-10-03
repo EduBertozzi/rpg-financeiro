@@ -91,7 +91,8 @@ body {
 @keyframes notebook-pop { from { transform: scale(.85) rotate(-2deg); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes notebook-flip { from { transform: perspective(1200px) rotateY(-70deg); opacity: .3; } to { transform: none; opacity: 1; } }
 .notebook-pop { animation: notebook-pop .35s cubic-bezier(.2,.9,.3,1.2); }
-.notebook-flip { transform-origin: left center; animation: notebook-flip .45s ease; }
+/* no celular a página gira de leve; no desktop quem vira é a folha inteira */
+@media (max-width: 767px) { .notebook-flip { transform-origin: left center; animation: notebook-flip .45s ease; } }
 @media (prefers-reduced-motion: reduce) { .notebook-pop, .notebook-flip { animation: none; } }
 
 /* resumo da virada: o cartão entra e o imprevisto chega logo depois */
@@ -105,3 +106,37 @@ body {
 @keyframes tour-card { from { transform: translateY(10px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
 .tour-card { animation: tour-card .25s ease-out; }
 @media (prefers-reduced-motion: reduce) { .tour-card { animation: none; } .tour-spot { transition: none; } }
+
+/* barra lateral: selo de pontos pulsando */
+@keyframes hud-badge { 50% { transform: scale(1.15); } }
+.hud-badge { animation: hud-badge 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .hud-badge { animation: none; } }
+
+/* a virada do mês como cena (TurnScene) */
+.turn-night { background: linear-gradient(#0B1640 0%, rgba(27,42,107,.86) 55%, rgba(43,35,80,.8) 100%); }
+.turn-dawn { background: linear-gradient(rgba(255,179,107,.75) 0%, rgba(255,214,160,.35) 55%, rgba(255,240,220,.1) 100%); }
+@keyframes turn-twinkle { 50% { opacity: .35; } }
+.turn-star { box-shadow: 0 0 6px #fff; animation: turn-twinkle 1.6s ease-in-out infinite; }
+@keyframes turn-cal-in { from { transform: translate(-50%, -30%) scale(.7); opacity: 0; } }
+.turn-cal { animation: turn-cal-in .45s cubic-bezier(.2,.9,.3,1.2); }
+.turn-sheet { display: grid; grid-template-rows: 64px 1fr; overflow: hidden; border-radius: 18px; background: #fff; box-shadow: 0 10px 0 #E2D6BE; }
+.turn-sheet-top { display: grid; place-items: center; background: var(--theme-primary); color: #fff; font-family: "Baloo 2", sans-serif; font-size: 22px; font-weight: 800; letter-spacing: .06em; }
+.turn-sheet-day { display: grid; place-items: center; align-content: center; font-family: "Baloo 2", sans-serif; font-size: 96px; font-weight: 800; line-height: 1; color: #24331F; }
+.turn-sheet-day small { font-family: Outfit, sans-serif; font-size: 14px; font-weight: 700; color: #6B7A62; }
+@keyframes turn-tear { 0% { transform: none; } 20% { transform: rotate(-6deg); } 100% { transform: translate(-160px, 520px) rotate(-38deg); opacity: 0; } }
+.turn-tear { transform-origin: 20% 0; animation: turn-tear 1s cubic-bezier(.5,0,.75,0) forwards; }
+.turn-coin { position: fixed; left: 0; top: 0; z-index: 80; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #B07A0C; background: radial-gradient(circle at 35% 35%, #FFF1B0, #F4C430 45%, #C8920A); color: #7A5200; font: 800 13px "Baloo 2", sans-serif; pointer-events: none; }
+
+/* carregando: a logo (calendário com check) perdendo uma folha por mês */
+.cl-icon { position: relative; display: block; width: var(--s); height: var(--s); border-radius: calc(var(--s) * .25); background: #12B5A6; box-shadow: 0 calc(var(--s) * .06) 0 rgba(0,0,0,.18); }
+.cl-frame { position: absolute; left: 21.9%; right: 21.9%; top: 26.6%; bottom: 21.9%; border: calc(var(--s) * .07) solid #fff; border-radius: calc(var(--s) * .11); overflow: hidden; }
+.cl-bar { position: absolute; left: 0; right: 0; top: 10%; height: calc(var(--s) * .07); background: #fff; }
+.cl-ring { position: absolute; top: 18.75%; width: calc(var(--s) * .07); height: calc(var(--s) * .14); border-radius: 999px; background: #fff; z-index: 2; }
+.cl-ring-l { left: calc(35.9% - var(--s) * .035); }
+.cl-ring-r { left: calc(64.1% - var(--s) * .035); }
+.cl-pad { position: absolute; left: 0; right: 0; bottom: 0; top: calc(10% + var(--s) * .07); perspective: calc(var(--s) * 4); }
+.cl-sheet { position: absolute; inset: 8% 8% 10%; display: grid; place-items: center; border-radius: calc(var(--s) * .03); background: #E6FAF7; color: #0A7F75; font: 800 calc(var(--s) * .13)/1 "Baloo 2", sans-serif; letter-spacing: .04em; }
+.cl-fall { background: #fff; transform-origin: 50% 0; animation: cl-fall .9s cubic-bezier(.55,0,.75,.2) .25s both; }
+@keyframes cl-fall { 0% { transform: none; opacity: 1; } 35% { transform: rotateX(-25deg); } 100% { transform: translateY(140%) rotateX(-80deg) rotate(8deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .cl-fall { animation-duration: 2.4s; } }
+.cl-loop { animation-iteration-count: infinite; }

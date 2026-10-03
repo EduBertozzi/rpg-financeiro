@@ -7,8 +7,13 @@ import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
 import LeisureModal from '../../components/LeisureModal'
 import TurnSummaryModal from '../../components/TurnSummaryModal'
+import TurnScene from '../../components/TurnScene'
+import { sfx } from '../../services/sound'
 import Tour from '../../components/Tour'
 import { tourKey } from './tourSteps'
+import { TASK_EVENT } from '../../components/sidebarData'
+import { TOUR_EVENT } from '../../components/howToPlaySteps'
+import { refreshStanding } from '../../components/hudHooks'
 import WalkLock from '../../components/WalkLock'
 import { loadWalkLock, saveWalkLock } from '../../components/walkTimer'
 import BillModal from '../../components/BillModal'
@@ -204,6 +209,7 @@ export default function Map() {
         setCharacter({ ...characterRef.current, turnReady: false })
       }
 
+      refreshStanding()
       // o resumo da virada e o dilema do mês novo abrem pelo efeito do mês (abaixo)
     })
 
@@ -236,6 +242,7 @@ export default function Map() {
     try {
       await api.patch(`/characters/${character.id}/ready`)
       setCharacter({ ...character, turnReady: true })
+      refreshStanding()
     } catch (err) {
       console.error(err)
       alert(err.response?.data?.error || 'Erro ao finalizar mês!')
@@ -259,6 +266,7 @@ export default function Map() {
   // o que ficou em aberto), depois o dilema, se ainda não foi respondido.
   const [turnSummary, setTurnSummary] = useState(null)
   const [showSummary, setShowSummary] = useState(false)
+  const [showScene, setShowScene] = useState(false)
   const [dilemmaPending, setDilemmaPending] = useState(false)
   const [showTour, setShowTour] = useState(false)
   useEffect(() => {
@@ -277,7 +285,9 @@ export default function Map() {
         const pending = Boolean(data.dilemma && !data.alreadyAnswered)
         if (summary && !summarySeen(character.id, turn)) {
           setDilemmaPending(pending)
-          setShowSummary(true)
+          // de fevereiro em diante a virada abre com a cena; depois vem o resumo
+          if (turn > 1) setShowScene(true)
+          else setShowSummary(true)
         } else if (turn === 1 && !tourSeen(character.id)) {
           setDilemmaPending(pending)
           setShowTour(true)
@@ -346,11 +356,31 @@ export default function Map() {
   }
 
   const handleBuilding = (b) => {
+    sfx.click()
     if (b.route === 'modal_dilemma') setShowDilemmaModal(true)
     else if (b.route === 'modal_leisure') setShowLeisure(true)
     else if (b.route.startsWith('modal_bill_')) setActiveBill(b.route.replace('modal_bill_', ''))
     else navigate(b.route)
   }
+
+  // os ícones de tarefa da barra lateral abrem a tarefa aqui
+  useEffect(() => {
+    const ROUTES = { dilemma: 'modal_dilemma', leisure: 'modal_leisure', food: 'modal_bill_food', utilities: 'modal_bill_utilities', internet: 'modal_bill_transport' }
+    const onTask = (e) => {
+      const route = ROUTES[e.detail?.id]
+      if (!route || roomRef.current?.status !== 'active') return
+      if (route === 'modal_dilemma') setShowDilemmaModal(true)
+      else if (route === 'modal_leisure') setShowLeisure(true)
+      else setActiveBill(route.replace('modal_bill_', ''))
+    }
+    const onTour = () => roomRef.current?.status === 'active' && setShowTour(true)
+    window.addEventListener(TASK_EVENT, onTask)
+    window.addEventListener(TOUR_EVENT, onTour)
+    return () => {
+      window.removeEventListener(TASK_EVENT, onTask)
+      window.removeEventListener(TOUR_EVENT, onTour)
+    }
+  }, [])
 
   const currentTurn = room?.currentTurn ?? 0
   const isWaiting = room?.status === 'waiting'
@@ -501,6 +531,17 @@ export default function Map() {
         <DilemmaModal
           onClose={() => setShowDilemmaModal(false)}
           onComplete={handleDilemmaComplete}
+        />
+      )}
+
+      {showScene && turnSummary && (
+        <TurnScene
+          turn={turnSummary.turn}
+          net={turnSummary.net}
+          onDone={() => {
+            setShowScene(false)
+            setShowSummary(true)
+          }}
         />
       )}
 

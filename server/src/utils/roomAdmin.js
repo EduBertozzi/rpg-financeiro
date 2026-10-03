@@ -80,5 +80,26 @@ function temporaryPassword(random = Math.random) {
   return `${word}${digits}`
 }
 
+// Como o jogador está na turma, sem expor ninguém: a posição dele pelo
+// patrimônio da última virada, quantos jogam e quantos já encerraram o mês.
+// characters: [{ id, turnReady, snapshots: [{ netWorth }] }] (snapshot mais recente).
+// rank é null enquanto ninguém tem patrimônio fechado (janeiro).
+function roomStanding(characters, characterId) {
+  const list = characters ?? []
+  const worth = (c) => (c.snapshots?.[0] ? Number(c.snapshots[0].netWorth) : null)
+  const scored = list.filter((c) => worth(c) !== null)
+  const mine = list.find((c) => c.id === characterId)
+  let rank = null
+  if (mine && worth(mine) !== null) {
+    // empate divide a posição: conta só quem tem patrimônio maior
+    rank = 1 + scored.filter((c) => worth(c) > worth(mine)).length
+  }
+  return {
+    rank,
+    total: list.length,
+    ready: list.filter((c) => c.turnReady).length,
+  }
+}
+
 module.exports = {
-  TEMP_WORDS, temporaryPassword, NAME_MAX, BILL_PREFIXES, CHARACTER_CHILD_MODELS, cleanRoomName, playerTasks, playerProgress, roomSummary }
+  roomStanding, TEMP_WORDS, temporaryPassword, NAME_MAX, BILL_PREFIXES, CHARACTER_CHILD_MODELS, cleanRoomName, playerTasks, playerProgress, roomSummary }

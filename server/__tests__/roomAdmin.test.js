@@ -321,3 +321,93 @@ describe('POST /api/v1/rooms/:id/players/:characterId/reset-password', () => {
     expect((await request(app).post('/api/v1/rooms/room-1/players/c1/reset-password')).status).toBe(401)
   })
 })
+
+// ─── posição na turma (barra lateral do jogador) ─────────────────────────────
+
+const { roomStanding } = require('../src/utils/roomAdmin')
+const snap = (netWorth) => [{ netWorth }]
+
+describe('roomStanding', () => {
+  const players = [
+    { id: 'a', turnReady: true, snapshots: snap(30000) },
+    { id: 'b', turnReady: false, snapshots: snap(25000) },
+    { id: 'c', turnReady: true, snapshots: snap('41000.50') },
+    { id: 'd', turnReady: false, snapshots: snap(25000) },
+  ]
+
+  it('posição pelo patrimônio da última virada (Decimal vira número)', () => {
+    expect(roomStanding(players, 'c').rank).toBe(1)
+    expect(roomStanding(players, 'a').rank).toBe(2)
+  })
+
+  it('empate divide a posição', () => {
+    expect(roomStanding(players, 'b').rank).toBe(3)
+    expect(roomStanding(players, 'd').rank).toBe(3)
+  })
+
+  it('conta quantos jogam e quantos já encerraram', () => {
+    expect(roomStanding(players, 'a')).toEqual({ rank: 2, total: 4, ready: 2 })
+  })
+
+  it('janeiro, sem patrimônio fechado: sem posição', () => {
+    const jan = [{ id: 'a', turnReady: false, snapshots: [] }, { id: 'b', turnReady: true }]
+    expect(roomStanding(jan, 'a')).toEqual({ rank: null, total: 2, ready: 1 })
+  })
+
+  it('quem ainda não tem patrimônio não entra na conta dos outros', () => {
+    const mixed = [{ id: 'a', snapshots: snap(100) }, { id: 'novo', snapshots: [] }]
+    expect(roomStanding(mixed, 'a').rank).toBe(1)
+  })
+
+  it('sala vazia ou jogador de fora', () => {
+    expect(roomStanding(undefined, 'x')).toEqual({ rank: null, total: 0, ready: 0 })
+    expect(roomStanding(players, 'x').rank).toBeNull()
+  })
+})
+
+describe('GET /api/v1/rooms/:id/standing', () => {
+  const PLAYER = makeToken({ id: 'user-2' })
+  const withPlayers = () => room({
+    characters: [
+      { id: 'c1', userId: 'user-1', turnReady: true, snapshots: snap(20000) },
+      { id: 'c2', userId: 'user-2', turnReady: false, snapshots: snap(18000) },
+      { id: 'c3', userId: 'user-3', turnReady: true, snapshots: snap(12000) },
+    ],
+  })
+
+  it('devolve a posição de quem pediu, o total, os prontos e o mês', async () => {
+    prismaMock.room.findUnique.mockResolvedValue(withPlayers())
+    const res = await request(app).get('/api/v1/rooms/room-1/standing').set(authHeader(PLAYER))
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ rank: 2, total: 3, ready: 2, turn: 3, status: 'active' })
+  })
+
+  it('não mostra patrimônio nem nome de ninguém', async () => {
+    prismaMock.room.findUnique.mockResolvedValue(withPlayers())
+    const res = await request(app).get('/api/v1/rooms/room-1/standing').set(authHeader(PLAYER))
+    expect(JSON.stringify(res.body)).not.toMatch(/netWorth|20000|c1|user-1/)
+  })
+
+  it('403 para quem não joga na sala', async () => {
+    prismaMock.room.findUnique.mockResolvedValue(withPlayers())
+    const res = await request(app).get('/api/v1/rooms/room-1/standing').set(authHeader(makeToken({ id: 'intruso' })))
+    expect(res.status).toBe(403)
+  })
+
+  it('404 para sala que não existe', async () => {
+    prismaMock.room.findUnique.mockResolvedValue(null)
+    const res = await request(app).get('/api/v1/rooms/nada/standing').set(authHeader(PLAYER))
+    expect(res.status).toBe(404)
+  })
+
+  it('401 sem token', async () => {
+    const res = await request(app).get('/api/v1/rooms/room-1/standing')
+    expect(res.status).toBe(401)
+  })
+
+  it('500 em erro de banco', async () => {
+    prismaMock.room.findUnique.mockRejectedValue(new Error('caiu'))
+    const res = await request(app).get('/api/v1/rooms/room-1/standing').set(authHeader(PLAYER))
+    expect(res.status).toBe(500)
+  })
+})

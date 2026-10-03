@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import HowToPlay from './HowToPlay'
+import { sfx } from '../services/sound'
 import { COMPANIES } from '../data/companies'
 import { GLOSSARY, GUIDE_EVENT, PRODUCTS, overdraftAfter, searchGlossary, termOf, yearlyNet } from '../data/guide'
 
@@ -21,7 +23,7 @@ const H3 = ({ children }) => <h3 className="mb-1 mt-3.5 font-toy text-[19px] fon
 // Páginas de cada capítulo (o glossário é à parte). `go(term)` abre um termo.
 const CHAPTERS = [
   {
-    id: 'play', label: 'Como jogar', color: 'bg-[#3DBE5A] text-white',
+    id: 'play', label: 'A cidade', color: 'bg-[#3DBE5A] text-white',
     pages: [
       () => (
         <>
@@ -179,6 +181,7 @@ function TermList({ term, query, setQuery, onPick, inputId }) {
 // páginas (uma no celular). Qualquer tela abre um termo com openGuide(termo).
 export default function Notebook() {
   const [open, setOpen] = useState(false)
+  const [help, setHelp] = useState(false)
   const [chapter, setChapter] = useState(0)
   const [page, setPage] = useState(0) // página no celular
   const [term, setTerm] = useState('CDB')
@@ -193,6 +196,7 @@ export default function Notebook() {
   const [origin, setOrigin] = useState({ x: 0, y: 0 })
 
   const openBook = () => {
+    sfx.page()
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const r = openerRef.current?.getBoundingClientRect()
     setOrigin(r ? { x: r.left + r.width / 2 - window.innerWidth / 2, y: r.top + r.height / 2 - window.innerHeight / 2 } : { x: 0, y: 0 })
@@ -203,6 +207,7 @@ export default function Notebook() {
   const landed = () => setPhase((p) => (p === 'flying' ? (wide() ? 'opening' : 'open') : p))
 
   const turn = (fn) => {
+    sfx.page()
     fn()
     setFlipKey((k) => k + 1)
   }
@@ -244,9 +249,22 @@ export default function Notebook() {
   const pages = current.pages
   const lastChapter = chapter === CHAPTERS.length - 1
 
-  // desktop: um capítulo por vez (duas páginas); celular: uma página por vez
-  const nextDesktop = () => turn(() => setChapter((c) => Math.min(c + 1, CHAPTERS.length - 1)))
-  const prevDesktop = () => turn(() => setChapter((c) => Math.max(c - 1, 0)))
+  // desktop: um capítulo por vez (duas páginas). Trocar de capítulo vira a
+  // folha da direita para a esquerda (ou o contrário, voltando).
+  const [leaf, setLeaf] = useState(null) // { dir, from, to }
+  const flipTo = (target) => {
+    if (target === chapter || leaf) return
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (!wide() || reduced) return turn(() => setChapter(target))
+    sfx.page()
+    setLeaf({ dir: target > chapter ? 1 : -1, from: chapter, to: target })
+  }
+  const leafDone = () => {
+    setChapter(leaf.to)
+    setLeaf(null)
+  }
+  const nextDesktop = () => flipTo(Math.min(chapter + 1, CHAPTERS.length - 1))
+  const prevDesktop = () => flipTo(Math.max(chapter - 1, 0))
   const nextMobile = () => turn(() => {
     if (page < pages.length - 1) setPage(page + 1)
     else { setChapter(chapter + 1); setPage(0) }
@@ -260,24 +278,59 @@ export default function Notebook() {
     const P = pages[i]
     return P ? <P go={go} /> : null
   }
+  // as duas páginas de um capítulo no desktop (a folha que vira usa as mesmas)
+  const leftOf = (ci, inputId = 'guide-search') => {
+    if (ci === GLOSSARY_INDEX) return <TermList inputId={inputId} term={term} query={query} setQuery={setQuery} onPick={(t) => turn(() => setTerm(t))} />
+    const P = CHAPTERS[ci].pages[0]
+    return P ? <P go={go} /> : null
+  }
+  const rightOf = (ci) => {
+    const P = CHAPTERS[ci].pages[1]
+    return (
+      <>
+        {ci === GLOSSARY_INDEX ? <TermPage term={term} /> : P ? <P go={go} /> : null}
+        <div className="mt-3.5 flex items-center justify-between gap-2">
+          <button type="button" onClick={prevDesktop} disabled={ci === 0} className={pagerBtn}>← virar</button>
+          <span className="font-hand text-xl text-[#A9B19E]">{ci + 1}/{CHAPTERS.length}</span>
+          <button type="button" onClick={nextDesktop} disabled={ci === CHAPTERS.length - 1} className={pagerBtn}>virar →</button>
+        </div>
+      </>
+    )
+  }
+  // durante a virada: embaixo fica o que a folha descobre
+  const baseLeft = leaf ? (leaf.dir > 0 ? leaf.from : leaf.to) : chapter
+  const baseRight = leaf ? (leaf.dir > 0 ? leaf.to : leaf.from) : chapter
   const pagerBtn = 'rounded-xl border-2 border-[#D8E6F2] bg-[#FFFDF5] px-3 py-1 text-[13px] font-extrabold text-[#6B7A62] disabled:opacity-35 cursor-pointer disabled:cursor-default'
 
   return (
     <>
+      {/* canto de baixo: "Como jogar" (?) e o caderninho, lado a lado */}
+      <div data-tour="caderninho" className="fixed bottom-5 right-5 z-30 flex items-end gap-3.5">
+      <button
+        type="button"
+        onClick={() => { sfx.pop(); setHelp(true) }}
+        aria-label="Como jogar"
+        className="group grid justify-items-center gap-1.5 cursor-pointer"
+      >
+        <span className="grid h-14 w-14 place-items-center rounded-full bg-[#E5484D] font-toy text-[32px] font-extrabold text-white shadow-[0_5px_0_#A12C30,0_12px_20px_rgba(0,0,0,0.2)] transition-transform group-hover:-translate-y-1 group-hover:rotate-6">?</span>
+        <span className="rounded-full bg-[#FFFDF7] px-3 py-0.5 font-toy text-sm font-extrabold text-[#24331F] shadow-[0_3px_0_#E2D6BE]">Como jogar</span>
+      </button>
       <button
         ref={openerRef}
         type="button"
         onClick={openBook}
         aria-label="Abrir o caderninho"
-        data-tour="caderninho"
-        className="group fixed bottom-5 right-5 z-30 grid justify-items-center gap-1.5 cursor-pointer"
+        className="group grid justify-items-center gap-1.5 cursor-pointer"
       >
         <span className="relative block h-[84px] w-[68px] rounded-[6px_12px_12px_6px] bg-[linear-gradient(90deg,#173A8A_0_10px,#2457C5_10px)] shadow-[0_6px_0_#173A8A,0_14px_24px_rgba(0,0,0,0.25)] transition-transform group-hover:-translate-y-1 group-hover:-rotate-3">
-          <span className="absolute left-5 right-2.5 top-4 grid h-6 place-items-center rounded bg-[#FFFDF5] font-hand text-lg font-bold text-[#2457C5]">Guia</span>
+          <span className="absolute left-[14px] right-1.5 top-4 grid h-6 place-items-center rounded bg-[#FFFDF5] font-hand text-[17px] font-bold leading-none text-[#2457C5]">Guia</span>
           <span className="absolute -bottom-2.5 right-3 h-5 w-2.5 bg-[#EC4899] [clip-path:polygon(0_0,100%_0,100%_100%,50%_75%,0_100%)]" />
         </span>
         <span className="rounded-full bg-[#FFFDF7] px-3 py-0.5 font-toy text-sm font-extrabold text-[#24331F] shadow-[0_3px_0_#E2D6BE]">Caderninho</span>
       </button>
+      </div>
+
+      {help && <HowToPlay onClose={() => setHelp(false)} />}
 
       {open && (
         <div className="fixed inset-0 z-[55] grid place-items-center bg-[#141E12]/55 p-4 pt-14 backdrop-blur-[3px] md:pt-4" onClick={(e) => e.target === e.currentTarget && close()}>
@@ -318,7 +371,7 @@ export default function Notebook() {
             <div role="tablist" aria-label="Capítulos" className={`absolute -top-10 left-0 z-10 flex gap-1.5 transition-opacity duration-300 md:-right-10 md:left-auto md:top-10 md:grid md:gap-2 ${phase === 'open' ? '' : 'opacity-0'}`}>
               {CHAPTERS.map((c, i) => (
                 <button key={c.id} type="button" role="tab" aria-selected={chapter === i}
-                  onClick={() => turn(() => { setChapter(i); setPage(0); setShowList(true) })}
+                  onClick={() => { setPage(0); setShowList(true); flipTo(i) }}
                   className={`${c.color} rounded-t-xl px-2.5 py-2 font-toy text-[13px] font-extrabold shadow-[3px_3px_0_rgba(0,0,0,0.18)] transition-transform cursor-pointer md:w-[46px] md:rounded-l-none md:rounded-r-xl md:px-0 md:py-3 md:pl-2 md:[writing-mode:vertical-rl] ${chapter === i ? '-translate-y-1 md:translate-x-1.5 md:translate-y-0' : ''}`}>
                   {c.label}
                 </button>
@@ -328,10 +381,29 @@ export default function Notebook() {
             {/* página da esquerda (só no desktop): o papel já está lá enquanto a capa
                 gira (senão aparece o azul do fundo), e o texto surge quando ela pousa */}
             <section className={`notebook-page hidden rounded-l-lg md:block ${phase === 'flying' ? 'opacity-0' : ''} ${phase === 'open' ? '' : '[&>*]:opacity-0'} [&>*]:transition-opacity [&>*]:duration-200`}>
-              {isGlossary
-                ? <TermList inputId="guide-search" term={term} query={query} setQuery={setQuery} onPick={(t) => turn(() => setTerm(t))} />
-                : Page(0)}
+              {leftOf(baseLeft)}
             </section>
+
+            {/* a folha que vira: frente = página direita, verso = página esquerda */}
+            {leaf && (
+              <motion.div
+                aria-hidden="true"
+                inert
+                className="absolute bottom-3.5 left-1/2 right-3.5 top-3.5 z-[3] hidden md:block"
+                style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
+                initial={{ rotateY: leaf.dir > 0 ? 0 : -180 }}
+                animate={{ rotateY: leaf.dir > 0 ? -180 : 0 }}
+                transition={{ duration: 0.7, ease: [0.45, 0.05, 0.3, 1] }}
+                onAnimationComplete={leafDone}
+              >
+                <div className="notebook-page !absolute inset-0 rounded-r-lg [backface-visibility:hidden]">
+                  {rightOf(leaf.dir > 0 ? leaf.from : leaf.to)}
+                </div>
+                <div className="notebook-page !absolute inset-0 rounded-l-lg [backface-visibility:hidden] [transform:rotateY(180deg)]">
+                  {leftOf(leaf.dir > 0 ? leaf.to : leaf.from, 'guide-search-leaf')}
+                </div>
+              </motion.div>
+            )}
 
             <span aria-hidden="true" className="notebook-spiral pointer-events-none absolute bottom-6 left-1/2 top-6 z-[2] hidden w-6 -translate-x-1/2 md:block" />
 
@@ -351,12 +423,7 @@ export default function Notebook() {
                 )}
               </div>
               <div className="hidden md:block">
-                {isGlossary ? <TermPage term={term} /> : Page(1)}
-                <div className="mt-3.5 flex items-center justify-between gap-2">
-                  <button type="button" onClick={prevDesktop} disabled={chapter === 0} className={pagerBtn}>← virar</button>
-                  <span className="font-hand text-xl text-[#A9B19E]">{chapter + 1}/{CHAPTERS.length}</span>
-                  <button type="button" onClick={nextDesktop} disabled={lastChapter} className={pagerBtn}>virar →</button>
-                </div>
+                {rightOf(baseRight)}
               </div>
             </section>
           </motion.div>

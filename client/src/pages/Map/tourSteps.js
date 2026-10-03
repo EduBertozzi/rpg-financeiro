@@ -29,7 +29,7 @@ export const TOUR_STEPS = [
   {
     target: 'caderninho',
     title: 'Ficou com dúvida?',
-    text: 'O caderninho explica como jogar e o que é CDB, Selic, inflação e outros termos. Agora, a carta do seu primeiro dilema.',
+    text: 'O ? vermelho mostra como jogar em 5 passos. Do lado, o caderninho explica CDB, Selic, inflação e outros termos. Agora, a carta do seu primeiro dilema.',
   },
 ]
 

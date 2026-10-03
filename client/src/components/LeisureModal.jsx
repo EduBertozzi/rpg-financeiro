@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { sfx } from '../services/sound'
 import api from '../services/api'
 import useGameStore from '../store/gameStore'
 import { TOY_CARD, TOY_ERROR } from './town/toy'
@@ -38,6 +39,7 @@ export default function LeisureModal({ onClose, onComplete }) {
     try {
       const { data: res } = await api.post(`/characters/${character.id}/leisure/${turn}/choose`, { optionIndex: picked })
       setDone(res)
+      sfx.coin()
     } catch (err) {
       setError(err.response?.data?.error || 'Não deu para pagar o lazer. Tente de novo.')
     } finally {

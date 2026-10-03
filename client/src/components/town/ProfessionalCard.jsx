@@ -11,7 +11,7 @@ export default function ProfessionalCard({ avatarId = 1, name, profession, gift,
 
   return (
     <div className={`relative overflow-hidden rounded-[22px] bg-[#F7F4EC] text-[#1E2A3A] shadow-[0_8px_0_#D9CFBB,0_24px_40px_rgba(30,42,58,0.25)] ${className}`}>
-      <div className="flex items-end justify-between gap-3 bg-[#2457C5] px-5 pb-3 pt-4 text-white">
+      <div className="flex items-end justify-between gap-3 bg-[var(--theme-primary)] px-5 pb-3 pt-4 text-white transition-colors duration-300">
         <div>
           <p className="text-[9px] font-extrabold tracking-[0.26em] opacity-85">CARTEIRA PROFISSIONAL</p>
           <p className="font-toy text-xl font-extrabold leading-tight">Engenharia · Santa Rita</p>
