@@ -49,7 +49,7 @@
 \maketitle
 
 \begin{abstract}
-Decisões financeiras do dia a dia raramente têm efeito imediato: um empréstimo a um amigo, uma consulta adiada ou uma compra parcelada cobram seu preço meses depois. Apresentamos o \emph{Fecha o Mês}, um jogo sério multijogador para jovens adultos em que cada partida simula um ano de vida financeira de um recém-formado em uma cidade fictícia. A cada mês o jogador paga contas, escolhe um lazer, responde a um dilema e decide o que fazer com o dinheiro em produtos reais de renda fixa e variável; as escolhas geram consequências agendadas para meses futuros, reveladas apenas quando acontecem. Descrevemos o desenho do jogo, sua arquitetura e um método de balanceamento baseado em doze agentes com estratégias distintas, que jogam partidas completas pelas mesmas rotas do servidor usado por pessoas. Em 792 anos simulados, o método revelou dois defeitos que não apareciam em 1.077 testes automatizados, orientou o ajuste dos três caminhos de habilidade (de R\$~3.828 para R\$~82 de diferença no patrimônio anual) e mostrou que as decisões nos dilemas pesam cerca de três vezes mais no resultado do que a escolha de onde investir.
+Decisões financeiras do dia a dia raramente têm efeito imediato: um empréstimo a um amigo, uma consulta adiada ou uma compra parcelada cobram seu preço meses depois. Apresentamos o \emph{Fecha o Mês}, um jogo sério multijogador para jovens adultos em que cada partida simula um ano de vida financeira de um recém-formado em uma cidade fictícia. A cada mês o jogador paga contas, escolhe um lazer, responde a um dilema e decide o que fazer com o dinheiro em produtos reais de renda fixa e variável; as escolhas geram consequências agendadas para meses futuros, reveladas apenas quando acontecem. Descrevemos o desenho do jogo, sua arquitetura e um método de balanceamento baseado em doze agentes com estratégias distintas, que jogam partidas completas pelas mesmas rotas do servidor usado por pessoas. Em 792 anos simulados, o método revelou dois defeitos que passavam por todos os testes automatizados, orientou o ajuste dos três caminhos de habilidade (de R\$~3.828 para R\$~82 de diferença no patrimônio anual) e mostrou que as decisões nos dilemas pesam cerca de três vezes mais no resultado do que a escolha de onde investir.
 
 \medskip
 \noindent\textbf{Palavras-chave:} jogos sérios; educação financeira; balanceamento de jogos; testes automatizados com agentes.
@@ -151,7 +151,7 @@ Cada mês segue o mesmo ciclo (Figura~\ref{fig:ciclo}). Na \textbf{virada}, o se
 
 \subsection{Dilemas e consequências encadeadas}
 
-Há onze dilemas, de janeiro a novembro, cada um com duas opções. O jogador vê o custo imediato de cada opção, mas nunca a consequência (Figura~\ref{fig:telas}b): ela é agendada no servidor e revelada na virada do mês em que acontece. A Tabela~\ref{tab:consequencias} mostra algumas cadeias. Algumas consequências dependem de mais de uma escolha: quem vai a pé para o trabalho em agosto e falta ao programa de TV em setembro é demitido em novembro e fica sem o salário de dezembro.
+Há onze dilemas, de janeiro a novembro, cada um com duas opções. O jogador vê o custo imediato de cada opção, quanto sobraria na conta e o total guardado nas aplicações, mas nunca a consequência (Figura~\ref{fig:telas}b): ela é agendada no servidor e revelada na virada do mês em que acontece. A resposta pode ser adiada dentro do mês, para que o jogador consulte o banco e as contas antes de decidir --- planejar é parte do que o jogo ensina. A Tabela~\ref{tab:consequencias} mostra algumas cadeias. Algumas consequências dependem de mais de uma escolha: quem vai a pé para o trabalho em agosto e falta ao programa de TV em setembro é demitido em novembro e fica sem o salário de dezembro.
 
 \begin{table}[ht]
   \centering\small
@@ -216,7 +216,7 @@ O cliente é uma aplicação React~19 com Vite, Tailwind CSS e Framer Motion; o 
 
 \paragraph{Consequências agendadas.} Ao responder um dilema, o servidor grava a escolha e as consequências futuras numa tabela de efeitos (mês de aplicação, tipo, valor e rótulo). Na virada, o motor aplica os efeitos daquele mês e os marca como aplicados; efeitos depois de dezembro permanecem como dívida. Tipos de efeito cobrem dinheiro, parcelas, aumento de salário, mês sem salário, aluguel já pago e avisos.
 
-\paragraph{Testes.} O projeto tem 1.077 testes automatizados no servidor e 108 no cliente, cobrindo as regras financeiras, as rotas e as permissões. % TODO: cobertura de código, se o time quiser relatar.
+\paragraph{Testes.} O projeto tem 1.077 testes automatizados no servidor e 113 no cliente, cobrindo as regras financeiras, as rotas e as permissões. % TODO: cobertura de código, se o time quiser relatar.
 
 % ----------------------------------------------------------------------------
 \section{Balanceamento com agentes}
