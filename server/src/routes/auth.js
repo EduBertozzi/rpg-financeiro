@@ -1,21 +1,11 @@
 const router = require('express').Router()
-const { register, login } = require('../controllers/authController')
-const prisma = require('../lib/prisma')
+const { register, login, registerAdmin } = require('../controllers/authController')
 
 router.post('/register', register)
+router.post('/register-admin', registerAdmin)
 router.post('/login', login)
 
-// rota temporaria para promover admin
-router.patch('/make-admin/:email', async (req, res) => {
-  try {
-    const user = await prisma.user.update({
-      where: { email: req.params.email },
-      data: { role: 'admin' }
-    })
-    res.json({ message: 'Role atualizado!', role: user.role })
-  } catch (err) {
-    res.status(500).json({ error: err.message })
-  }
-})
+// Promover alguém a admin não é mais uma rota aberta: usar o código de
+// convite (register-admin) ou `npm run make-admin -- email` no servidor.
 
 module.exports = router

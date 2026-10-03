@@ -8,7 +8,8 @@
     "test": "npx jest --runInBand --forceExit",
     "test:watch": "npx jest --watch --runInBand",
     "test:coverage": "npx jest --coverage --runInBand --forceExit",
-    "migrate:turso": "node scripts/migrate-turso.js"
+    "migrate:turso": "node scripts/migrate-turso.js",
+    "make-admin": "node scripts/make-admin.js"
   },
   "keywords": [],
   "author": "",

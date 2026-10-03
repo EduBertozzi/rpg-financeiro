@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
+const crypto = require('crypto')
 const prisma = require('../lib/prisma')
 
 const generateToken = (user) =>
@@ -35,6 +36,46 @@ exports.login = async (req, res) => {
     if (!valid) return res.status(401).json({ error: 'Senha incorreta' })
 
     res.json({ token: generateToken(user), user: { id: user.id, name: user.name, role: user.role } })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+// Compara o código de convite sem vazar pelo tempo de resposta.
+function inviteMatches(given, expected) {
+  if (typeof given !== 'string' || !expected) return false
+  const a = crypto.createHash('sha256').update(given.trim()).digest()
+  const b = crypto.createHash('sha256').update(expected).digest()
+  return crypto.timingSafeEqual(a, b)
+}
+
+// Cadastro de administrador: precisa do código de convite (ADMIN_INVITE_CODE).
+// Quem já tem conta de jogador vira administrador com a mesma senha.
+// Sem código configurado no servidor, o cadastro de administrador fica fechado.
+exports.registerAdmin = async (req, res) => {
+  try {
+    const expected = process.env.ADMIN_INVITE_CODE
+    if (!expected) return res.status(403).json({ error: 'O cadastro de administrador está fechado' })
+
+    const { name, email, password, inviteCode } = req.body ?? {}
+    if (!email || !password || !inviteCode)
+      return res.status(400).json({ error: 'Preencha todos os campos' })
+    if (!inviteMatches(inviteCode, expected))
+      return res.status(403).json({ error: 'Código de convite inválido' })
+
+    const exists = await prisma.user.findUnique({ where: { email } })
+    if (exists) {
+      const valid = await bcrypt.compare(password, exists.passwordHash)
+      if (!valid) return res.status(401).json({ error: 'Esse e-mail já tem conta. Use a mesma senha dela.' })
+      const user = exists.role === 'admin'
+        ? exists
+        : await prisma.user.update({ where: { id: exists.id }, data: { role: 'admin' } })
+      return res.json({ token: generateToken(user), user: { id: user.id, name: user.name, role: user.role } })
+    }
+
+    if (!name) return res.status(400).json({ error: 'Preencha todos os campos' })
+    const passwordHash = await bcrypt.hash(password, 10)
+    const user = await prisma.user.create({ data: { name, email, passwordHash, role: 'admin' } })
+    res.status(201).json({ token: generateToken(user), user: { id: user.id, name: user.name, role: user.role } })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
