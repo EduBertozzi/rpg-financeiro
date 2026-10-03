@@ -7,7 +7,7 @@
 %
 % Está em `article` para compilar em qualquer lugar. Para submeter na SBC
 % (SBGames, SBIE, WEI), troque o preâmbulo pelo modelo oficial da SBC
-% (sbc-template.sty) — o corpo do texto já segue a estrutura deles.
+% (sbc-template.sty) --- o corpo do texto já segue a estrutura deles.
 %
 % Marcadores [ASSIM] e % TODO são lugares para o time completar.
 % Todos os números do texto saem do código e da rodada de robôs de
@@ -42,7 +42,7 @@
 \definecolor{cinza}{HTML}{6B7A62}
 
 \title{\textbf{Fecha o Mês}: um jogo sério de educação financeira\\com consequências encadeadas e balanceamento por agentes automatizados}
-\author{[Autor 1]\thanks{[Instituição] — [e-mail]} \and [Autor 2] \and [Autor 3] \and [Orientador(a)]}
+\author{[Autor 1]\thanks{[Instituição] --- [e-mail]} \and [Autor 2] \and [Autor 3] \and [Orientador(a)]}
 \date{}
 
 \begin{document}
@@ -81,7 +81,7 @@ A distinção entre jogos sérios e gamificação \cite{deterding2011} posiciona
 % ----------------------------------------------------------------------------
 \section{O jogo}
 
-O jogador é um engenheiro recém-formado que se muda para Santa Rita, uma cidade fictícia. Ele recebe R\$~7.000 de salário por mês e começa com o salário de janeiro mais um presente de R\$~500 da família. A partida dura de janeiro a dezembro; vence quem termina com o maior \textbf{patrimônio líquido} — saldo, aplicações e ações, menos cheque especial e parcelas a vencer. A cidade é o próprio menu (Figura~\ref{fig:mapa}): cada prédio é uma empresa com nome e história, e o mapa muda com as estações e o clima de cada mês.
+O jogador é um engenheiro recém-formado que se muda para Santa Rita, uma cidade fictícia. Ele recebe R\$~7.000 de salário por mês e começa com o salário de janeiro mais um presente de R\$~500 da família. A partida dura de janeiro a dezembro; vence quem termina com o maior \textbf{patrimônio líquido} --- saldo, aplicações e ações, menos cheque especial e parcelas a vencer. A cidade é o próprio menu (Figura~\ref{fig:mapa}): cada prédio é uma empresa com nome e história, e o mapa muda com as estações e o clima de cada mês.
 
 \begin{figure}[ht]
   \centering
@@ -143,7 +143,7 @@ Parcelas que passam do fim do ano entram como dívida no patrimônio. Sem essa r
 
 \subsection{Eventos, lazer e dinheiro}
 
-\paragraph{Eventos.} Cada mês tem um calendário próprio de imprevistos sem escolha (casamento de um amigo, restituição do IR, celular quebrado, participação nos resultados, 13º salário). Em cada virada sorteia-se um da lista do mês, ou nenhum com 20\% de chance.
+\paragraph{Eventos.} Cada mês tem um calendário próprio de imprevistos sem escolha (casamento de um amigo, restituição do IR, celular quebrado, participação nos resultados, décimo terceiro). Em cada virada sorteia-se um da lista do mês, ou nenhum com 20\% de chance.
 
 \paragraph{Lazer.} Duas opções com o mesmo preço por mês (por exemplo, kart ou boliche). A escolha é de gosto, não de dinheiro, mas o lazer é obrigatório e soma R\$~4.850 no ano.
 
@@ -151,7 +151,7 @@ Parcelas que passam do fim do ano entram como dívida no patrimônio. Sem essa r
 
 \subsection{Personagem, habilidades e descoberta}
 
-Na criação, o jogador escolhe um de três \emph{dons} (custos fixos 10\% menores; um freela mensal e eventos positivos maiores; ou mais pontos de habilidade). Cada dilema respondido dá um ponto para a Universidade, uma constelação de doze habilidades em três caminhos — Técnico (renda), Comunicação (descontos) e Gestão (bônus sobre o que se guarda). Três cupons escondidos no mapa, um por fase do ano, premiam quem explora. Um \emph{caderninho} sempre disponível explica como jogar e traz um glossário de 21 termos (Figura~\ref{fig:telas}c); a tela final mostra o pódio, as conquistas e a linha do tempo das escolhas e de suas consequências (Figura~\ref{fig:telas}d).
+Na criação, o jogador escolhe um de três \emph{dons} (custos fixos 10\% menores; um freela mensal e eventos positivos maiores; ou mais pontos de habilidade). Cada dilema respondido dá um ponto para a Universidade, uma constelação de doze habilidades em três caminhos --- Técnico (renda), Comunicação (descontos) e Gestão (bônus sobre o que se guarda). Três cupons escondidos no mapa, um por fase do ano, premiam quem explora. Um \emph{caderninho} sempre disponível explica como jogar e traz um glossário de 21 termos (Figura~\ref{fig:telas}c); a tela final mostra o pódio, as conquistas e a linha do tempo das escolhas e de suas consequências (Figura~\ref{fig:telas}d).
 
 \begin{figure}[ht]
   \centering
@@ -179,7 +179,7 @@ O administrador cria uma sala por turma, distribui o código e acompanha, em tem
 
 O cliente é uma aplicação React~19 com Vite, Tailwind CSS e Framer Motion; o estado global usa Zustand. O servidor é Node.js com Express~5, Prisma~5 sobre SQLite (Turso em produção) e Socket.IO para avisar a turma quando o mês vira.
 
-\paragraph{Matemática em funções puras.} Toda regra de dinheiro — juros, cheque especial, imposto de renda, rendimento das aplicações, dilemas, consequências, eventos e cobrança do que ficou em aberto — está em módulos sem acesso a banco de dados. O motor de turnos apenas lê o estado, chama essas funções e grava o resultado. Isso permite testar cada regra isoladamente e reutilizá-la no cliente.
+\paragraph{Matemática em funções puras.} Toda regra de dinheiro --- juros, cheque especial, imposto de renda, rendimento das aplicações, dilemas, consequências, eventos e cobrança do que ficou em aberto --- está em módulos sem acesso a banco de dados. O motor de turnos apenas lê o estado, chama essas funções e grava o resultado. Isso permite testar cada regra isoladamente e reutilizá-la no cliente.
 
 \paragraph{Consequências agendadas.} Ao responder um dilema, o servidor grava a escolha e as consequências futuras numa tabela de efeitos (mês de aplicação, tipo, valor e rótulo). Na virada, o motor aplica os efeitos daquele mês e os marca como aplicados; efeitos depois de dezembro permanecem como dívida. Tipos de efeito cobrem dinheiro, parcelas, aumento de salário, mês sem salário, aluguel já pago e avisos.
 
@@ -257,7 +257,7 @@ A rodada final teve 66 salas, ou 792 anos jogados, em 441 segundos, sem nenhum e
       ytick={1,...,5},
       yticklabels={Caminho da Universidade, Dom, Investir ou deixar na conta, Ações às cegas ou poupança, Dilemas: cuidado ou descuido},
       y tick label style={font=\small}, x tick label style={font=\small},
-      scaled x ticks=false,
+      scaled x ticks=false, xtick={0,4000,8000,12000,16000},
       nodes near coords, nodes near coords style={font=\scriptsize},
       axis x line*=bottom, axis y line*=left, enlarge y limits=0.12
     ]
