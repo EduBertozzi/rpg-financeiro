@@ -206,8 +206,8 @@ describe('custos fixos', () => {
   const costsUpdate = () => prismaMock.character.update.mock.calls.find(([args]) => 'isBankrupt' in (args?.data ?? {}))[0]
   const logs = () => prismaMock.characterEventLog.create.mock.calls.map(([args]) => args.data)
 
-  it('caixa que não cobre o aluguel fica negativo com o valor inteiro', async () => {
-    setupOne(makeCharacter({ cash: 100, housingCost: 1000 }))
+  it('caixa + salário que não cobrem o aluguel ficam negativos com o valor inteiro', async () => {
+    setupOne(makeCharacter({ cash: 100, housingCost: 8000 })) // 100 + 7000 - 8000
     await processTurn('room-1')
 
     expect(costsUpdate().data).toEqual({ cash: -900, overdraftDebt: 0, isBankrupt: true })
@@ -217,7 +217,7 @@ describe('custos fixos', () => {
     setupOne(makeCharacter({ cash: -1000, housingCost: 1000 }))
     await processTurn('room-1')
 
-    expect(costsUpdate().data.cash).toBe(-2080)
+    expect(costsUpdate().data.cash).toBe(4920) // -1000 - 80 juros + 7000 salário - 1000 aluguel
     expect(logs()).toContainEqual(expect.objectContaining({
       turn: 2, cashImpact: -80, description: expect.stringContaining('Cheque especial: Juros de 8%'),
     }))
@@ -228,14 +228,39 @@ describe('custos fixos', () => {
     await processTurn('room-1')
 
     expect(logs().some((l) => l.description.startsWith('Cheque especial'))).toBe(false)
-    expect(costsUpdate().data).toEqual({ cash: 4000, overdraftDebt: 0, isBankrupt: false })
+    expect(costsUpdate().data).toEqual({ cash: 11000, overdraftDebt: 0, isBankrupt: false })
   })
 
   it('dívida antiga (overdraftDebt) volta para o saldo e é zerada', async () => {
     setupOne(makeCharacter({ cash: 2000, overdraftDebt: 500, housingCost: 1000 }))
     await processTurn('room-1')
 
-    expect(costsUpdate().data).toEqual({ cash: 500, overdraftDebt: 0, isBankrupt: false })
+    expect(costsUpdate().data).toEqual({ cash: 7500, overdraftDebt: 0, isBankrupt: false })
+  })
+
+  it('o salário de R$ 7.000 entra todo mês e aparece no extrato', async () => {
+    setupOne(makeCharacter({ cash: 0, housingCost: 1500 }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().data.cash).toBe(5500)
+    expect(logs()).toContainEqual(expect.objectContaining({
+      turn: 2, cashImpact: 7000, description: expect.stringContaining('Salário'),
+    }))
+  })
+
+  it('o salário abate o cheque especial antes de sobrar saldo', async () => {
+    setupOne(makeCharacter({ cash: -3000, housingCost: 1500 }))
+    await processTurn('room-1')
+
+    // -3000 - 240 juros + 7000 - 1500 = 2260: sai do cheque especial
+    expect(costsUpdate().data).toEqual({ cash: 2260, overdraftDebt: 0, isBankrupt: false })
+  })
+
+  it('dívida maior que o salário continua no cheque especial', async () => {
+    setupOne(makeCharacter({ cash: -10000, housingCost: 1500 }))
+    await processTurn('room-1')
+
+    expect(costsUpdate().data).toEqual({ cash: -5300, overdraftDebt: 0, isBankrupt: true })
   })
 
   it('o snapshot conta o saldo negativo como dívida', async () => {
@@ -253,9 +278,9 @@ describe('custos fixos', () => {
     setupOne(makeCharacter({ cash: -1000, housingCost: 1000 }))
     const { results } = await processTurn('room-1')
 
-    // custo = 1000 aluguel + 80 juros; evento é aleatório
-    const event = logs().find((l) => !l.description.startsWith('Aluguel') && !l.description.startsWith('Cheque'))
-    expect(results[0].cashDelta).toBeCloseTo(-1080 + event.cashImpact, 2)
+    // salário 7000 - 1000 aluguel - 80 juros; evento é aleatório
+    const event = logs().find((l) => !/^(Aluguel|Cheque|Salário)/.test(l.description))
+    expect(results[0].cashDelta).toBeCloseTo(7000 - 1080 + event.cashImpact, 2)
   })
 })
 

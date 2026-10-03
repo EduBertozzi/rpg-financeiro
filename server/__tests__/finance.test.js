@@ -3,7 +3,7 @@ const {
   ANNUAL_RATES, SELIC_ANNUAL, cents, monthlyFromAnnual, getMonthlyRate, incomeTaxRate,
   monthlyReturn, principalOf, redemptionOf, planWithdrawal, debentureMaturity,
   debentureReturn, averagePrice, nextStockPrice,
-  OVERDRAFT_MONTHLY_RATE, overdraftInterest, closeMonth, balanceSheet,
+  OVERDRAFT_MONTHLY_RATE, SALARY, overdraftInterest, closeMonth, balanceSheet,
 } = require('../src/utils/finance')
 
 // Simula o turnEngine: todo mês soma amount * monthlyRate em amount.
@@ -409,6 +409,43 @@ describe('closeMonth', () => {
   it('cheque especial custa muito mais que a melhor caixinha rende', () => {
     const best = Math.max(...Object.keys(ANNUAL_RATES).map(getMonthlyRate))
     expect(OVERDRAFT_MONTHLY_RATE).toBeGreaterThan(best * 5)
+  })
+})
+
+describe('salário na virada do mês', () => {
+  it('o salário é R$ 7.000', () => {
+    expect(SALARY).toBe(7000)
+  })
+
+  it('entra depois dos juros e antes do aluguel', () => {
+    // juros calculados sobre o saldo com que o mês fechou, não sobre o saldo depois do salário
+    expect(closeMonth(-1000, 1500, 0, 7000)).toEqual({ opening: -1000, interest: 80, closing: 4420, inOverdraft: false })
+  })
+
+  it('cobre o aluguel de quem fechou o mês zerado', () => {
+    expect(closeMonth(0, 1500, 0, 7000).closing).toBe(5500)
+  })
+
+  it('não basta para uma dívida grande: continua no cheque especial', () => {
+    const m = closeMonth(-10000, 1500, 0, 7000)
+    expect(m.closing).toBe(-5300)
+    expect(m.inOverdraft).toBe(true)
+  })
+
+  it('12 meses só de salário e aluguel acumulam a sobra', () => {
+    let cash = 0
+    for (let i = 0; i < 12; i++) cash = closeMonth(cash, 1500, 0, 7000).closing
+    expect(cash).toBe(66000)
+  })
+
+  it('quem vive no negativo perde para quem paga em dia, mesmo com salário', () => {
+    let debtor = -5000
+    let payer = 0
+    for (let i = 0; i < 6; i++) {
+      debtor = closeMonth(debtor, 7500, 0, 7000).closing // gasta mais do que ganha
+      payer = closeMonth(payer, 7500, 0, 7000).closing
+    }
+    expect(payer - debtor).toBeGreaterThan(5000) // a diferença é a dívida + os juros
   })
 })
 

@@ -1,5 +1,5 @@
 const prisma = require('../lib/prisma')
-const { monthlyReturn, debentureReturn, nextStockPrice, closeMonth, balanceSheet, OVERDRAFT_MONTHLY_RATE } = require('./finance')
+const { monthlyReturn, debentureReturn, nextStockPrice, closeMonth, balanceSheet, OVERDRAFT_MONTHLY_RATE, SALARY } = require('./finance')
 
 const EVENTS = [
   { title: 'Resistência Queimada', description: 'A resistência do seu chuveiro queimou.', cashImpact: -200, category: 'daily' },
@@ -112,9 +112,10 @@ async function applyFixedCosts(character, turn) {
   // foodCost, utilitiesCost e transportCost agora são pagos manualmente pelo
   // jogador durante o mês (Mercadinho, Água e Luz, Internet e Celular — ver
   // billController.js); só o aluguel continua sendo descontado automaticamente.
-  // Antes dele, quem fechou o mês no negativo paga os juros do cheque especial.
+  // Antes dele, quem fechou o mês no negativo paga os juros do cheque especial
+  // e entra o salário do mês novo.
   const totalCosts = Number(character.housingCost)
-  const month = closeMonth(character.cash, totalCosts, character.overdraftDebt)
+  const month = closeMonth(character.cash, totalCosts, character.overdraftDebt, SALARY)
 
   await prisma.character.update({
     where: { id: character.id },
@@ -136,12 +137,21 @@ async function applyFixedCosts(character, turn) {
     data: {
       characterId: character.id,
       turn,
+      cashImpact: SALARY,
+      description: `Salário: Depósito do mês (+R$ ${SALARY.toFixed(2)})`
+    }
+  })
+
+  await prisma.characterEventLog.create({
+    data: {
+      characterId: character.id,
+      turn,
       cashImpact: -totalCosts,
       description: `Aluguel: Casa — Pago (-R$ ${totalCosts})`
     }
   })
 
-  return { totalCosts: totalCosts + month.interest, interest: month.interest, newCash: month.closing }
+  return { totalCosts: totalCosts + month.interest, interest: month.interest, salary: SALARY, newCash: month.closing }
 }
 
 async function applyFixedIncomeReturns(character, turn) {
@@ -304,7 +314,7 @@ async function processTurn(roomId) {
     results.push({
       characterId: character.id,
       characterName: character.name,
-      cashDelta: -costs.totalCosts + returns + eventResult.cashImpact,
+      cashDelta: costs.salary - costs.totalCosts + returns + eventResult.cashImpact,
       event: eventResult.event,
       netWorth: snapshot.netWorth
     })

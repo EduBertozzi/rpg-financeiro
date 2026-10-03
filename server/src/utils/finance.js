@@ -16,6 +16,7 @@ const ANNUAL_RATES = {
 const DEBENTURE_TERM_MONTHS = 10
 const EARLY_REDEMPTION_MONTHS = 6
 const OVERDRAFT_MONTHLY_RATE = 0.08 // cheque especial: teto legal de 8% ao mês
+const SALARY = 7000 // salário fixo mensal de todo personagem
 
 const cents = (n) => Math.round(n * 100) / 100
 
@@ -89,13 +90,14 @@ const debentureReturn = (amount, annualRate, months) =>
 // dinheiro que entra na conta abate a dívida antes de sobrar saldo.
 const overdraftInterest = (cash) => (Number(cash) < 0 ? cents(-Number(cash) * OVERDRAFT_MONTHLY_RATE) : 0)
 
-// Fechamento do mês da conta: juros do cheque especial sobre o saldo do mês e
-// depois o aluguel. `legacyDebt` é a dívida antiga guardada fora do saldo, que
-// volta para o saldo para seguir a mesma regra.
-function closeMonth(cash, rent, legacyDebt = 0) {
+// Virada do mês na conta: juros do cheque especial sobre o saldo com que o mês
+// fechou, depois entra o salário do mês novo (que abate a dívida) e sai o
+// aluguel. `legacyDebt` é a dívida antiga guardada fora do saldo, que volta
+// para o saldo para seguir a mesma regra.
+function closeMonth(cash, rent, legacyDebt = 0, salary = 0) {
   const opening = cents(Number(cash) - Number(legacyDebt))
   const interest = overdraftInterest(opening)
-  const closing = cents(opening - interest - Number(rent))
+  const closing = cents(opening - interest + Number(salary) - Number(rent))
   return { opening, interest, closing, inOverdraft: closing < 0 }
 }
 
@@ -135,6 +137,7 @@ module.exports = {
   DEBENTURE_TERM_MONTHS,
   EARLY_REDEMPTION_MONTHS,
   OVERDRAFT_MONTHLY_RATE,
+  SALARY,
   cents,
   monthlyFromAnnual,
   getMonthlyRate,

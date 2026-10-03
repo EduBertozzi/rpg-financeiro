@@ -40,6 +40,19 @@ describe('POST /api/v1/characters', () => {
     expect(res.body.name).toBe('Dudu')
   })
 
+  it('começa com o salário de janeiro (R$ 7.000) na conta', async () => {
+    prismaMock.room.findUnique.mockResolvedValue({ id: 'room-1', status: 'waiting' })
+    prismaMock.character.findUnique.mockResolvedValue(null)
+    prismaMock.character.create.mockResolvedValue({ id: 'char-1', name: 'Dudu' })
+    prismaMock.characterSkillPoints.create.mockResolvedValue({})
+
+    await request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send(validBody)
+
+    expect(prismaMock.character.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ cash: 7000 }),
+    }))
+  })
+
   it('retorna 409 se usuário já tem personagem na sala', async () => {
     prismaMock.room.findUnique.mockResolvedValue({ id: 'room-1', status: 'waiting' })
     prismaMock.character.findUnique.mockResolvedValue({ id: 'char-existente' })

@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { SALARY } = require('../utils/finance')
 
 const GIFT_MODIFIERS = {
   frugal:  { housingCost: 0.85, foodCost: 0.85, utilitiesCost: 0.85, transportCost: 0.85 },
@@ -35,6 +36,7 @@ exports.createCharacter = async (req, res) => {
         avatarId,
         course,
         gift,
+        cash: SALARY, // começa com o salário de janeiro na conta
         housingCost:   mods.housingCost   ? 1500 * mods.housingCost   : 1500,
         foodCost:      mods.foodCost       ? 1000 * mods.foodCost       : 1000,
         utilitiesCost: mods.utilitiesCost  ? 250  * mods.utilitiesCost  : 250,
