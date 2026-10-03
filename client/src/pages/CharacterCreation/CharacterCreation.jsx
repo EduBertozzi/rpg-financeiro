@@ -10,7 +10,6 @@ import ProfessionalCard from '../../components/town/ProfessionalCard'
 import { TOY_BUTTON, TOY_CARD, TOY_ERROR, TOY_GHOST, TOY_INPUT, TOY_LABEL } from '../../components/town/toy'
 
 const STEPS = ['Quem é você', 'Seu dom', 'Sua carteira']
-const brl0 = (n) => `R$ ${Math.round(n).toLocaleString('pt-BR')}`
 
 export default function CharacterCreation() {
   const navigate = useNavigate()
@@ -151,7 +150,7 @@ export default function CharacterCreation() {
             <div className="grid gap-6">
               <div>
                 <h2 className="font-toy text-3xl font-extrabold">Qual é o seu dom?</h2>
-                <p className="text-[#6B7A62]">Os três valem quase o mesmo no ano. Muda o jeito: um é garantido, outro depende da sorte, outro acelera a Universidade. Você escolhe só um, e não dá para trocar depois.</p>
+                <p className="text-[#6B7A62]">Escolha pelo seu jeito de jogar. Você escolhe só um, e não dá para trocar depois.</p>
               </div>
               <div className="grid gap-4 md:grid-cols-3">
                 {GIFTS.map((g) => {
@@ -169,7 +168,7 @@ export default function CharacterCreation() {
                       <span className="font-toy text-[22px] font-extrabold leading-tight">{g.name}</span>
                       <span className="text-[15px] leading-snug text-[#4A5A42]">{g.effect}</span>
                       <span className="rounded-full px-3 py-1 text-xs font-extrabold" style={{ background: `color-mix(in srgb, ${g.color} 16%, #fff)` }}>
-                        ≈ {brl0(g.year)} no ano · {g.style}
+                        {g.style}
                       </span>
                     </button>
                   )

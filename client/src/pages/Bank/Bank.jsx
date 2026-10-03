@@ -186,7 +186,7 @@ export default function Bank() {
   const initials = (character?.name ?? '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
   return (
-    <GameLayout>
+    <GameLayout light>
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
         <div className="relative overflow-hidden rounded-[28px] bg-[#F3F6F6] text-[#10201E] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
           {/* cabeçalho da marca */}

@@ -33,7 +33,7 @@ const IconClose = (p) => (
   </svg>
 )
 
-const PANEL = 'rounded-2xl border border-white/15 bg-[color-mix(in_srgb,var(--theme-bg)_82%,transparent)] shadow-[0_12px_40px_rgba(0,0,0,0.35)] backdrop-blur-md'
+const PANEL = 'rounded-[24px] bg-[#FFFDF7]/95 text-[#24331F] shadow-[0_6px_0_#E2D6BE,0_16px_36px_rgba(36,51,31,0.2)] backdrop-blur'
 
 const GUIDE_TIPS = [
   {
@@ -295,9 +295,9 @@ export default function Map() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex w-full max-w-xs flex-col gap-3">
             <div className={`pointer-events-auto ${PANEL} px-5 py-4`}>
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">Mapa</p>
-              <h2 className="mt-0.5 text-2xl font-black tracking-tight">Cidade de Santa Rita</h2>
-              <p className="mt-1 hidden text-xs text-gray-300 sm:block">Passe o mouse pela cidade e clique num prédio para entrar.</p>
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">Mapa</p>
+              <h2 className="font-toy text-[26px] font-extrabold leading-tight text-[#2457C5]">Cidade de Santa Rita</h2>
+              <p className="mt-0.5 hidden text-xs text-[#6B7A62] sm:block">Passe o mouse pela cidade e clique num prédio para entrar.</p>
             </div>
 
           </div>
@@ -305,8 +305,8 @@ export default function Map() {
           {!isWaiting && (
             <div className={`pointer-events-auto flex flex-col items-end gap-3 ${PANEL} px-5 py-4`}>
               <div className="text-right">
-                <p className="mb-1 text-xs font-black uppercase tracking-[0.2em] text-gray-300">
-                  {monthName ?? 'Mês'} · <span className="text-[var(--theme-secondary)]">{currentTurn}</span> / 12
+                <p className="mb-1.5 font-toy text-[17px] font-extrabold text-[#24331F]">
+                  {monthName ?? 'Mês'} · <span className="text-[#2457C5]">{currentTurn}</span><span className="text-[#A9B19E]"> / 12</span>
                 </p>
 
                 <div className="flex w-48 gap-1">
@@ -319,10 +319,10 @@ export default function Map() {
                       <div
                         key={m}
                         className={`h-2 flex-1 rounded-full transition-all duration-500 ${active
-                            ? 'bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-secondary)] shadow-[0_0_8px_var(--theme-glow)]'
+                            ? 'bg-[#2457C5]'
                             : done
-                              ? 'bg-primary/70'
-                              : 'bg-white/15'
+                              ? 'bg-[#3DBE5A]'
+                              : 'bg-[#EFE6D3]'
                           }`}
                       />
                     )
@@ -334,9 +334,9 @@ export default function Map() {
                 type="button"
                 onClick={handleFinishMonth}
                 disabled={character?.turnReady}
-                className={`rounded-2xl border px-5 py-2.5 text-sm font-black transition-all active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
-                    ? 'border-green-500/30 bg-green-600/15 text-green-300'
-                    : 'border-primary/40 bg-primary/25 text-white shadow-[0_0_18px_var(--theme-glow)] hover:bg-primary/40 hover:border-primary/70 hover:shadow-[0_0_28px_var(--theme-glow)] hover:-translate-y-0.5'
+                className={`rounded-[16px] px-5 py-2 font-toy text-[17px] font-extrabold transition-transform cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
+                    ? 'bg-[#E2F4E5] text-[#2B8C41]'
+                    : 'bg-[#3DBE5A] text-white shadow-[0_5px_0_#2B8C41] hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_1px_0_#2B8C41]'
                   }`}
               >
                 {character?.turnReady ? 'Mês finalizado' : 'Encerrar mês'}
@@ -346,18 +346,18 @@ export default function Map() {
         </div>
 
         {isWaiting && (
-          <div className="pointer-events-auto mx-auto max-w-md rounded-3xl border border-white/10 bg-[var(--theme-bg)]/90 p-8 text-center backdrop-blur-md animate-fade-in-up">
-            <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-yellow-400/30 bg-yellow-500/10 text-yellow-300">
+          <div className={`pointer-events-auto mx-auto max-w-md ${PANEL} p-8 text-center animate-fade-in-up`}>
+            <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#FDF1D6] text-[#C98A12]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-7 w-7 animate-pulse">
                 <circle cx="12" cy="12" r="9" />
                 <path d="M12 7v5l3 3" />
               </svg>
             </span>
-            <h3 className="mt-4 text-xl font-black text-white">Aguardando início da partida</h3>
-            <p className="mt-2 text-sm text-gray-400">
+            <h3 className="mt-4 font-toy text-2xl font-extrabold">Aguardando início da partida</h3>
+            <p className="mt-2 text-sm text-[#6B7A62]">
               O administrador ainda não iniciou a sala. Assim que a partida começar, a cidade fica disponível e o mês 1 tem início automaticamente.
             </p>
-            <p className="mt-4 text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-muted)]">
+            <p className="mt-4 font-mono text-sm font-bold tracking-[0.2em] text-[#8A9680]">
               Sala {room?.code}
             </p>
           </div>
@@ -366,22 +366,22 @@ export default function Map() {
         <div className="flex items-end justify-between gap-4">
           {!isWaiting && checklist.length > 0 && (
             <div className={`pointer-events-auto hidden w-64 sm:block ${PANEL} p-4`}>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[var(--theme-muted)]">
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">
                 Checklist de {monthName}
               </p>
-              <p className="mt-0.5 text-sm font-black text-white">{doneCount}/{checklist.length} concluídos</p>
+              <p className="font-toy text-[18px] font-extrabold">{doneCount}/{checklist.length} concluídos</p>
               <ul className="mt-3 flex flex-col gap-1.5">
                 {checklist.map((b) => (
                   <li key={b.id}>
                     <button
                       type="button"
                       onClick={() => handleBuilding(b)}
-                      className="flex w-full items-center gap-2 rounded-lg px-1 py-0.5 text-left text-xs transition-colors hover:bg-white/5 cursor-pointer"
+                      className="flex w-full items-center gap-2 rounded-lg px-1 py-0.5 text-left text-[13px] font-semibold transition-colors hover:bg-[#F1EBDD] cursor-pointer"
                     >
-                      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${b.done ? 'border-green-400 bg-green-500 text-white' : 'border-yellow-400/60 text-transparent'}`}>
+                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${b.done ? 'border-[#3DBE5A] bg-[#3DBE5A] text-white' : 'border-[#F2B53A] text-transparent'}`}>
                         <IconCheck className="h-3 w-3" />
                       </span>
-                      <span className={b.done ? 'text-gray-500 line-through' : 'text-gray-200'}>{b.name}</span>
+                      <span className={b.done ? 'text-[#A9B19E] line-through' : 'text-[#24331F]'}>{b.name}</span>
                     </button>
                   </li>
                 ))}
@@ -392,13 +392,13 @@ export default function Map() {
             {showGuide ? (
               <div className={`pointer-events-auto hidden w-72 lg:block ${PANEL} p-5 animate-fade-in-up`}>
                 <div className="mb-4 flex items-center gap-2">
-                  <IconGuide className="h-5 w-5 text-[var(--theme-secondary)]" />
-                  <h3 className="flex-1 text-sm font-black uppercase tracking-[0.2em] text-white">Guia Rápido</h3>
+                  <IconGuide className="h-5 w-5 text-[#2457C5]" />
+                  <h3 className="flex-1 font-toy text-[19px] font-extrabold">Guia rápido</h3>
                   <button
                     type="button"
                     onClick={() => setShowGuide(false)}
                     aria-label="Fechar guia rápido"
-                    className="rounded-lg p-1 text-gray-400 transition-colors hover:bg-white/10 hover:text-white cursor-pointer"
+                    className="rounded-lg p-1 text-[#8A9680] transition-colors hover:bg-[#F1EBDD] hover:text-[#24331F] cursor-pointer"
                   >
                     <IconClose className="h-4 w-4" />
                   </button>
@@ -406,9 +406,9 @@ export default function Map() {
 
                 <div className="flex flex-col gap-4">
                   {GUIDE_TIPS.map((tip) => (
-                    <div key={tip.title} className="border-l-2 border-white/15 pl-3">
-                      <p className="text-sm font-bold text-white">{tip.title}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-gray-300">{tip.desc}</p>
+                    <div key={tip.title} className="border-l-[3px] border-[#EFE6D3] pl-3">
+                      <p className="text-sm font-extrabold">{tip.title}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-[#6B7A62]">{tip.desc}</p>
                     </div>
                   ))}
                 </div>
@@ -417,9 +417,9 @@ export default function Map() {
               <button
                 type="button"
                 onClick={() => setShowGuide(true)}
-                className={`pointer-events-auto hidden items-center gap-2 lg:flex ${PANEL} px-4 py-2.5 text-xs font-black uppercase tracking-[0.2em] text-white transition-colors hover:bg-white/10 cursor-pointer`}
+                className={`pointer-events-auto hidden items-center gap-2 lg:flex ${PANEL} px-4 py-2.5 font-toy text-[16px] font-extrabold transition-transform hover:-translate-y-0.5 cursor-pointer`}
               >
-                <IconGuide className="h-4 w-4 text-[var(--theme-secondary)]" /> Guia Rápido
+                <IconGuide className="h-4 w-4 text-[#2457C5]" /> Guia rápido
               </button>
             )}
           </div>

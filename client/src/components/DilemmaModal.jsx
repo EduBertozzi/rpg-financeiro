@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import api from '../services/api'
 import useGameStore from '../store/gameStore'
+import { TOY_CARD, TOY_ERROR } from './town/toy'
+import leisureArt from '../assets/buildings/leisure.png'
 
 export default function DilemmaModal({ onClose, onComplete }) {
   const { character, room } = useGameStore()
@@ -47,72 +49,70 @@ export default function DilemmaModal({ onClose, onComplete }) {
     }
   }
 
+  const pink = 'bg-[#EC4899] shadow-[0_5px_0_#B8336F] hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_1px_0_#B8336F]'
+  const money = (v) => `${v > 0 ? '+' : '−'}R$ ${Math.abs(Number(v)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-darker border border-yellow-700 rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up">
-        
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
+    >
+      <div role="dialog" aria-label="Lazer do mês" className={`w-full max-w-xl ${TOY_CARD} px-6 pb-7 pt-3 sm:px-8 animate-fade-in-up`}>
+        <img src={leisureArt} alt="" className="mx-auto -mt-20 h-32 drop-shadow-[0_10px_10px_rgba(0,0,0,0.18)]" />
+
         {loading ? (
-          <div className="p-12 text-center">
-            <p className="text-gray-400">Carregando lazer do mês...</p>
-          </div>
+          <p className="py-10 text-center text-[#6B7A62]">Carregando o lazer do mês…</p>
         ) : !dilemma ? (
-          <div className="p-12 text-center">
-            <p className="text-gray-400 mb-6">
-              {!room?.currentTurn ? "A partida ainda não começou!" : "Nenhum lazer este mês."}
-            </p>
-            <button onClick={handleClose} className="px-6 py-2 bg-primary text-white rounded-lg">Fechar</button>
+          <div className="grid justify-items-center gap-5 py-6 text-center">
+            <p className="text-[#6B7A62]">{!room?.currentTurn ? 'A partida ainda não começou!' : 'Nenhum lazer este mês.'}</p>
+            <button type="button" onClick={handleClose} className={`rounded-[16px] px-6 py-2 font-toy text-[17px] font-extrabold text-white transition-transform cursor-pointer ${pink}`}>Fechar</button>
           </div>
         ) : (
-          <div className="p-8">
-            <div className="text-center mb-6">
-              <span className="text-4xl">⚡</span>
-              <h2 className="text-2xl font-bold text-white mt-2">Lazer do Mês</h2>
-              <p className="text-yellow-400 text-sm">Mês {room?.currentTurn} de 12</p>
+          <div className="grid gap-5">
+            <div className="text-center">
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#B8336F]">Lazer · mês {room?.currentTurn} de 12</p>
+              <h2 className="font-toy text-[30px] font-extrabold leading-tight">{dilemma.title}</h2>
             </div>
 
             {!result ? (
-              <div className="bg-card border border-border rounded-2xl p-6">
-                <h3 className="text-lg font-bold text-white mb-3">{dilemma.title}</h3>
-                <p className="text-gray-300 mb-6 text-sm leading-relaxed">{dilemma.description}</p>
-                <div className="space-y-3">
+              <>
+                <p className="text-center text-[15px] leading-relaxed text-[#4A5A42]">{dilemma.description}</p>
+                <div className="grid gap-3">
                   {dilemma.options.map((option, index) => (
-                    <button key={index} onClick={() => handleChoose(index)} disabled={choosing}
-                      className="w-full p-3 bg-dark border border-border hover:border-yellow-500 rounded-xl text-left transition-all disabled:opacity-50">
-                      <div className="flex items-start gap-3">
-                        <span className="text-yellow-400 font-bold">{option.label}</span>
-                        <p className="text-gray-300 text-sm leading-relaxed">{option.text}</p>
-                      </div>
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleChoose(index)}
+                      disabled={choosing}
+                      className="flex items-center gap-3 rounded-[20px] border-[3px] border-[#EFE6D3] bg-white p-3.5 text-left transition-[transform,border-color] hover:-translate-y-0.5 hover:border-[#EC4899] disabled:opacity-60 cursor-pointer"
+                    >
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#FCE4F1] font-toy text-lg font-extrabold text-[#B8336F]">{option.label}</span>
+                      <span className="text-[15px] font-semibold leading-snug">{option.text}</span>
                     </button>
                   ))}
                 </div>
-                {error && (
-                  <p className="mt-4 text-center text-sm text-red-400">{error}</p>
-                )}
-                <div className="mt-4 text-center">
-                  <button onClick={handleClose} className="text-gray-500 hover:text-white text-sm">Cancelar</button>
-                </div>
-              </div>
+                {error && <p className={TOY_ERROR}>{error}</p>}
+                <button type="button" onClick={handleClose} className="justify-self-center text-sm font-bold text-[#8A9680] hover:text-[#24331F] cursor-pointer">Agora não</button>
+              </>
             ) : (
-              <div className="bg-card border border-yellow-700 rounded-2xl p-8 text-center space-y-6">
-                <div className="text-5xl">{result.cashImpact > 0 ? '🎉' : result.cashImpact < 0 ? '😬' : '😐'}</div>
-                <h3 className="text-xl font-bold text-white">{wasAlreadyAnswered ? 'Lazer já concluído' : 'Resultado'}</h3>
-                <p className="text-gray-300 text-sm">{result.result}</p>
+              <div className="grid justify-items-center gap-4 text-center">
+                <p className="font-toy text-xl font-extrabold">{wasAlreadyAnswered ? 'Lazer já concluído' : 'Resultado'}</p>
+                <p className="text-[15px] text-[#4A5A42]">{result.result}</p>
                 {result.cashImpact !== 0 && (
-                  <p className={`text-2xl font-bold ${result.cashImpact > 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {result.cashImpact > 0 ? '+' : ''}R$ {Number(result.cashImpact).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <p className={`font-toy text-[34px] font-extrabold tabular-nums ${result.cashImpact > 0 ? 'text-[#2B8C41]' : 'text-[#C4283D]'}`}>
+                    {money(result.cashImpact)}
                   </p>
                 )}
                 {!wasAlreadyAnswered && (
-                  <p className="text-yellow-400 text-sm">+1 ponto de habilidade ganho!</p>
+                  <p className="rounded-full bg-[#EEE7FE] px-4 py-1.5 text-sm font-extrabold text-[#6538C9]">+1 ponto de habilidade para a Universidade</p>
                 )}
-                <button onClick={handleClose} className="px-8 py-3 bg-primary hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
-                  {wasAlreadyAnswered ? 'Fechar' : 'Concluir Lazer'}
+                <button type="button" onClick={handleClose} className={`rounded-[16px] px-8 py-2.5 font-toy text-[18px] font-extrabold text-white transition-transform cursor-pointer ${pink}`}>
+                  {wasAlreadyAnswered ? 'Fechar' : 'Concluir lazer'}
                 </button>
               </div>
             )}
           </div>
         )}
-
       </div>
     </div>
   )

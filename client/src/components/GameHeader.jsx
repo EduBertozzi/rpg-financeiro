@@ -96,7 +96,20 @@ function Icon({ name, className = 'h-5 w-5' }) {
   return icons[name] || null
 }
 
+// Cor de cada lugar da cidade, igual aos prédios do mapa.
+const TONES = {
+  map: { bg: '#3DBE5A', edge: '#2B8C41', soft: '#E2F4E5' },
+  bank: { bg: '#12B5A6', edge: '#0A7F75', soft: '#DDF4F1' },
+  skills: { bg: '#8A5CF6', edge: '#6538C9', soft: '#EEE7FE' },
+  admin: { bg: '#F2B53A', edge: '#C98A12', soft: '#FDF1D6' },
+}
+
 function MenuItem({ active, icon, label, description, onClick, expanded }) {
+  const tone = TONES[icon] ?? TONES.map
+  const tile = active
+    ? { background: tone.bg, color: '#fff', boxShadow: `0 4px 0 ${tone.edge}` }
+    : { background: tone.soft, color: tone.edge }
+
   if (!expanded) {
     return (
       <button
@@ -104,12 +117,9 @@ function MenuItem({ active, icon, label, description, onClick, expanded }) {
         onClick={onClick}
         title={label}
         aria-label={label}
-        className={[
-          'grid h-11 w-11 place-items-center rounded-2xl border transition-all duration-200 active:scale-95 cursor-pointer',
-          active
-            ? 'border-primary/60 bg-primary/20 text-white shadow-[0_0_16px_var(--theme-glow)]'
-            : 'border-white/10 bg-white/[0.035] text-gray-400 hover:border-primary/50 hover:text-white',
-        ].join(' ')}
+        aria-current={active ? 'page' : undefined}
+        style={tile}
+        className="grid h-12 w-12 place-items-center rounded-2xl transition-transform hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
       >
         <Icon name={icon} className="h-5 w-5" />
       </button>
@@ -120,81 +130,43 @@ function MenuItem({ active, icon, label, description, onClick, expanded }) {
     <button
       type="button"
       onClick={onClick}
+      aria-current={active ? 'page' : undefined}
       className={[
-        'group relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border px-3 py-2 text-left cursor-pointer',
-        'transition-all duration-200 active:scale-[0.98]',
-        active
-          ? 'border-primary/60 bg-primary/15 shadow-[0_0_20px_var(--theme-glow)]'
-          : 'border-white/10 bg-white/[0.035] hover:border-primary/50 hover:bg-white/[0.07]',
+        'flex w-full items-center gap-3 rounded-[20px] border-2 px-2.5 py-2 text-left transition-transform hover:-translate-y-0.5 cursor-pointer',
+        active ? 'bg-white' : 'border-transparent hover:bg-white/70',
       ].join(' ')}
+      style={active ? { borderColor: tone.bg, boxShadow: `0 4px 0 ${tone.bg}` } : undefined}
     >
-      {active && (
-        <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[var(--theme-secondary)] shadow-[0_0_12px_var(--theme-glow)]" />
-      )}
-
-      <div
-        className={[
-          'grid h-10 w-10 shrink-0 place-items-center rounded-2xl border transition-all duration-200',
-          active
-            ? 'border-primary/60 bg-primary/20 text-white'
-            : 'border-white/10 bg-black/20 text-gray-400 group-hover:text-white',
-        ].join(' ')}
-      >
+      <span style={tile} className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl">
         <Icon name={icon} className="h-5 w-5" />
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-[15px] font-black text-white">{label}</p>
-        <p className="mt-0.5 truncate text-[11px] font-medium text-gray-500">
-          {description}
-        </p>
-      </div>
+      </span>
+      <span className="min-w-0">
+        <span className="block font-toy text-[18px] font-extrabold leading-tight text-[#24331F]">{label}</span>
+        <span className="block truncate text-[12px] font-medium text-[#6B7A62]">{description}</span>
+      </span>
     </button>
   )
 }
 
 function StatusCard({ icon, label, value, helper, tone = 'theme' }) {
+  const color = tone === 'money' ? '#2B8C41' : tone === 'debt' ? '#C4283D' : '#2457C5'
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3 shadow-inner shadow-black/20">
-      <div className="flex items-center gap-2">
-        <div className="grid h-7 w-7 place-items-center rounded-xl border border-white/10 bg-black/20 text-[var(--theme-secondary)]">
-          <Icon name={icon} className="h-4 w-4" />
-        </div>
-
-        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-gray-500">
-          {label}
-        </p>
+    <div className="rounded-[20px] border-2 border-[#EFE6D3] bg-white p-3">
+      <div className="flex items-center gap-2 text-[#8A9680]">
+        <Icon name={icon} className="h-4 w-4" />
+        <p className="text-[10px] font-extrabold uppercase tracking-[0.18em]">{label}</p>
       </div>
-
-      <p
-        className={[
-          'mt-2 text-base font-black',
-          tone === 'money'
-            ? 'text-emerald-300'
-            : tone === 'debt'
-            ? 'text-red-400'
-            : 'text-[var(--theme-secondary)]',
-        ].join(' ')}
-      >
-        {value}
-      </p>
-
-      {helper && (
-        <p className="mt-0.5 text-[11px] font-medium text-gray-500">
-          {helper}
-        </p>
-      )}
+      <p className="mt-1.5 font-toy text-[19px] font-extrabold leading-tight tabular-nums" style={{ color }}>{value}</p>
+      {helper && <p className="text-[11px] font-semibold text-[#8A9680]">{helper}</p>}
     </div>
   )
 }
 
-function CompactStat({ icon, value, tone }) {
+function CompactStat({ icon, value, color }) {
   return (
-    <div className="flex flex-col items-center gap-1">
-      <div className={`grid h-8 w-8 place-items-center rounded-xl border border-white/10 bg-black/20 ${tone}`}>
-        <Icon name={icon} className="h-4 w-4" />
-      </div>
-      <span className={`text-[10px] font-black leading-none ${tone}`}>{value}</span>
+    <div className="flex flex-col items-center gap-0.5" style={{ color }}>
+      <Icon name={icon} className="h-4 w-4" />
+      <span className="font-toy text-[13px] font-extrabold leading-none tabular-nums">{value}</span>
     </div>
   )
 }
@@ -209,29 +181,12 @@ export default function GameHeader() {
   if (!character) return null
 
   const navItems = [
-    {
-      label: 'Mapa',
-      path: '/map',
-      icon: 'map',
-      description: 'Cidade e ações principais',
-    },
-    {
-      label: 'Banco',
-      path: '/bank',
-      icon: 'bank',
-      description: 'Conta, caixinhas e ações',
-    },
-    {
-      label: 'Universidade',
-      path: '/skills',
-      icon: 'skills',
-      description: 'Constelação de habilidades',
-    },
+    { label: 'Mapa', path: '/map', icon: 'map', description: 'Cidade e ações principais' },
+    { label: 'Banco', path: '/bank', icon: 'bank', description: 'Conta, caixinhas e ações' },
+    { label: 'Universidade', path: '/skills', icon: 'skills', description: 'Constelação de habilidades' },
   ]
 
-  function goTo(route) {
-    navigate(route)
-  }
+  const negative = Number(character.cash) < 0
 
   function handleLogout() {
     logout()
@@ -243,107 +198,70 @@ export default function GameHeader() {
       onMouseEnter={() => setSidebarExpanded(true)}
       onMouseLeave={() => setSidebarExpanded(false)}
       className={[
-        'fixed left-0 top-0 z-40 h-screen border-r border-white/10 bg-[var(--theme-bg)]/92 backdrop-blur-2xl',
-        'shadow-[8px_0_40px_rgba(0,0,0,0.4)] transition-[width] duration-300 ease-out',
+        'fixed left-0 top-0 z-40 h-screen bg-[#FFFDF7] text-[#24331F]',
+        'shadow-[6px_0_0_#E2D6BE,12px_0_40px_rgba(36,51,31,0.18)] transition-[width] duration-300 ease-out',
         sidebarExpanded ? 'w-80' : 'w-20',
       ].join(' ')}
     >
       <div className="relative flex h-full flex-col overflow-hidden">
-        <div className="pointer-events-none absolute left-[-25%] top-[-12%] h-72 w-72 rounded-full bg-[var(--theme-primary)]/30 blur-[95px]" />
-        <div className="pointer-events-none absolute bottom-[-15%] right-[-25%] h-72 w-72 rounded-full bg-[var(--theme-secondary)]/20 blur-[95px]" />
-
-        <div className="relative shrink-0 border-b border-white/10 p-4">
+        <div className="shrink-0 border-b-2 border-dashed border-[#EFE6D3] p-4">
           {sidebarExpanded ? (
-            <div className="flex items-start justify-between gap-4">
-              <button
-                type="button"
-                onClick={() => setSidebarExpanded(false)}
-                className="flex min-w-0 items-center gap-3 text-left cursor-pointer"
-                title="Recolher"
-              >
-                <Avatar id={character.avatarId} size={66} selected />
-
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar id={character.avatarId} size={62} selected />
                 <div className="min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">
-                    Jogador
-                  </p>
-
-                  <h2 className="mt-1 truncate text-xl font-black text-white">
-                    {character.name}
-                  </h2>
-
-                  <p className="mt-0.5 truncate text-xs font-medium text-gray-400">
-                    {character.course}
-                  </p>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">Morador</p>
+                  <h2 className="truncate font-toy text-[22px] font-extrabold leading-tight">{character.name}</h2>
+                  <p className="truncate text-xs font-medium text-[#6B7A62]">{character.course}</p>
                 </div>
-              </button>
-
+              </div>
               <button
                 type="button"
                 onClick={() => setSidebarExpanded(false)}
-                aria-label="Recolher HUD"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/[0.035] text-gray-400 transition-all hover:border-primary/50 hover:text-white active:scale-95 cursor-pointer"
+                aria-label="Recolher menu"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border-2 border-[#EFE6D3] bg-white text-[#8A9680] transition-colors hover:text-[#24331F] cursor-pointer"
               >
                 <Icon name="close" className="h-5 w-5" />
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setSidebarExpanded(true)}
-              title="Expandir"
-              className="mx-auto flex justify-center cursor-pointer"
-            >
-              <div className="relative">
+            <button type="button" onClick={() => setSidebarExpanded(true)} title="Expandir" className="mx-auto flex justify-center cursor-pointer">
+              <span className="relative">
                 <Avatar id={character.avatarId} size={48} selected />
-                <span
-                  className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[var(--theme-bg)] bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]"
-                  title="online"
-                />
-              </div>
+                <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#FFFDF7] bg-[#3DBE5A]" title="online" />
+              </span>
             </button>
           )}
         </div>
 
-        <div className="relative min-h-0 flex-1 overflow-y-auto p-4 pr-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-4 pb-3">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="space-y-5 pb-3">
             {sidebarExpanded ? (
               <div className="grid grid-cols-2 gap-3">
                 <StatusCard
                   icon="wallet"
                   label="Caixa"
                   value={formatMoney(character.cash)}
-                  helper={Number(character.cash) < 0 ? 'Cheque especial' : 'Saldo atual'}
-                  tone={Number(character.cash) < 0 ? 'debt' : 'money'}
+                  helper={negative ? 'Cheque especial' : 'Saldo atual'}
+                  tone={negative ? 'debt' : 'money'}
                 />
-
                 <StatusCard
                   icon="calendar"
                   label="Mês"
-                  value={
-                    <>
-                      {room?.currentTurn ?? 0}
-                      <span className="text-gray-500">/12</span>
-                    </>
-                  }
+                  value={<>{room?.currentTurn ?? 0}<span className="text-[#A9B19E]">/12</span></>}
                   helper="Progresso"
                 />
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3">
-                <CompactStat icon="wallet" value={formatMoneyCompact(character.cash)} tone={Number(character.cash) < 0 ? 'text-red-400' : 'text-emerald-300'} />
-                <CompactStat icon="calendar" value={`${room?.currentTurn ?? 0}/12`} tone="text-[var(--theme-secondary)]" />
+                <CompactStat icon="wallet" value={formatMoneyCompact(character.cash)} color={negative ? '#C4283D' : '#2B8C41'} />
+                <CompactStat icon="calendar" value={`${room?.currentTurn ?? 0}/12`} color="#2457C5" />
               </div>
             )}
 
-            <div>
-              {sidebarExpanded && (
-                <p className="mb-2 text-[10px] font-black uppercase tracking-[0.28em] text-[var(--theme-muted)]">
-                  Navegação
-                </p>
-              )}
-
-              <div className={sidebarExpanded ? 'space-y-2' : 'flex flex-col items-center gap-2'}>
+            <nav aria-label="Lugares">
+              {sidebarExpanded && <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">Lugares</p>}
+              <div className={sidebarExpanded ? 'space-y-2' : 'flex flex-col items-center gap-3'}>
                 {navItems.map((item) => (
                   <MenuItem
                     key={item.path}
@@ -352,20 +270,15 @@ export default function GameHeader() {
                     description={item.description}
                     active={path === item.path}
                     expanded={sidebarExpanded}
-                    onClick={() => goTo(item.path)}
+                    onClick={() => navigate(item.path)}
                   />
                 ))}
               </div>
-            </div>
+            </nav>
 
             {user?.role === 'admin' && (
               <div>
-                {sidebarExpanded && (
-                  <p className="mb-2 text-[10px] font-black uppercase tracking-[0.28em] text-yellow-200/70">
-                    Admin
-                  </p>
-                )}
-
+                {sidebarExpanded && <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#C98A12]">Admin</p>}
                 <div className={sidebarExpanded ? '' : 'flex justify-center'}>
                   <MenuItem
                     icon="admin"
@@ -373,7 +286,7 @@ export default function GameHeader() {
                     description="Gerenciar salas e jogo"
                     active={path === '/admin'}
                     expanded={sidebarExpanded}
-                    onClick={() => goTo('/admin')}
+                    onClick={() => navigate('/admin')}
                   />
                 </div>
               </div>
@@ -381,27 +294,20 @@ export default function GameHeader() {
           </div>
         </div>
 
-        <div className="relative shrink-0 border-t border-white/10 bg-black/10 p-4">
-          {sidebarExpanded ? (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 font-black text-red-200 transition-all hover:border-red-400/40 hover:bg-red-500/15 active:scale-[0.98] cursor-pointer"
-            >
-              <Icon name="logout" className="h-5 w-5" />
-              Sair
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleLogout}
-              title="Sair"
-              aria-label="Sair"
-              className="mx-auto grid h-11 w-11 place-items-center rounded-2xl border border-red-400/20 bg-red-500/10 text-red-200 transition-all hover:border-red-400/40 hover:bg-red-500/15 active:scale-95 cursor-pointer"
-            >
-              <Icon name="logout" className="h-5 w-5" />
-            </button>
-          )}
+        <div className="shrink-0 border-t-2 border-dashed border-[#EFE6D3] p-4">
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Sair"
+            aria-label="Sair"
+            className={[
+              'flex items-center justify-center gap-2 rounded-2xl bg-[#FDE2E5] font-toy font-extrabold text-[#9F1D2F] shadow-[0_4px_0_#F5B8C0] transition-transform hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer',
+              sidebarExpanded ? 'w-full px-4 py-2.5 text-[17px]' : 'mx-auto h-12 w-12',
+            ].join(' ')}
+          >
+            <Icon name="logout" className="h-5 w-5" />
+            {sidebarExpanded && 'Sair'}
+          </button>
         </div>
       </div>
     </aside>

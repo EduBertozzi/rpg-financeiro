@@ -1,4 +1,6 @@
 // Dons da criação de personagem (os números valem no servidor, em utils/gifts.js).
+// `year` é a referência do balanceamento, só para os testes: a tela não mostra
+// valores, o jogador escolhe pela descrição.
 export const GIFTS = [
   {
     id: 'frugal',
