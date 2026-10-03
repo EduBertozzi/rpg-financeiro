@@ -4,6 +4,7 @@ import useGameStore from '../../store/gameStore'
 import GameLayout from '../../components/GameLayout'
 import { BOXES, MONTHS, boxByType } from './bankData'
 import MareLogo from './MareLogo'
+import { BOX_TERM, openGuide } from '../../data/guide'
 import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
@@ -295,6 +296,15 @@ export default function Bank() {
                   Rendem cerca de <b className="tabular-nums text-[#0B8A50]">{money(monthlyYield)}</b> até o fim do mês
                 </span>
               </h3>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#627673]">
+                <span>O que é cada uma?</span>
+                {BOXES.map((b) => (
+                  <button key={b.type} type="button" onClick={() => openGuide(BOX_TERM[b.type])}
+                    className="font-bold text-[#0A7F75] underline decoration-dotted underline-offset-2 cursor-pointer">
+                    {BOX_TERM[b.type]}
+                  </button>
+                ))}
+              </p>
               <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
                 {activeTypes.map((type) => {
                   const box = boxByType(type)
@@ -347,7 +357,10 @@ export default function Bank() {
             <section className="grid gap-4 rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
               <h3 className="flex flex-wrap items-center justify-between gap-2 font-extrabold">
                 Ações
-                <span className="text-sm font-medium text-[#627673]">Renda variável · liquidez diária · isento de IR · o preço muda todo mês</span>
+                <span className="text-sm font-medium text-[#627673]">
+                  Renda variável · liquidez diária · isento de IR · o preço muda todo mês ·{' '}
+                  <button type="button" onClick={() => openGuide('Ações')} className="font-bold text-[#0A7F75] underline decoration-dotted underline-offset-2 cursor-pointer">o que são ações?</button>
+                </span>
               </h3>
               <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
                 {market.map((asset) => {

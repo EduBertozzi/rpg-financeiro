@@ -7,8 +7,6 @@ import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
 import LeisureModal from '../../components/LeisureModal'
 import WalkLock from '../../components/WalkLock'
-import CompanyInfo from '../../components/CompanyInfo'
-import { COMPANIES } from '../../data/companies'
 import { loadWalkLock, saveWalkLock } from '../../components/walkTimer'
 import BillModal from '../../components/BillModal'
 import CityScene from './CityScene'
@@ -26,40 +24,7 @@ const IconCheck = (p) => (
     <path d="m5 13 4 4L19 7" />
   </svg>
 )
-const IconGuide = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M12 3 3 7l9 4 9-4-9-4Z" />
-    <path d="M3 12l9 4 9-4" />
-    <path d="M3 17l9 4 9-4" />
-  </svg>
-)
-
-const IconClose = (p) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}>
-    <path d="M6 6l12 12M18 6 6 18" />
-  </svg>
-)
-
 const PANEL = 'rounded-[24px] bg-[#FFFDF7]/95 text-[#24331F] shadow-[0_6px_0_#E2D6BE,0_16px_36px_rgba(36,51,31,0.2)] backdrop-blur'
-
-const GUIDE_TIPS = [
-  {
-    title: 'Prédios obrigatórios',
-    desc: 'O dilema, o lazer e as contas mensais (Mercadinho, Água e Luz, Internet) precisam ser resolvidos antes de encerrar o mês.',
-  },
-  {
-    title: 'Diversifique investimentos',
-    desc: 'No Banco você encontra Renda Fixa, Ações e Empresas — cada uma com riscos e retornos diferentes.',
-  },
-  {
-    title: 'Patrimônio decide o ranking',
-    desc: 'Quando dezembro fechar, quem tiver o maior patrimônio líquido vence a partida. Parcelas que faltam pagar contam como dívida.',
-  },
-  {
-    title: 'Universidade',
-    desc: 'Na Universidade fica o Cruzeiro, sua constelação de habilidades: cada estrela dá uma vantagem financeira de verdade.',
-  },
-]
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
@@ -134,21 +99,6 @@ export default function Map() {
   const [dilemmaInfo, setDilemmaInfo] = useState(null) // { turn, exists }
   const [walkUntil, setWalkUntil] = useState(null)
   const [activeBill, setActiveBill] = useState(null)
-  const [showGuide, setShowGuideState] = useState(() => {
-    try {
-      return localStorage.getItem('map:showGuide') === '1'
-    } catch {
-      return false
-    }
-  })
-  const setShowGuide = (open) => {
-    setShowGuideState(open)
-    try {
-      localStorage.setItem('map:showGuide', open ? '1' : '0')
-    } catch {
-      // sem storage: só não lembra a preferência
-    }
-  }
   const mapScrollRef = useRef(null)
 
   // no celular o mapa rola na horizontal; começa centralizado na cidade
@@ -464,59 +414,6 @@ export default function Map() {
               </ul>
             </div>
           )}
-          <div className="ml-auto">
-            {showGuide ? (
-              <div className={`pointer-events-auto hidden w-72 lg:block ${PANEL} p-5 animate-fade-in-up`}>
-                <div className="mb-4 flex items-center gap-2">
-                  <IconGuide className="h-5 w-5 text-[#2457C5]" />
-                  <h3 className="flex-1 font-toy text-[19px] font-extrabold">Guia rápido</h3>
-                  <button
-                    type="button"
-                    onClick={() => setShowGuide(false)}
-                    aria-label="Fechar guia rápido"
-                    className="rounded-lg p-1 text-[#8A9680] transition-colors hover:bg-[#F1EBDD] hover:text-[#24331F] cursor-pointer"
-                  >
-                    <IconClose className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  {coupon && (
-                    <div className="rounded-2xl border-2 border-dashed border-[#E0A100] bg-[#FFF3C4] px-3 py-2">
-                      <p className="text-sm font-extrabold text-[#7A5200]">Psiu…</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-[#7A5200]">Dizem que tem algo diferente na cidade este mês. Olhe com calma.</p>
-                    </div>
-                  )}
-                  <div className="border-l-[3px] border-[#EFE6D3] pl-3">
-                    <p className="text-sm font-extrabold">Quem é quem na cidade</p>
-                    <ul className="mt-1 grid gap-1">
-                      {Object.entries(COMPANIES).map(([id, c]) => (
-                        <li key={id} className="flex items-center justify-between gap-2 text-xs text-[#6B7A62]">
-                          {c.name}
-                          <CompanyInfo id={id} align="right" />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  {GUIDE_TIPS.map((tip) => (
-                    <div key={tip.title} className="border-l-[3px] border-[#EFE6D3] pl-3">
-                      <p className="text-sm font-extrabold">{tip.title}</p>
-                      <p className="mt-0.5 text-xs leading-relaxed text-[#6B7A62]">{tip.desc}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowGuide(true)}
-                className={`pointer-events-auto hidden items-center gap-2 lg:flex ${PANEL} px-4 py-2.5 font-toy text-[16px] font-extrabold transition-transform hover:-translate-y-0.5 cursor-pointer`}
-              >
-                <IconGuide className="h-4 w-4 text-[#2457C5]" /> Guia rápido
-                {coupon && <span className="h-2.5 w-2.5 rounded-full bg-[#F2B53A]" aria-label="tem dica nova" />}
-              </button>
-            )}
-          </div>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import useGameStore from '../store/gameStore'
 import GameHeader from './GameHeader'
+import Notebook from './Notebook'
 
 // `light`: fundo claro de manhã, para telas claras como o banco Maré.
 export default function GameLayout({ children, light = false }) {
@@ -24,6 +25,9 @@ export default function GameLayout({ children, light = false }) {
       <main className={`relative z-10 transition-[padding] duration-300 ${sidebarExpanded ? 'pl-80' : 'pl-20'}`}>
         {children}
       </main>
+
+      {/* o caderninho fica sempre no canto, em todas as telas do jogo */}
+      <Notebook />
     </div>
   )
 }
