@@ -30,28 +30,25 @@ async function seed() {
 
   await prisma.marketAsset.createMany({
     data: [
-      { ticker: 'VALE3', name: 'Vale', type: 'stock', sector: 'Mineração', riskLevel: 'medium', basePrice: 83.79 },
-      { ticker: 'PETR4', name: 'Petrobras', type: 'stock', sector: 'Energia', riskLevel: 'high', basePrice: 45.22 },
-      { ticker: 'AMER3', name: 'Americanas', type: 'stock', sector: 'Varejo', riskLevel: 'high', basePrice: 5.29 },
+      // renda variável da tabela oficial de investimentos
       { ticker: 'ABEV3', name: 'Ambev', type: 'stock', sector: 'Bebidas', riskLevel: 'low', basePrice: 15.90 },
-      { ticker: 'ECOP4', name: 'EcoPlanet', type: 'stock', sector: 'Sustentabilidade', riskLevel: 'medium', basePrice: 12.50 },
-      { ticker: 'TECH3', name: 'TechFuture', type: 'stock', sector: 'Tecnologia', riskLevel: 'high', basePrice: 55.00 },
-      { ticker: 'SAUD3', name: 'SaúdeMais', type: 'stock', sector: 'Saúde', riskLevel: 'low', basePrice: 30.20 },
-      { ticker: 'CONS4', name: 'ConstruBem', type: 'stock', sector: 'Construção', riskLevel: 'medium', basePrice: 22.10 },
+      { ticker: 'VALE3', name: 'Vale', type: 'stock', sector: 'Mineração', riskLevel: 'medium', basePrice: 83.79 },
+      { ticker: 'AMER3', name: 'Americanas', type: 'stock', sector: 'Varejo', riskLevel: 'high', basePrice: 5.29 },
+      { ticker: 'PETR4', name: 'Petrobras', type: 'stock', sector: 'Energia', riskLevel: 'high', basePrice: 42.22 },
     ]
   })
 
-  console.log('Ativos de mercado populados! 5 ativos criados.')
+  console.log('Ativos de mercado populados! 4 ativos criados.')
 
   await prisma.company.deleteMany()
 
   await prisma.company.createMany({
     data: [
-      { name: 'Milhas Fácil', description: 'Empresa de programas de fidelidade e milhas.', riskRating: 'BBB', riskLevel: 'medium', annualRate: 0.18, defaultProbability: 0.05 },
+      { name: 'Milhas Fácil', description: 'Empresa de programas de fidelidade e milhas.', riskRating: 'C', riskLevel: 'high', annualRate: 0.18, defaultProbability: 0.05 },
     ]
   })
 
-  console.log('Empresas populadas! 3 empresas criadas.')
+  console.log('Empresas populadas! 1 empresa criada.')
   await prisma.$disconnect()
 }
 

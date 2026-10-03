@@ -1,7 +1,7 @@
 const router = require('express').Router()
 const auth = require('../middleware/auth')
 const {
-  getFixedIncome, investFixed, redeemFixed,
+  getFixedIncome, investFixed, redeemFixed, withdrawFixed,
   getMarket, getPortfolio, trade,
   getCompanies, getDebentures, investDebenture
 } = require('../controllers/investmentController')
@@ -9,6 +9,7 @@ const {
 router.get('/fixed/:id', auth, getFixedIncome)
 router.post('/fixed/:id', auth, investFixed)
 router.delete('/fixed/:id/:investmentId', auth, redeemFixed)
+router.post('/fixed/:id/withdraw', auth, withdrawFixed)
 
 router.get('/market/:roomId', auth, getMarket)
 router.get('/portfolio/:id', auth, getPortfolio)

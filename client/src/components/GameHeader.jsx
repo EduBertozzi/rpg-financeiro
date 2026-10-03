@@ -217,13 +217,7 @@ export default function GameHeader() {
       label: 'Banco',
       path: '/bank',
       icon: 'bank',
-      description: 'Reserva, renda fixa e dinheiro',
-    },
-    {
-      label: 'Corretora',
-      path: '/broker',
-      icon: 'broker',
-      description: 'Investimentos e risco',
+      description: 'Conta, caixinhas e ações',
     },
     {
       label: 'Skills',

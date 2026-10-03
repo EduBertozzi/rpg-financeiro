@@ -1,372 +1,539 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import GameLayout from '../../components/GameLayout'
-import CompaniesPanel from './CompaniesPanel'
+import { BOXES, MONTHS, boxByType } from './bankData'
+import MareLogo from './MareLogo'
+import {
+  debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
+  nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
+  reserveMonths as reserveMonthsOf, shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
+} from './bankMath'
 
-const FIXED_OPTIONS = [
-  { value: 'POUPANCA', label: 'Poupança (6,5% a.a.)' },
-  { value: 'CDB', label: 'CDB Nubank (106% CDI)' },
-  { value: 'TESOURO_SELIC', label: 'Tesouro Selic (+0,6% a.a.)' },
-  { value: 'TESOURO_PRE', label: 'Tesouro Prefixado (13,5% a.a.)' },
-  { value: 'LCI', label: 'LCI (108% CDI)' },
-  { value: 'LCA', label: 'LCA (Selic + 2,6% a.a.)' },
-]
+const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+const readStored = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? JSON.parse(raw) : fallback
+  } catch {
+    return fallback
+  }
+}
+const writeStored = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // sem storage: só não lembra a preferência
+  }
+}
+
+const Icon = {
+  eye: <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />,
+  eyeOff: <path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6" />,
+  in: <path d="M12 4v12M6 10l6 6 6-6M4 20h16" />,
+  out: <path d="M12 20V8M6 14l6-6 6 6M4 4h16" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  list: <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />,
+  box: <path d="M4 8h16v11H4zM3 5h18v3H3zM10 12h4" />,
+  lock: <path d="M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3" />,
+  up: <path d="M4 17l6-6 4 4 6-8" />,
+}
+const Svg = ({ d, className = 'h-5 w-5' }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    {d}
+  </svg>
+)
+
+const RISK_STYLE = {
+  Baixo: 'bg-[#E0F5EA] text-[#0B6B3F]',
+  Médio: 'bg-[#FDF1D6] text-[#8A5A00]',
+  Alto: 'bg-[#FDE2E5] text-[#9F1D2F]',
+}
 
 export default function Bank() {
   const { character, room, setCharacter } = useGameStore()
-  
-  const [mainTab, setMainTab] = useState('fixed') // 'fixed' | 'variable' | 'companies'
-  const [marketTab, setMarketTab] = useState('market')
-  
-  const [investments, setInvestments] = useState([])
-  const [amount, setAmount] = useState('')
-  const [fixedType, setFixedType] = useState('POUPANCA')
-  const [isEmergency, setIsEmergency] = useState(false)
-  
+  const [fixed, setFixed] = useState([])
+  const [debentures, setDebentures] = useState([])
+  const [companies, setCompanies] = useState([])
   const [market, setMarket] = useState([])
   const [portfolio, setPortfolio] = useState([])
-  const [quantity, setQuantity] = useState({})
-  
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState({ text: '', type: '' })
+  const [hide, setHide] = useState(() => readStored('bank:hide', false))
+  const [extraBoxes, setExtraBoxes] = useState(() => readStored(`bank:boxes:${character?.id}`, []))
+  const [sheet, setSheet] = useState(null) // { kind: 'move', type, mode, value, error } | { kind: 'new' }
+  const [busy, setBusy] = useState(false)
+  const [toast, setToast] = useState('')
 
-  const fetchFixed = async () => {
-    try {
-      const { data } = await api.get(`/investments/fixed/${character.id}`)
-      setInvestments(data)
-    } catch (err) { console.error(err) }
-  }
+  const turn = room?.currentTurn ?? 0
+  const money = (n) => (hide ? 'R$ ••••' : brl(n))
 
-  const fetchMarket = async () => {
-    try {
-      const { data } = await api.get(`/investments/market/${room.id}`)
-      setMarket(data)
-    } catch (err) { console.error(err) }
-  }
-
-  const fetchPortfolio = async () => {
-    try {
-      const { data } = await api.get(`/investments/portfolio/${character.id}`)
-      setPortfolio(data)
-    } catch (err) { console.error(err) }
-  }
-
-  useEffect(() => {
+  const refresh = async () => {
     if (!character?.id) return
-    const load = async () => {
-      await fetchFixed()
-      await fetchPortfolio()
-    }
-    load()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [character?.id])
+    const calls = [
+      api.get(`/investments/fixed/${character.id}`).then(({ data }) => setFixed(data)),
+      api.get(`/investments/debentures/${character.id}`).then(({ data }) => setDebentures(data)),
+      api.get(`/investments/portfolio/${character.id}`).then(({ data }) => setPortfolio(data)),
+      api.get(`/characters/${character.id}`).then(({ data }) => setCharacter(data)),
+    ]
+    if (room?.id) calls.push(api.get(`/investments/market/${room.id}`).then(({ data }) => setMarket(data)))
+    await Promise.allSettled(calls)
+  }
 
   useEffect(() => {
-    if (!room?.id) return
-    const loadMarket = async () => {
-      await fetchMarket()
-    }
-    loadMarket()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room?.id])
+    refresh()
+    api.get('/investments/companies').then(({ data }) => setCompanies(data)).catch(console.error)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character?.id, room?.id, turn])
 
-  const refreshAll = async () => {
-    fetchFixed()
-    fetchMarket()
-    fetchPortfolio()
-    const { data } = await api.get(`/characters/${character.id}`)
-    setCharacter(data)
+  useEffect(() => {
+    if (!toast) return
+    const id = setTimeout(() => setToast(''), 2800)
+    return () => clearTimeout(id)
+  }, [toast])
+
+  const toggleHide = () => {
+    setHide(!hide)
+    writeStored('bank:hide', !hide)
   }
 
-  // --- Fixed Actions ---
-  const handleInvestFixed = async () => {
-    setMessage({ text: '', type: '' })
-    if (!amount || Number(amount) <= 0) return setMessage({ text: 'Digite um valor válido', type: 'error' })
-    if (Number(amount) > Number(character.cash)) return setMessage({ text: 'Saldo insuficiente', type: 'error' })
-    setLoading(true)
+  // ── valores de cada caixinha ───────────────────────────────────────────
+  const company = companies[0]
+  const activeDebentures = activeDebenturesOf(debentures)
+  const nextMaturity = nextMaturityOf(debentures)
+  const boxValue = (type) => (type === 'DEBENTURE' ? debentureValueOf(debentures, turn) : fixedBoxValue(fixed, type))
+  const boxYield = (type) => (type === 'DEBENTURE' ? debentureYieldOf(debentures, turn) : fixedBoxYield(fixed, type))
+
+  const activeTypes = BOXES
+    .filter((b) => b.initial || extraBoxes.includes(b.type) || boxValue(b.type) > 0)
+    .map((b) => b.type)
+
+  const cash = Number(character?.cash ?? 0)
+  const stocksValue = stocksValueOf(portfolio)
+  const boxesTotal = activeTypes.reduce((sum, t) => sum + boxValue(t), 0)
+  const total = cash + boxesTotal + stocksValue
+  const monthlyYield = activeTypes.reduce((sum, t) => sum + boxYield(t), 0)
+  const reserveGoal = reserveGoalOf(character)
+
+  // ── ações ──────────────────────────────────────────────────────────────
+  const openMove = (type, mode = 'guardar') => setSheet({ kind: 'move', type, mode, value: '', error: '' })
+
+  const confirmMove = async () => {
+    const box = boxByType(sheet.type)
+    const amount = parseAmount(sheet.value)
+    if (!(amount > 0)) return setSheet({ ...sheet, error: 'Digite um valor maior que zero.' })
+    if (sheet.mode === 'guardar' && amount > cash) return setSheet({ ...sheet, error: `Saldo insuficiente na conta: você tem ${brl(cash)}.` })
+
+    setBusy(true)
     try {
-      await api.post(`/investments/fixed/${character.id}`, { amount: Number(amount), type: fixedType, isEmergency })
-      setMessage({ text: 'Investimento realizado com sucesso!', type: 'success' })
-      setAmount('')
-      await refreshAll()
+      if (sheet.mode === 'guardar') {
+        if (box.type === 'DEBENTURE') {
+          await api.post(`/investments/debentures/${character.id}`, { companyId: company?.id, amount })
+        } else {
+          await api.post(`/investments/fixed/${character.id}`, { type: box.type, amount })
+        }
+        setToast(`${brl(amount)} guardados em ${box.short}`)
+      } else {
+        const { data } = await api.post(`/investments/fixed/${character.id}/withdraw`, { type: box.type, amount })
+        setToast(data.incomeTax > 0
+          ? `${brl(data.net)} na conta (IR de ${brl(data.incomeTax)})`
+          : `${brl(data.net)} resgatados de ${box.short}`)
+      }
+      setSheet(null)
+      await refresh()
     } catch (err) {
-      setMessage({ text: err.response?.data?.error || 'Erro ao investir', type: 'error' })
+      setSheet({ ...sheet, error: err.response?.data?.error || 'Não deu certo. Tente de novo.' })
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
-  const handleRedeemFixed = async (investmentId) => {
-    setMessage({ text: '', type: '' })
-    setLoading(true)
+  const createBox = (type) => {
+    const next = [...extraBoxes, type]
+    setExtraBoxes(next)
+    writeStored(`bank:boxes:${character.id}`, next)
+    openMove(type)
+  }
+
+  const trade = async (asset, operation, quantity) => {
+    setBusy(true)
     try {
-      const { data } = await api.delete(`/investments/fixed/${character.id}/${investmentId}`)
-      setMessage({ text: `Resgate realizado! Você recebeu R$ ${Number(data.redeemedValue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, type: 'success' })
-      await refreshAll()
+      await api.post(`/investments/trade/${character.id}`, { assetId: asset.id, operation, quantity })
+      setToast(`${operation === 'buy' ? 'Comprou' : 'Vendeu'} ${quantity} ${asset.ticker}`)
+      await refresh()
     } catch (err) {
-      setMessage({ text: err.response?.data?.error || 'Erro ao resgatar', type: 'error' })
+      setToast(err.response?.data?.error || 'Não deu certo. Tente de novo.')
     } finally {
-      setLoading(false)
+      setBusy(false)
     }
   }
 
-  // --- Variable Actions ---
-  const handleTrade = async (assetId, operation) => {
-    const qty = Number(quantity[assetId] || 0)
-    if (qty <= 0) return setMessage({ text: 'Digite uma quantidade válida', type: 'error' })
-    setLoading(true)
-    setMessage({ text: '', type: '' })
-    try {
-      await api.post(`/investments/trade/${character.id}`, { assetId, operation, quantity: qty })
-      setMessage({ text: `${operation === 'buy' ? 'Compra' : 'Venda'} realizada com sucesso!`, type: 'success' })
-      setQuantity({ ...quantity, [assetId]: '' })
-      await refreshAll()
-    } catch (err) {
-      setMessage({ text: err.response?.data?.error || 'Erro na operação', type: 'error' })
-    } finally {
-      setLoading(false)
-    }
-  }
+  const extrato = [...(character?.eventLog ?? [])]
+    .filter((e) => Number(e.cashImpact ?? 0) !== 0)
+    .sort((a, b) => new Date(b.loggedAt) - new Date(a.loggedAt))
+    .slice(0, 8)
 
-  const totalFixed = investments.reduce((sum, i) => sum + Number(i.amount), 0)
-  const totalPortfolio = portfolio.reduce((sum, p) => sum + p.totalValue, 0)
+  const parts = shares([
+    { name: 'Conta', value: cash, color: '#9FB3B0' },
+    ...activeTypes.map((t) => ({ name: boxByType(t).short, value: boxValue(t), color: boxByType(t).color })),
+    { name: 'Ações', value: stocksValue, color: '#334155' },
+  ])
+  const reserveMonths = reserveMonthsOf(boxValue('POUPANCA'), character)
+  const initials = (character?.name ?? '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
   return (
     <GameLayout>
-      <div className="max-w-5xl mx-auto p-8 space-y-6">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-2xl">🏦</span>
-          <div>
-            <h1 className="text-xl font-bold">Banco</h1>
-            <p className="text-xs text-gray-400">Renda Fixa, Ações e Empresas</p>
-          </div>
-        </div>
-
-        <div className="flex gap-4 overflow-x-auto border-b border-border mb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <button
-            onClick={() => { setMainTab('fixed'); setMessage({text:'',type:''}) }}
-            className={`shrink-0 pb-2 px-4 font-bold transition-colors ${mainTab === 'fixed' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
-          >
-            Renda Fixa
-          </button>
-          <button
-            onClick={() => { setMainTab('variable'); setMessage({text:'',type:''}) }}
-            className={`shrink-0 pb-2 px-4 font-bold transition-colors ${mainTab === 'variable' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
-          >
-            Ações e FIIs (Corretora)
-          </button>
-          <button
-            onClick={() => { setMainTab('companies'); setMessage({text:'',type:''}) }}
-            className={`shrink-0 pb-2 px-4 font-bold transition-colors ${mainTab === 'companies' ? 'border-b-2 border-primary text-primary' : 'text-gray-400 hover:text-white'}`}
-          >
-            Empresas
-          </button>
-        </div>
-
-        {message.text && (
-          <div className={`p-3 rounded-lg text-sm ${message.type === 'error' ? 'bg-red-900/30 border border-red-500/50 text-red-400' : 'bg-green-900/30 border border-green-500/50 text-green-400'}`}>
-            {message.text}
-          </div>
-        )}
-
-        {/* --- ABA RENDA FIXA --- */}
-        {mainTab === 'fixed' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-card border border-border rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Saldo em Caixa</p>
-                <p className="text-green-400 font-bold text-xl">
-                  R$ {Number(character?.cash ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Total em Renda Fixa</p>
-                <p className="text-blue-400 font-bold text-xl">
-                  R$ {totalFixed.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+        <div className="relative overflow-hidden rounded-[28px] bg-[#F3F6F6] text-[#10201E] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
+          {/* cabeçalho da marca */}
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-[#12B5A6] px-6 pb-16 pt-5 text-white sm:px-7">
+            <div className="flex items-center gap-3">
+              <MareLogo size={42} />
+              <div>
+                <p className="text-2xl font-black leading-none tracking-tight">Maré</p>
+                <p className="mt-1 text-xs opacity-90">O seu dinheiro na onda certa.</p>
               </div>
             </div>
-
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Novo Aporte</h2>
-              <div className="flex gap-3 mb-3 flex-wrap">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="block text-sm text-gray-400 mb-1">Tipo de Investimento</label>
-                  <select 
-                    value={fixedType} 
-                    onChange={(e) => setFixedType(e.target.value)}
-                    className="w-full px-4 py-3 bg-dark border border-border rounded-lg text-white focus:outline-none focus:border-primary"
-                  >
-                    {FIXED_OPTIONS.map(opt => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex-1 min-w-[150px]">
-                  <label className="block text-sm text-gray-400 mb-1">Valor (R$)</label>
-                  <input
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="w-full px-4 py-3 bg-dark border border-border rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-                    placeholder="0,00"
-                    min="1"
-                  />
-                </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={handleInvestFixed}
-                    disabled={loading}
-                    className="px-6 py-3 bg-primary hover:bg-blue-600 disabled:opacity-50 text-white font-semibold rounded-lg transition-colors w-full"
-                  >
-                    Investir
-                  </button>
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="font-bold">Olá, {character?.name}</p>
+                <p className="text-xs opacity-90">{MONTHS[turn - 1] ?? 'Antes da partida'} · mês {turn} de 12</p>
               </div>
-              <label className="flex items-center gap-2 cursor-pointer mt-4">
-                <input
-                  type="checkbox"
-                  checked={isEmergency}
-                  onChange={(e) => setIsEmergency(e.target.checked)}
-                  className="w-4 h-4 accent-primary"
-                />
-                <span className="text-sm text-gray-400">Marcar como Reserva de Emergência</span>
-              </label>
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-white/20 font-black">{initials}</span>
+              <button
+                type="button"
+                onClick={toggleHide}
+                aria-label={hide ? 'Mostrar valores' : 'Esconder valores'}
+                className="grid h-10 w-10 place-items-center rounded-full bg-white/20 transition-colors hover:bg-white/30 cursor-pointer"
+              >
+                <Svg d={hide ? Icon.eyeOff : Icon.eye} />
+              </button>
             </div>
+          </div>
 
-            <div className="bg-card border border-border rounded-xl p-6">
-              <h2 className="text-lg font-semibold mb-4">Meus Investimentos</h2>
-              {investments.length === 0 ? (
-                <p className="text-gray-400 text-sm">Nenhum investimento ainda.</p>
-              ) : (
-                <div className="space-y-3">
-                  {investments.map(inv => (
-                    <div key={inv.id} className="flex items-center justify-between p-4 bg-dark rounded-lg border border-border">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white font-medium">
-                            R$ {Number(inv.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                          <span className="text-xs bg-blue-900/50 text-blue-400 border border-blue-700 px-2 py-0.5 rounded-full">
-                            {inv.type}
-                          </span>
-                          {inv.isEmergency && (
-                            <span className="text-xs bg-yellow-900/50 text-yellow-400 border border-yellow-700 px-2 py-0.5 rounded-full">
-                              Reserva
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Investido no mês {inv.investedAt} · {(Number(inv.monthlyRate) * 100).toFixed(2)}% a.m.
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleRedeemFixed(inv.id)}
-                        disabled={loading}
-                        className="px-4 py-2 text-sm border border-red-500/50 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                      >
-                        Resgatar
-                      </button>
+          <div className="-mt-11 grid gap-4 px-4 pb-6 sm:px-7">
+            {/* conta + patrimônio */}
+            <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
+              <section className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
+                <div className="min-w-[12rem]">
+                  <p className="text-sm text-[#627673]">Saldo em conta</p>
+                  <p className="mt-1 text-4xl font-black tracking-tight tabular-nums">{money(cash)}</p>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-3">
+                  {[
+                    { label: 'Guardar', icon: Icon.in, onClick: () => openMove('POUPANCA', 'guardar') },
+                    { label: 'Resgatar', icon: Icon.out, onClick: () => openMove('POUPANCA', 'resgatar') },
+                    { label: 'Nova caixinha', icon: Icon.plus, onClick: () => setSheet({ kind: 'new' }) },
+                    { label: 'Extrato', icon: Icon.list, onClick: () => document.getElementById('extrato')?.scrollIntoView({ behavior: 'smooth' }) },
+                  ].map((a) => (
+                    <button key={a.label} type="button" onClick={a.onClick} className="group grid w-[76px] justify-items-center gap-2 text-xs font-bold cursor-pointer">
+                      <span className="grid h-14 w-14 place-items-center rounded-full bg-[#E2F6F3] text-[#063F3A] transition-colors group-hover:bg-[#CBEFE9]">
+                        <Svg d={a.icon} className="h-6 w-6" />
+                      </span>
+                      <span className="text-center leading-tight">{a.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="grid content-start gap-3 rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
+                <h3 className="flex items-center justify-between font-extrabold">
+                  Patrimônio <span className="tabular-nums">{money(total)}</span>
+                </h3>
+                <div className="flex h-2.5 overflow-hidden rounded-full bg-[#E3EAE9]">
+                  {parts.map((p) => (
+                    <span key={p.name} style={{ width: `${p.pct}%`, background: p.color }} />
+                  ))}
+                </div>
+                <div className="grid gap-1.5 text-sm">
+                  {parts.filter((p) => p.value > 0 || p.name === 'Conta').map((p) => (
+                    <div key={p.name} className="flex justify-between gap-3">
+                      <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-[3px]" style={{ background: p.color }} />{p.name}</span>
+                      <b className="tabular-nums">{money(p.value)}</b>
                     </div>
                   ))}
                 </div>
+              </section>
+            </div>
+
+            {/* caixinhas */}
+            <section className="grid gap-4 rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
+              <h3 className="flex flex-wrap items-center justify-between gap-2 font-extrabold">
+                Caixinhas
+                <span className="text-sm font-medium text-[#627673]">
+                  Rendem cerca de <b className="tabular-nums text-[#0B8A50]">{money(monthlyYield)}</b> até o fim do mês
+                </span>
+              </h3>
+              <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+                {activeTypes.map((type) => {
+                  const box = boxByType(type)
+                  const value = boxValue(type)
+                  const locked = type === 'DEBENTURE' && activeDebentures.length > 0
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => openMove(type)}
+                      className="grid content-start gap-2 rounded-[18px] border border-[#E3EAE9] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#12B5A6] cursor-pointer"
+                    >
+                      <span className="flex items-center justify-between">
+                        <span className="grid h-9 w-9 place-items-center rounded-xl text-white" style={{ background: box.color }}><Svg d={Icon.box} /></span>
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-extrabold ${RISK_STYLE[box.risk]}`}>Risco {box.risk.toLowerCase()}</span>
+                      </span>
+                      <b className="text-sm">{type === 'DEBENTURE' && company ? `Debênture ${company.name}` : box.name}</b>
+                      <span className="text-[22px] font-black tabular-nums">{money(value)}</span>
+                      <small className="text-xs text-[#627673]">{box.rate} · rende {money(boxYield(type))} este mês</small>
+                      <BoxFacts box={box} />
+                      {box.type === 'POUPANCA' && reserveGoal > 0 && (
+                        <>
+                          <div className="h-1.5 overflow-hidden rounded-full bg-[#E3EAE9]">
+                            <span className="block h-full rounded-full" style={{ width: `${Math.min(100, (value / reserveGoal) * 100)}%`, background: box.color }} />
+                          </div>
+                          <small className="text-xs text-[#627673]">Meta {brl(reserveGoal)} · 3 meses de contas</small>
+                        </>
+                      )}
+                      {locked && (
+                        <small className="flex items-center gap-1 text-xs text-[#7A4F00]">
+                          <Svg d={Icon.lock} className="h-3 w-3" /> Volta para a conta em {MONTHS[nextMaturity - 1] ?? `mês ${nextMaturity}`}
+                        </small>
+                      )}
+                    </button>
+                  )
+                })}
+                <button
+                  type="button"
+                  onClick={() => setSheet({ kind: 'new' })}
+                  className="grid min-h-[140px] place-items-center content-center gap-1 rounded-[18px] border-2 border-dashed border-[#E3EAE9] p-4 font-extrabold text-[#0A7F75] transition-colors hover:border-[#12B5A6] hover:bg-[#E2F6F3] cursor-pointer"
+                >
+                  <Svg d={Icon.plus} className="h-6 w-6" />
+                  Nova caixinha
+                  <span className="text-xs font-medium text-[#627673]">LCI, LCA, Tesouro Prefixado</span>
+                </button>
+              </div>
+            </section>
+
+            {/* ações */}
+            <section className="grid gap-4 rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
+              <h3 className="flex flex-wrap items-center justify-between gap-2 font-extrabold">
+                Ações
+                <span className="text-sm font-medium text-[#627673]">Renda variável · liquidez diária · isento de IR · o preço muda todo mês</span>
+              </h3>
+              <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+                {market.map((asset) => {
+                  const position = portfolio.find((p) => p.ticker === asset.ticker)
+                  const qty = position?.quantity ?? 0
+                  return (
+                    <div key={asset.id} className="grid gap-1.5 rounded-2xl border border-[#E3EAE9] p-3.5">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <b className="text-base font-black">{asset.ticker}</b>
+                        <small className="text-[#627673]">{asset.name}</small>
+                      </div>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-xl font-black tabular-nums">{brl(asset.currentPrice)}</span>
+                        <small className={`tabular-nums ${asset.changePct >= 0 ? 'text-[#0B8A50]' : 'text-[#C4283D]'}`}>
+                          {asset.changePct >= 0 ? '+' : ''}{asset.changePct.toLocaleString('pt-BR')}%
+                        </small>
+                      </div>
+                      <small className="text-[#627673]">Você tem {qty} {qty === 1 ? 'ação' : 'ações'}{qty ? ` · ${money(position.totalValue)}` : ''}</small>
+                      <div className="mt-1 flex gap-1.5">
+                        <button type="button" disabled={busy || !qty} onClick={() => trade(asset, 'sell', 1)} className="flex-1 rounded-[10px] border border-[#E3EAE9] py-1.5 text-[13px] font-extrabold disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">Vender 1</button>
+                        <button type="button" disabled={busy} onClick={() => trade(asset, 'buy', 1)} className="flex-1 rounded-[10px] bg-[#12B5A6] py-1.5 text-[13px] font-extrabold text-white disabled:opacity-40 cursor-pointer">Comprar 1</button>
+                        <button type="button" disabled={busy} onClick={() => trade(asset, 'buy', 10)} className="flex-1 rounded-[10px] bg-[#12B5A6] py-1.5 text-[13px] font-extrabold text-white disabled:opacity-40 cursor-pointer">+10</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+
+            {/* extrato + dica */}
+            <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
+              <section id="extrato" className="rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
+                <h3 className="mb-2 font-extrabold">Extrato</h3>
+                {extrato.length === 0 && <p className="text-sm text-[#627673]">Nenhuma movimentação ainda.</p>}
+                {extrato.map((e) => {
+                  const v = Number(e.cashImpact)
+                  return (
+                    <div key={e.id} className="flex items-center justify-between gap-3 border-t border-[#E3EAE9] py-2.5 text-sm first:border-t-0">
+                      <span className="flex min-w-0 items-center gap-3">
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E2F6F3] text-[#063F3A]">
+                          <Svg d={v >= 0 ? Icon.in : Icon.out} className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block">{e.description}</span>
+                          <small className="text-xs text-[#627673]">{MONTHS[e.turn - 1] ?? `Mês ${e.turn}`}</small>
+                        </span>
+                      </span>
+                      <b className={`shrink-0 tabular-nums ${v >= 0 ? 'text-[#0B8A50]' : 'text-[#C4283D]'}`}>
+                        {hide ? '••••' : `${v >= 0 ? '+' : '−'}${brl(Math.abs(v))}`}
+                      </b>
+                    </div>
+                  )
+                })}
+              </section>
+              <section className="grid content-start gap-2 rounded-[20px] bg-[#063F3A] p-5 text-[#DDF5F1] sm:p-6">
+                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] opacity-80">Dica da Maré</p>
+                <p className="text-lg font-black text-white">Reserva de emergência primeiro</p>
+                <p className="text-sm">
+                  {reserveMonths >= 3
+                    ? `Sua reserva já cobre ${reserveMonths.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} meses de contas. Agora vale buscar mais rendimento no Tesouro, numa LCI ou na debênture.`
+                    : `Sua reserva cobre ${reserveMonths.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mês de contas. O ideal é chegar a 3 meses (${brl(reserveGoal)}) antes de arriscar.`}
+                </p>
+              </section>
+            </div>
+          </div>
+
+          {sheet && (
+            <div
+              className="absolute inset-0 z-10 flex items-center justify-center bg-[#041E1C]/45 p-4"
+              onClick={(e) => e.target === e.currentTarget && setSheet(null)}
+            >
+              {sheet.kind === 'new' ? (
+                <NewBoxSheet available={BOXES.filter((b) => !activeTypes.includes(b.type))} onPick={createBox} onClose={() => setSheet(null)} />
+              ) : (
+                <MoveSheet
+                  sheet={sheet}
+                  setSheet={setSheet}
+                  activeTypes={activeTypes}
+                  cash={cash}
+                  value={boxValue(sheet.type)}
+                  turn={turn}
+                  activeDebentures={activeDebentures}
+                  companyName={company?.name}
+                  busy={busy}
+                  onConfirm={confirmMove}
+                />
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {/* --- ABA AÇÕES --- */}
-        {mainTab === 'variable' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-card border border-border rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Valor da Carteira</p>
-                <p className="text-green-400 font-bold text-xl">
-                  R$ {totalPortfolio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-              <div className="bg-card border border-border rounded-xl p-4">
-                <p className="text-xs text-gray-400 mb-1">Ativos na Carteira</p>
-                <p className="text-primary font-bold text-xl">{portfolio.length} ativo(s)</p>
-              </div>
+          {toast && (
+            <div role="status" className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-xl bg-[#063F3A] px-4 py-2.5 text-sm font-bold text-white shadow-lg">
+              {toast}
             </div>
-
-            <div className="flex gap-2 mb-4">
-              <button onClick={() => setMarketTab('market')} className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${marketTab === 'market' ? 'bg-primary text-white' : 'bg-card border border-border text-gray-400 hover:text-white'}`}>Mercado</button>
-              <button onClick={() => setMarketTab('portfolio')} className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${marketTab === 'portfolio' ? 'bg-primary text-white' : 'bg-card border border-border text-gray-400 hover:text-white'}`}>Minha Carteira</button>
-            </div>
-
-            {marketTab === 'market' && (
-              <div className="space-y-3">
-                {market.map(asset => (
-                  <div key={asset.id} className="bg-card border border-border rounded-xl p-5">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono font-bold text-white">{asset.ticker}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full border ${asset.riskLevel === 'low' ? 'bg-green-900/30 text-green-400 border-green-700' : asset.riskLevel === 'medium' ? 'bg-yellow-900/30 text-yellow-400 border-yellow-700' : 'bg-red-900/30 text-red-400 border-red-700'}`}>
-                            {asset.riskLevel === 'low' ? 'Baixo risco' : asset.riskLevel === 'medium' ? 'Médio risco' : 'Alto risco'}
-                          </span>
-                        </div>
-                        <p className="text-gray-400 text-sm">{asset.name}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-white font-bold text-lg">R$ {asset.currentPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                        <p className={`text-sm font-medium ${asset.changePct >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                          {asset.changePct >= 0 ? '▲' : '▼'} {Math.abs(asset.changePct).toFixed(2)}%
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <input type="number" value={quantity[asset.id] || ''} onChange={(e) => setQuantity({ ...quantity, [asset.id]: e.target.value })} className="w-24 px-3 py-2 bg-dark border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary" placeholder="Qtd" min="1" />
-                      <button onClick={() => handleTrade(asset.id, 'buy')} disabled={loading} className="px-4 py-2 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">Comprar</button>
-                      <button onClick={() => handleTrade(asset.id, 'sell')} disabled={loading} className="px-4 py-2 bg-red-800 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">Vender</button>
-                      <span className="text-xs text-gray-500 self-center ml-2">Total: R$ {((quantity[asset.id] || 0) * asset.currentPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {marketTab === 'portfolio' && (
-              <div className="space-y-3">
-                {portfolio.length === 0 ? (
-                  <p className="text-gray-400 text-sm">Nenhum ativo na carteira ainda.</p>
-                ) : (
-                  portfolio.map(pos => (
-                    <div key={pos.id} className="bg-card border border-border rounded-xl p-5">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-mono font-bold text-white">{pos.ticker}</span>
-                          </div>
-                          <p className="text-gray-400 text-sm">{pos.name}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-white font-bold">R$ {pos.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                          <p className={`text-sm ${pos.profitLoss >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                            {pos.profitLoss >= 0 ? '+' : ''}R$ {pos.profitLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex gap-4 text-xs text-gray-400">
-                        <span>{pos.quantity} cotas</span>
-                        <span>PM: R$ {pos.avgPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                        <span>Atual: R$ {pos.currentPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* --- ABA EMPRESAS --- */}
-        {mainTab === 'companies' && <CompaniesPanel />}
-
+          )}
+        </div>
       </div>
     </GameLayout>
+  )
+}
+
+function BoxFacts({ box }) {
+  return (
+    <span className="flex flex-wrap gap-1">
+      {[`Liquidez ${box.liquidity}`, `Prazo ${box.term}`, box.tax, box.rating && `Rating ${box.rating}`].filter(Boolean).map((f) => (
+        <span key={f} className="rounded-md bg-[#F3F6F6] px-1.5 py-0.5 text-[11px] font-bold text-[#627673]">{f}</span>
+      ))}
+    </span>
+  )
+}
+
+function MoveSheet({ sheet, setSheet, activeTypes, cash, value, turn, activeDebentures, companyName, busy, onConfirm }) {
+  const box = boxByType(sheet.type)
+  const isDebenture = box.type === 'DEBENTURE'
+  const max = sheet.mode === 'guardar' ? cash : value
+  const withdrawBlocked = sheet.mode === 'resgatar' && isDebenture
+  const earlyTesouro = sheet.mode === 'resgatar' && box.earlyTaxMonths && turn > 0
+  const title = `${sheet.mode === 'guardar' ? 'Guardar em' : 'Resgatar de'} ${isDebenture && companyName ? `Debênture ${companyName}` : box.name}`
+
+  return (
+    <div role="dialog" aria-label={title} className="grid max-h-full w-full max-w-[460px] gap-3.5 overflow-y-auto rounded-[22px] bg-white p-6 text-[#10201E] shadow-2xl">
+      <h5 className="text-lg font-black">{title}</h5>
+      <div className="flex flex-wrap rounded-xl bg-[#F3F6F6] p-1">
+        {activeTypes.map((t) => (
+          <button
+            key={t}
+            type="button"
+            aria-pressed={t === sheet.type}
+            onClick={() => setSheet({ ...sheet, type: t, error: '' })}
+            className={`flex-1 rounded-[9px] px-2 py-2 text-sm font-extrabold cursor-pointer ${t === sheet.type ? 'bg-[#12B5A6] text-white' : ''}`}
+          >
+            {boxByType(t).short}
+          </button>
+        ))}
+      </div>
+      <div className="flex rounded-xl bg-[#F3F6F6] p-1">
+        {['guardar', 'resgatar'].map((m) => (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={m === sheet.mode}
+            onClick={() => setSheet({ ...sheet, mode: m, error: '' })}
+            className={`flex-1 rounded-[9px] py-2 text-sm font-extrabold capitalize cursor-pointer ${m === sheet.mode ? 'bg-[#12B5A6] text-white' : ''}`}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+
+      {withdrawBlocked ? (
+        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
+          A debênture tem liquidez de 10 meses: o dinheiro volta sozinho para a conta no vencimento
+          {activeDebentures.length > 0 && ` (${activeDebentures.map((d) => MONTHS[d.maturesAt - 1] ?? `mês ${d.maturesAt}`).join(', ')})`}.
+          Se a empresa der calote, o valor é perdido.
+        </p>
+      ) : (
+        <>
+          <label htmlFor="bank-amount" className="text-sm text-[#627673]">
+            Quanto você quer {sheet.mode}?
+          </label>
+          <input
+            id="bank-amount"
+            autoFocus
+            inputMode="decimal"
+            placeholder="R$ 0,00"
+            value={sheet.value}
+            onChange={(e) => setSheet({ ...sheet, value: e.target.value, error: '' })}
+            onKeyDown={(e) => e.key === 'Enter' && onConfirm()}
+            className="w-full border-0 border-b-2 border-[#12B5A6] bg-transparent py-1.5 text-3xl font-black tabular-nums outline-none"
+          />
+          <div className="flex flex-wrap gap-2">
+            {[100, 500, 1000].map((v) => (
+              <button key={v} type="button" onClick={() => setSheet({ ...sheet, value: v.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), error: '' })} className="rounded-full border border-[#E3EAE9] px-3 py-1.5 text-sm font-bold cursor-pointer">
+                {brl(v)}
+              </button>
+            ))}
+            <button type="button" onClick={() => setSheet({ ...sheet, value: max.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), error: '' })} className="rounded-full border border-[#E3EAE9] px-3 py-1.5 text-sm font-bold cursor-pointer">
+              Tudo ({brl(max)})
+            </button>
+          </div>
+        </>
+      )}
+
+      <p className="text-sm text-[#627673]">
+        {box.rate} · {sheet.mode === 'guardar' ? `${brl(cash)} disponível na conta` : `${brl(value)} na caixinha`}
+      </p>
+      <BoxFacts box={box} />
+      {sheet.mode === 'guardar' && isDebenture && (
+        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">O dinheiro guardado aqui fica preso por 10 meses (ou até o fim da partida) e pode dar calote.</p>
+      )}
+      {earlyTesouro && (
+        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">Resgate antes de 6 meses paga IR de 22,5% sobre o rendimento (depois, 15%).</p>
+      )}
+      {sheet.error && <p className="text-sm text-[#C4283D]">{sheet.error}</p>}
+      {!withdrawBlocked && (
+        <button type="button" disabled={busy} onClick={onConfirm} className="rounded-[14px] bg-[#12B5A6] py-3.5 font-extrabold text-white transition-colors hover:bg-[#0A7F75] disabled:opacity-60 cursor-pointer">
+          {busy ? 'Aguarde…' : 'Confirmar'}
+        </button>
+      )}
+      <button type="button" onClick={() => setSheet(null)} className="font-bold text-[#627673] cursor-pointer">Cancelar</button>
+    </div>
+  )
+}
+
+function NewBoxSheet({ available, onPick, onClose }) {
+  return (
+    <div role="dialog" aria-label="Nova caixinha" className="grid max-h-full w-full max-w-[460px] gap-3.5 overflow-y-auto rounded-[22px] bg-white p-6 text-[#10201E] shadow-2xl">
+      <h5 className="text-lg font-black">Nova caixinha</h5>
+      <p className="text-sm text-[#627673]">Escolha onde a nova caixinha vai render.</p>
+      {available.length === 0 && <p className="text-sm text-[#627673]">Você já tem todas as caixinhas disponíveis.</p>}
+      {available.map((box) => (
+        <button key={box.type} type="button" onClick={() => onPick(box.type)} className="grid gap-1.5 rounded-[14px] border border-[#E3EAE9] p-3.5 text-left hover:border-[#12B5A6] cursor-pointer">
+          <span className="flex justify-between gap-2 font-extrabold"><span>{box.name}</span><span className="text-[#0A7F75]">{box.rate}</span></span>
+          <span className="text-sm text-[#627673]">{box.desc}</span>
+          <BoxFacts box={box} />
+        </button>
+      ))}
+      <button type="button" onClick={onClose} className="font-bold text-[#627673] cursor-pointer">Fechar</button>
+    </div>
   )
 }

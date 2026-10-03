@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma')
+const { monthlyReturn, debentureReturn, nextStockPrice } = require('./finance')
 
 const EVENTS = [
   { title: 'Resistência Queimada', description: 'A resistência do seu chuveiro queimou.', cashImpact: -200, category: 'daily' },
@@ -149,11 +150,11 @@ async function applyFixedIncomeReturns(character, turn) {
 
   let totalReturns = 0
   for (const inv of investments) {
-    const monthlyReturn = Number(inv.amount) * Number(inv.monthlyRate)
-    totalReturns += monthlyReturn
+    const gain = monthlyReturn(inv.amount, inv.monthlyRate)
+    totalReturns += gain
     await prisma.fixedIncomeInvestment.update({
       where: { id: inv.id },
-      data: { amount: { increment: monthlyReturn } }
+      data: { amount: { increment: gain } }
     })
   }
 
@@ -197,32 +198,12 @@ async function generateAssetPrices(roomId, turn) {
     })
 
     const basePrice = prev ? Number(prev.price) : Number(asset.basePrice)
-
-    // variação aleatória baseada no nível de risco
-    const volatility = asset.riskLevel === 'low' ? 0.03 : asset.riskLevel === 'medium' ? 0.07 : 0.15
-    let change = (Math.random() * 2 - 1) * volatility
-
-    // Eventos específicos para ações (Historinhas)
-    if (asset.ticker === 'VALE3' && turn === 3) {
-      change += 0.40 // Valoriza 40%
-    } else if (asset.ticker === 'PETR4' && turn === 10) {
-      change -= 0.35 // Cai 35% por evento político (eleição)
-    } else if (asset.ticker === 'ECOP4' && turn === 5) {
-      change += 0.25 // Valoriza por incentivo verde
-    } else if (asset.ticker === 'TECH3' && turn === 7) {
-      change -= 0.20 // Cai por balanço ruim
-    } else if (asset.ticker === 'SAUD3' && turn === 8) {
-      change += 0.30 // Valoriza por nova patente médica
-    } else if (asset.ticker === 'CONS4' && turn === 4) {
-      change -= 0.15 // Cai por crise imobiliária
-    }
-
-    const newPrice = Math.max(basePrice * (1 + change), 0.01)
+    const price = nextStockPrice(basePrice, asset.riskLevel, asset.ticker, turn)
 
     await prisma.assetPrice.upsert({
       where: { assetId_turn_roomId: { assetId: asset.id, turn, roomId } },
-      update: { price: Math.round(newPrice * 100) / 100 },
-      create: { assetId: asset.id, turn, roomId, price: Math.round(newPrice * 100) / 100 }
+      update: { price },
+      create: { assetId: asset.id, turn, roomId, price }
     })
   }
 }
@@ -250,10 +231,7 @@ async function checkDebentures(character, turn) {
         }
       })
     } else {
-      const months = deb.maturesAt - deb.investedAt
-      const monthlyRate = Math.pow(1 + Number(deb.annualRate), 1 / 12) - 1
-      const returnedValue = Number(deb.amount) * Math.pow(1 + monthlyRate, months)
-      const rounded = Math.round(returnedValue * 100) / 100
+      const rounded = debentureReturn(deb.amount, deb.annualRate, deb.maturesAt - deb.investedAt)
 
       await prisma.$transaction([
         prisma.debentureInvestment.update({

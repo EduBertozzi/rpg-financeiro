@@ -1,20 +1,17 @@
 const prisma = require('../lib/prisma')
 
-const SELIC_ANNUAL = 0.105 // 10.5% a.a simulado
-const CDI_ANNUAL = 0.104 // 10.4% a.a simulado
+const {
+  cents, getMonthlyRate, redemptionOf, planWithdrawal, debentureMaturity, averagePrice,
+} = require('../utils/finance')
 
-function getMonthlyRate(type) {
-  let annualRate = 0
-  switch (type) {
-    case 'POUPANCA': annualRate = 0.065; break;
-    case 'CDB': annualRate = CDI_ANNUAL * 1.06; break;
-    case 'TESOURO_SELIC': annualRate = SELIC_ANNUAL + 0.006; break;
-    case 'TESOURO_PRE': annualRate = 0.135; break;
-    case 'LCI': annualRate = CDI_ANNUAL * 1.08; break;
-    case 'LCA': annualRate = SELIC_ANNUAL + 0.026; break;
-    default: annualRate = SELIC_ANNUAL; break;
-  }
-  return Math.pow(1 + annualRate, 1 / 12) - 1
+// Nome de cada tipo como caixinha no banco (tabela oficial de investimentos).
+const TYPE_LABELS = {
+  POUPANCA: 'Reserva de Emergência',
+  CDB: 'CDB',
+  TESOURO_SELIC: 'Tesouro Selic',
+  TESOURO_PRE: 'Tesouro Prefixado',
+  LCI: 'LCI',
+  LCA: 'LCA',
 }
 
 // ── RENDA FIXA ────────────────────────────────────────────────────────────────
@@ -32,7 +29,9 @@ exports.getFixedIncome = async (req, res) => {
 
 exports.investFixed = async (req, res) => {
   try {
-    const { amount, type = 'POUPANCA', isEmergency = false } = req.body
+    const { type = 'POUPANCA', isEmergency = false } = req.body
+    const amount = cents(Number(req.body.amount))
+    if (!TYPE_LABELS[type]) return res.status(400).json({ error: 'Tipo de investimento inválido' })
     const character = await prisma.character.findUnique({
       where: { id: req.params.id },
       include: { room: true }
@@ -40,7 +39,7 @@ exports.investFixed = async (req, res) => {
 
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
-    if (amount <= 0) return res.status(400).json({ error: 'Valor inválido' })
+    if (!(amount > 0)) return res.status(400).json({ error: 'Valor inválido' })
     if (Number(character.cash) < amount) return res.status(422).json({ error: 'Saldo insuficiente' })
 
     const monthlyRate = getMonthlyRate(type)
@@ -53,12 +52,20 @@ exports.investFixed = async (req, res) => {
           type,
           monthlyRate,
           investedAt: character.room.currentTurn,
-          isEmergency
+          isEmergency: isEmergency || type === 'POUPANCA'
         }
       }),
       prisma.character.update({
         where: { id: character.id },
         data: { cash: { decrement: amount } }
+      }),
+      prisma.characterEventLog.create({
+        data: {
+          characterId: character.id,
+          turn: character.room.currentTurn,
+          cashImpact: -amount,
+          description: `Caixinha: Guardado em ${TYPE_LABELS[type]}`
+        }
       })
     ])
 
@@ -85,9 +92,8 @@ exports.redeemFixed = async (req, res) => {
     if (investment.redeemedAt !== null)
       return res.status(400).json({ error: 'Investimento já resgatado' })
 
-    const turns = character.room.currentTurn - investment.investedAt
-    const redeemedValue = Number(investment.amount) * Math.pow(1 + Number(investment.monthlyRate), Math.max(turns, 0))
-    const rounded = Math.round(redeemedValue * 100) / 100
+    // `amount` já inclui os rendimentos mensais aplicados pelo turnEngine
+    const { gross, incomeTax, net: rounded } = redemptionOf(investment, character.room.currentTurn)
 
     await prisma.$transaction([
       prisma.fixedIncomeInvestment.update({
@@ -100,7 +106,64 @@ exports.redeemFixed = async (req, res) => {
       })
     ])
 
-    res.json({ redeemedValue: rounded, cashAfter: Number(character.cash) + rounded })
+    res.json({ redeemedValue: rounded, grossValue: gross, incomeTax, cashAfter: Number(character.cash) + rounded })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+
+// Resgate parcial de uma caixinha: tira o valor dos investimentos daquele tipo,
+// do mais antigo para o mais novo, cobrando IR só sobre a parte do rendimento.
+exports.withdrawFixed = async (req, res) => {
+  try {
+    const { type } = req.body
+    const amount = cents(Number(req.body.amount))
+    if (!TYPE_LABELS[type]) return res.status(400).json({ error: 'Tipo de investimento inválido' })
+    if (!(amount > 0)) return res.status(400).json({ error: 'Valor inválido' })
+
+    const character = await prisma.character.findUnique({
+      where: { id: req.params.id },
+      include: { room: true }
+    })
+    if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
+    if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+
+    const turn = character.room.currentTurn
+    const investments = await prisma.fixedIncomeInvestment.findMany({
+      where: { characterId: character.id, type, redeemedAt: null },
+      orderBy: { investedAt: 'asc' }
+    })
+    const plan = planWithdrawal(investments, type, amount, turn)
+    if (plan.error) {
+      return res.status(422).json({ error: `A caixinha tem R$ ${plan.available.toFixed(2)} para resgatar` })
+    }
+
+    const { incomeTax, net } = plan
+    await prisma.$transaction([
+      ...plan.steps.map((step) => (step.closes
+        ? prisma.fixedIncomeInvestment.update({
+            where: { id: step.id },
+            data: { redeemedAt: turn, redeemedValue: cents(step.value - step.tax) }
+          })
+        : prisma.fixedIncomeInvestment.update({
+            where: { id: step.id },
+            data: { amount: { decrement: step.take } }
+          }))),
+      prisma.character.update({
+        where: { id: character.id },
+        data: { cash: { increment: net } }
+      }),
+      prisma.characterEventLog.create({
+        data: {
+          characterId: character.id,
+          turn,
+          cashImpact: net,
+          description: `Caixinha: Resgate de ${TYPE_LABELS[type]}${incomeTax > 0 ? ` (IR de R$ ${incomeTax.toFixed(2)})` : ''}`
+        }
+      })
+    ])
+
+    res.json({ gross: plan.gross, incomeTax, net, cashAfter: Number(character.cash) + net })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
@@ -192,7 +255,7 @@ exports.trade = async (req, res) => {
       where: { assetId_turn_roomId: { assetId, turn: character.room.currentTurn, roomId: character.roomId } }
     })
     const price = priceRecord ? Number(priceRecord.price) : Number(asset.basePrice)
-    const total = price * quantity
+    const total = cents(price * quantity)
 
     if (operation === 'buy') {
       if (Number(character.cash) < total) return res.status(422).json({ error: 'Saldo insuficiente' })
@@ -207,7 +270,7 @@ exports.trade = async (req, res) => {
               where: { id: existing.id },
               data: {
                 quantity: { increment: quantity },
-                avgPrice: ((Number(existing.avgPrice) * existing.quantity) + total) / (existing.quantity + quantity)
+                avgPrice: averagePrice(existing.quantity, existing.avgPrice, quantity, price)
               }
             })
           : prisma.variableIncomePosition.create({
@@ -216,6 +279,9 @@ exports.trade = async (req, res) => {
         prisma.character.update({ where: { id: character.id }, data: { cash: { decrement: total } } }),
         prisma.tradeHistory.create({
           data: { characterId: character.id, assetId, operation, quantity, price, total, turn: character.room.currentTurn }
+        }),
+        prisma.characterEventLog.create({
+          data: { characterId: character.id, turn: character.room.currentTurn, cashImpact: -total, description: `Ações: Compra de ${quantity} ${asset.ticker} (${asset.name})` }
         })
       ])
 
@@ -235,6 +301,9 @@ exports.trade = async (req, res) => {
         prisma.character.update({ where: { id: character.id }, data: { cash: { increment: total } } }),
         prisma.tradeHistory.create({
           data: { characterId: character.id, assetId, operation, quantity, price, total, turn: character.room.currentTurn }
+        }),
+        prisma.characterEventLog.create({
+          data: { characterId: character.id, turn: character.room.currentTurn, cashImpact: total, description: `Ações: Venda de ${quantity} ${asset.ticker} (${asset.name})` }
         })
       ])
 
@@ -274,7 +343,9 @@ exports.getDebentures = async (req, res) => {
 
 exports.investDebenture = async (req, res) => {
   try {
-    const { companyId, amount } = req.body
+    const { companyId } = req.body
+    const amount = cents(Number(req.body.amount))
+    if (!(amount > 0)) return res.status(400).json({ error: 'Valor inválido' })
     const character = await prisma.character.findUnique({
       where: { id: req.params.id },
       include: { room: true }
@@ -286,7 +357,8 @@ exports.investDebenture = async (req, res) => {
     const company = await prisma.company.findUnique({ where: { id: companyId } })
     if (!company) return res.status(404).json({ error: 'Empresa não encontrada' })
 
-    const maturesAt = Math.min(character.room.currentTurn + 3, character.room.maxTurns)
+    // liquidez de 10 meses (tabela oficial): o dinheiro só volta no vencimento
+    const maturesAt = debentureMaturity(character.room.currentTurn, character.room.maxTurns)
 
     const [debenture] = await prisma.$transaction([
       prisma.debentureInvestment.create({
@@ -302,6 +374,14 @@ exports.investDebenture = async (req, res) => {
       prisma.character.update({
         where: { id: character.id },
         data: { cash: { decrement: amount } }
+      }),
+      prisma.characterEventLog.create({
+        data: {
+          characterId: character.id,
+          turn: character.room.currentTurn,
+          cashImpact: -amount,
+          description: `Caixinha: Guardado em Debênture ${company.name}`
+        }
       })
     ])
 

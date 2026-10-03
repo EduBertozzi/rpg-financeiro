@@ -7,7 +7,6 @@ import Register from './pages/Register/Register'
 import CharacterCreation from './pages/CharacterCreation/CharacterCreation'
 import Map from './pages/Map/Map'
 import Bank from './pages/Bank/Bank'
-import Broker from './pages/Broker/Broker'
 import SkillTree from './pages/SkillTree/SkillTree'
 import Admin from './pages/Admin/Admin'
 import Finished from './pages/Finished/Finished'
@@ -81,14 +80,8 @@ function App() {
           }
         />
 
-        <Route
-          path="/broker"
-          element={
-            <ProtectedRoute>
-              <Broker />
-            </ProtectedRoute>
-          }
-        />
+        {/* a Corretora virou a seção de Ações dentro do Banco */}
+        <Route path="/broker" element={<Navigate to="/bank" replace />} />
 
         <Route
           path="/skills"
