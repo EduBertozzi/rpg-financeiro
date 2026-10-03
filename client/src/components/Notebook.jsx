@@ -309,7 +309,7 @@ export default function Notebook() {
                   </div>
                   <span className="absolute bottom-0 right-10 h-16 w-5 bg-[#EC4899] [clip-path:polygon(0_0,100%_0,100%_100%,50%_78%,0_100%)]" />
                 </div>
-                <div className="notebook-page absolute inset-0 rounded-l-lg [backface-visibility:hidden] [transform:rotateY(180deg)]" />
+                <div className="notebook-page !absolute inset-0 rounded-l-lg [backface-visibility:hidden] [transform:rotateY(180deg)]" />
               </motion.div>
             )}
             <button ref={closeRef} type="button" onClick={close} aria-label="Fechar o caderninho"
@@ -325,8 +325,9 @@ export default function Notebook() {
               ))}
             </div>
 
-            {/* página da esquerda (só no desktop): aparece quando a capa termina de abrir */}
-            <section className={`notebook-page hidden rounded-l-lg transition-opacity duration-150 md:block ${phase === 'open' ? 'opacity-100' : 'opacity-0'}`}>
+            {/* página da esquerda (só no desktop): o papel já está lá enquanto a capa
+                gira (senão aparece o azul do fundo), e o texto surge quando ela pousa */}
+            <section className={`notebook-page hidden rounded-l-lg md:block ${phase === 'flying' ? 'opacity-0' : ''} ${phase === 'open' ? '' : '[&>*]:opacity-0'} [&>*]:transition-opacity [&>*]:duration-200`}>
               {isGlossary
                 ? <TermList inputId="guide-search" term={term} query={query} setQuery={setQuery} onPick={(t) => turn(() => setTerm(t))} />
                 : Page(0)}

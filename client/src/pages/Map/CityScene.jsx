@@ -230,10 +230,12 @@ function Building({ b, hovered, setHovered, onSelect, interactive, reduced }) {
 
   return (
     <motion.g
-      role="button"
-      tabIndex={interactive ? 0 : -1}
+      // fora de jogo (sala esperando) a casinha nem recebe foco: senão o clique
+      // desenhava o contorno cinza do navegador em volta dela
+      role={interactive ? 'button' : undefined}
+      tabIndex={interactive ? 0 : undefined}
       aria-label={`${b.name}: ${b.desc}${b.done ? ' (concluído)' : pending ? ' (pendente)' : ''}`}
-      className={interactive ? 'cursor-pointer outline-none' : ''}
+      className={interactive ? 'cursor-pointer outline-none' : 'outline-none'}
       onMouseEnter={() => setHovered(b.id)}
       onMouseLeave={() => setHovered(null)}
       onFocus={() => setHovered(b.id)}
