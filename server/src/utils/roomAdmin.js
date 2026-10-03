@@ -71,4 +71,14 @@ const CHARACTER_CHILD_MODELS = [
   'characterCoupon', 'characterChoice', 'scheduledEffect',
 ]
 
-module.exports = { NAME_MAX, BILL_PREFIXES, CHARACTER_CHILD_MODELS, cleanRoomName, playerTasks, playerProgress, roomSummary }
+// Senha provisória legível para o professor ditar: palavra + 3 números.
+const TEMP_WORDS = ['maré', 'coreto', 'ipê', 'cupom', 'caixinha', 'cruzeiro', 'sapucaí', 'mercado', 'praça', 'boleto']
+function temporaryPassword(random = Math.random) {
+  const word = TEMP_WORDS[Math.floor(random() * TEMP_WORDS.length)]
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const digits = String(Math.floor(random() * 900) + 100)
+  return `${word}${digits}`
+}
+
+module.exports = {
+  TEMP_WORDS, temporaryPassword, NAME_MAX, BILL_PREFIXES, CHARACTER_CHILD_MODELS, cleanRoomName, playerTasks, playerProgress, roomSummary }

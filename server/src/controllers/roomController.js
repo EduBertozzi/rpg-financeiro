@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma')
-const { cleanRoomName, playerProgress, roomSummary, CHARACTER_CHILD_MODELS } = require('../utils/roomAdmin')
+const bcrypt = require('bcryptjs')
+const { cleanRoomName, playerProgress, roomSummary, CHARACTER_CHILD_MODELS, temporaryPassword } = require('../utils/roomAdmin')
 
 const generateCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -168,6 +169,23 @@ exports.deleteRoom = async (req, res) => {
     })
 
     res.json({ deleted: room.id, players: ids.length })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+
+// Esqueci a senha: o administrador da sala gera uma senha provisória para um
+// jogador dela e passa para ele. A senha antiga deixa de valer.
+exports.resetPlayerPassword = async (req, res) => {
+  try {
+    const room = await ownRoom(req, res)
+    if (!room) return
+    const character = await prisma.character.findUnique({ where: { id: req.params.characterId } })
+    if (!character || character.roomId !== room.id) return res.status(404).json({ error: 'Jogador não está nesta sala' })
+
+    const password = temporaryPassword()
+    await prisma.user.update({ where: { id: character.userId }, data: { passwordHash: await bcrypt.hash(password, 10) } })
+    res.json({ password, name: character.name })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }

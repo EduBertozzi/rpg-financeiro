@@ -263,3 +263,61 @@ describe('DELETE /api/v1/rooms/:id', () => {
     expect((await request(app).delete('/api/v1/rooms/room-1')).status).toBe(401)
   })
 })
+
+// ─── esqueci a senha ──────────────────────────────────────────────────────────
+
+const bcrypt = require('bcryptjs')
+const { temporaryPassword, TEMP_WORDS } = require('../src/utils/roomAdmin')
+
+describe('temporaryPassword', () => {
+  it('palavra sem acento + 3 números', () => {
+    expect(temporaryPassword(() => 0)).toBe('mare100')
+    expect(temporaryPassword(() => 0.99)).toMatch(/^boleto\d{3}$/)
+  })
+
+  it('sempre só letras minúsculas e números, com pelo menos 6 caracteres', () => {
+    for (let i = 0; i < 200; i++) expect(temporaryPassword()).toMatch(/^[a-z]+\d{3}$/)
+    expect(TEMP_WORDS.length).toBeGreaterThanOrEqual(10)
+  })
+})
+
+describe('POST /api/v1/rooms/:id/players/:characterId/reset-password', () => {
+  const reset = (token = ADMIN, characterId = 'c1') =>
+    request(app).post(`/api/v1/rooms/room-1/players/${characterId}/reset-password`).set(authHeader(token))
+
+  beforeEach(() => {
+    prismaMock.room.findUnique.mockResolvedValue(room())
+    prismaMock.character.findUnique.mockResolvedValue({ id: 'c1', name: 'Ana', roomId: 'room-1', userId: 'u-ana' })
+    prismaMock.user.update.mockResolvedValue({})
+  })
+
+  it('gera uma senha provisória e grava só o hash dela', async () => {
+    const res = await reset()
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ password: expect.stringMatching(/^[a-z]+\d{3}$/), name: 'Ana' })
+    const { where, data } = prismaMock.user.update.mock.calls[0][0]
+    expect(where).toEqual({ id: 'u-ana' })
+    expect(data.passwordHash).not.toBe(res.body.password)
+    expect(await bcrypt.compare(res.body.password, data.passwordHash)).toBe(true)
+  })
+
+  it('jogador de outra sala: 404 e nada muda', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({ id: 'c9', roomId: 'outra', userId: 'u9' })
+    expect((await reset(ADMIN, 'c9')).status).toBe(404)
+    expect(prismaMock.user.update).not.toHaveBeenCalled()
+  })
+
+  it('administrador de outra sala não redefine', async () => {
+    expect((await reset(OTHER)).status).toBe(403)
+    expect(prismaMock.user.update).not.toHaveBeenCalled()
+  })
+
+  it('jogador comum não redefine', async () => {
+    expect((await reset(makeToken({ id: 'u-ana' }))).status).toBe(403)
+  })
+
+  it('401 sem token', async () => {
+    expect((await request(app).post('/api/v1/rooms/room-1/players/c1/reset-password')).status).toBe(401)
+  })
+})

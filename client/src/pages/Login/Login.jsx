@@ -65,6 +65,8 @@ export default function Login() {
         </button>
       </form>
 
+      <p className="text-[13px] text-[#8A9680]">Esqueceu a senha? Peça ao administrador da sua sala: ele gera uma senha nova pelo painel.</p>
+
       <p className="text-sm text-[#6B7A62]">
         Primeira vez aqui?{' '}
         <Link to="/register" className="font-extrabold text-[#2457C5] underline-offset-2 hover:underline">Criar conta de jogador</Link>

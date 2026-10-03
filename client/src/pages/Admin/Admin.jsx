@@ -61,6 +61,7 @@ export default function Admin() {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [lastResult, setLastResult] = useState(null)
+  const [pwd, setPwd] = useState(null) // { id, name, password? } — esqueci a senha
 
   const say = (text) => {
     setToast(text)
@@ -202,6 +203,20 @@ export default function Admin() {
       say('Sala apagada')
     } catch (err) {
       setError(err.response?.data?.error || 'Não deu para apagar a sala.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const resetPassword = async (player) => {
+    setBusy(true)
+    setError('')
+    try {
+      const { data } = await api.post(`/rooms/${room.id}/players/${player.id}/reset-password`)
+      setPwd({ id: player.id, name: data.name, password: data.password })
+    } catch (err) {
+      setError(err.response?.data?.error || 'Não deu para gerar a senha nova.')
+      setPwd(null)
     } finally {
       setBusy(false)
     }
@@ -422,6 +437,7 @@ export default function Admin() {
                           {room.status === 'active' && <th className="px-2.5 py-2">Falta no mês</th>}
                           {room.status === 'active' && <th className="px-2.5 py-2">Situação</th>}
                           <th className="px-2.5 py-2 text-right">Patrimônio</th>
+                          <th className="px-2.5 py-2 text-right">Senha</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -450,6 +466,16 @@ export default function Admin() {
                               </td>
                             )}
                             <td className="px-2.5 py-2.5 text-right font-extrabold tabular-nums">{room.status === 'waiting' ? '—' : brl(p.netWorth)}</td>
+                            <td className="px-2.5 py-2.5 text-right">
+                              {pwd?.id === p.id && !pwd.password ? (
+                                <span className="inline-flex gap-1.5">
+                                  <button type="button" onClick={() => resetPassword(p)} disabled={busy} className="rounded-lg bg-[#F2B53A] px-2.5 py-1 text-xs font-extrabold text-[#4A3200] cursor-pointer">Gerar nova</button>
+                                  <button type="button" onClick={() => setPwd(null)} className="rounded-lg px-2 py-1 text-xs font-extrabold text-[#6B7A62] cursor-pointer">Cancelar</button>
+                                </span>
+                              ) : (
+                                <button type="button" onClick={() => setPwd({ id: p.id, name: p.name })} className="text-xs font-extrabold text-[#2457C5] hover:underline cursor-pointer">Esqueceu?</button>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -457,6 +483,13 @@ export default function Admin() {
                   </div>
                 )}
               </div>
+
+              {pwd?.password && (
+                <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] border-2 border-[#E0A100] bg-[#FFF3C4] p-4 text-[#5A3D00]">
+                  <p className="text-[15px]">Senha nova de <b>{pwd.name}</b>: <b className="font-mono text-xl tracking-wider">{pwd.password}</b>. Passe para a pessoa; a senha antiga não vale mais.</p>
+                  <button type="button" onClick={() => setPwd(null)} className="rounded-[14px] bg-white px-4 py-2 font-extrabold text-[#6B7A62] cursor-pointer">Pronto</button>
+                </div>
+              )}
 
               {lastResult && (
                 <div className={`${CARD} grid gap-2 p-5`}>
