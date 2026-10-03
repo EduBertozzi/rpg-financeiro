@@ -6,11 +6,7 @@ const { foodBillWithCoupon, foodCouponDiscount, combinedDiscount, FOOD_COUPON_NO
 // habilidades desbloqueadas, para aplicar os descontos das contas
 const withSkills = { unlockedSkills: { include: { skillNode: true } } }
 
-const BILL_TYPES = {
-  food: { field: 'foodCost', label: 'Mercadinho' },
-  utilities: { field: 'utilitiesCost', label: 'Água e Luz' },
-  transport: { field: 'transportCost', label: 'Internet e Celular' },
-}
+const { BILLS: BILL_TYPES } = require('../utils/settle')
 
 // Cupom do Mercadinho resgatado neste mês (ver couponController). Enquanto a
 // conta não foi paga, ele dá 20% de desconto sobre o valor já com as habilidades.

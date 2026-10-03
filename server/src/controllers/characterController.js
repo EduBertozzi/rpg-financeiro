@@ -4,6 +4,7 @@ const { isValidGift, startingCosts, startingSkillPoints, giftEventImpact } = req
 const { WELCOME_GIFT } = require('../utils/events')
 const { leisureFor } = require('../utils/leisure')
 const { dilemmaFor } = require('../utils/dilemmas')
+const { BILLS, pendingForMonth } = require('../utils/settle')
 const { createCouponPlan } = require('./couponController')
 
 // gênero saiu da criação de personagem; a coluna continua obrigatória no
@@ -99,18 +100,22 @@ exports.setReady = async (req, res) => {
   try {
     const character = await prisma.character.findUnique({
       where: { id: req.params.id },
-      include: { room: true, choices: true }
+      include: { room: true, choices: true, eventLog: true }
     })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
 
-    // lazer e dilema do mês são obrigatórios para fechar o mês
+    // dilema, lazer e as três contas são obrigatórios para fechar o mês
     const turn = character.room?.status === 'active' ? character.room.currentTurn : 0
     const chose = (kind) => (character.choices ?? []).some((c) => c.turn === turn && c.kind === kind)
     const missing = []
-    if (turn > 0 && leisureFor(turn) && !chose('leisure')) missing.push('Lazer')
     if (turn > 0 && dilemmaFor(turn) && !chose('dilemma')) missing.push('Dilema')
-    if (missing.length) return res.status(400).json({ error: `Falta resolver: ${missing.join(' e ')}`, missing })
+    if (turn > 0 && leisureFor(turn) && !chose('leisure')) missing.push('Lazer')
+    if (turn > 0) {
+      const pending = pendingForMonth({ logs: character.eventLog ?? [], choices: [], turn })
+      for (const type of pending.bills) missing.push(BILLS[type].label)
+    }
+    if (missing.length) return res.status(400).json({ error: `Falta resolver: ${missing.join(', ')}`, missing })
 
     const updated = await prisma.character.update({
       where: { id: req.params.id },

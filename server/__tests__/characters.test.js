@@ -338,6 +338,7 @@ describe('PATCH /api/v1/characters/:id/ready', () => {
   })
 
   const activeRoom = (currentTurn) => ({ status: 'active', currentTurn })
+  const paidBills = (turn) => ['Mercadinho', 'Água e Luz', 'Internet e Celular'].map((label) => ({ turn, description: `Conta: ${label} — Pago (-R$ 100)` }))
   const ready = () => request(app).patch('/api/v1/characters/char-1/ready').set(authHeader(TOKEN))
 
   it('não fecha o mês sem o lazer e o dilema', async () => {
@@ -346,14 +347,39 @@ describe('PATCH /api/v1/characters/:id/ready', () => {
     const res = await ready()
 
     expect(res.status).toBe(400)
-    expect(res.body.missing).toEqual(['Lazer', 'Dilema'])
+    expect(res.body.missing).toEqual(['Dilema', 'Lazer', 'Mercadinho', 'Água e Luz', 'Internet e Celular'])
     expect(prismaMock.character.update).not.toHaveBeenCalled()
+  })
+
+  it('não fecha o mês com conta em aberto', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({
+      id: 'char-1', userId: 'user-1', room: activeRoom(3),
+      choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }],
+      eventLog: paidBills(3).slice(0, 2),
+    })
+
+    const res = await ready()
+
+    expect(res.status).toBe(400)
+    expect(res.body.missing).toEqual(['Internet e Celular'])
+    expect(res.body.error).toBe('Falta resolver: Internet e Celular')
+  })
+
+  it('conta paga em outro mês não vale', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({
+      id: 'char-1', userId: 'user-1', room: activeRoom(3),
+      choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }],
+      eventLog: paidBills(2),
+    })
+
+    expect((await ready()).body.missing).toEqual(['Mercadinho', 'Água e Luz', 'Internet e Celular'])
   })
 
   it('escolhas de outro mês não contam', async () => {
     prismaMock.character.findUnique.mockResolvedValue({
       id: 'char-1', userId: 'user-1', room: activeRoom(3),
       choices: [{ turn: 2, kind: 'leisure' }, { turn: 2, kind: 'dilemma' }, { turn: 3, kind: 'leisure' }],
+      eventLog: paidBills(3),
     })
 
     const res = await ready()
@@ -366,6 +392,7 @@ describe('PATCH /api/v1/characters/:id/ready', () => {
     prismaMock.character.findUnique.mockResolvedValue({
       id: 'char-1', userId: 'user-1', room: activeRoom(3),
       choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }],
+      eventLog: paidBills(3),
     })
     prismaMock.character.update.mockResolvedValue({ turnReady: true })
 
@@ -374,7 +401,7 @@ describe('PATCH /api/v1/characters/:id/ready', () => {
 
   it('dezembro não tem dilema: só o lazer é obrigatório', async () => {
     prismaMock.character.findUnique.mockResolvedValue({
-      id: 'char-1', userId: 'user-1', room: activeRoom(12), choices: [{ turn: 12, kind: 'leisure' }],
+      id: 'char-1', userId: 'user-1', room: activeRoom(12), choices: [{ turn: 12, kind: 'leisure' }], eventLog: paidBills(12),
     })
     prismaMock.character.update.mockResolvedValue({ turnReady: true })
 

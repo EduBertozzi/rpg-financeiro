@@ -212,6 +212,11 @@ const DILEMMAS = {
 
 const LABELS = ['A', 'B']
 
+// Inércia: o que acontece com quem não respondeu o dilema até o mês fechar —
+// a opção de quem não fez nada (não emprestou, deixou para depois, parcelou…).
+const INERTIA = { 1: 0, 2: 1, 3: 0, 4: 0, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1 }
+const inertiaOption = (turn) => INERTIA[Number(turn)] ?? 0
+
 const dilemmaFor = (turn) => DILEMMAS[Number(turn)] ?? null
 
 // gasto da escolha antes de desconto (custo ou primeira parcela)
@@ -332,6 +337,7 @@ function choicesTimeline(choices = [], effects = []) {
 }
 
 module.exports = {
+  INERTIA, inertiaOption,
   choicesTimeline,
   DILEMMAS, LABELS, WALK_LOCK_SECONDS, FIRE_HOUSE_MULTIPLIER, RAISE, RAISE_MISSED_MEETING,
   dilemmaFor, optionPrice, resolveDilemma, publicDilemma, summarizeEffects, installmentDebt,

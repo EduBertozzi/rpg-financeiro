@@ -378,7 +378,7 @@ export default function Admin() {
                     {confirm === 'close' && (
                       <div role="alertdialog" aria-label="Confirmar fechamento" className="grid gap-2.5 rounded-[18px] bg-[#FFF3C4] p-4 text-[#5A3D00]">
                         <b>{missing === 1 ? '1 jogador ainda não terminou' : `${missing} jogadores ainda não terminaram`} o mês.</b>
-                        <span className="text-sm">Se fechar agora, quem não pagou as contas ou não escolheu o lazer passa para o mês seguinte sem ter feito.</span>
+                        <span className="text-sm">Se fechar agora, o que ficou em aberto é cobrado na virada: conta não paga vira conta atrasada (com multa e juros), o lazer é cobrado e o dilema sem resposta é decidido pela inércia.</span>
                         <div className="flex flex-wrap gap-2">
                           <button type="button" onClick={closeMonth} disabled={busy} className={AMBER_BUTTON}>Fechar mesmo assim</button>
                           <button type="button" onClick={() => setConfirm(null)} className="rounded-[14px] bg-white px-4 py-2 font-extrabold text-[#6B7A62] cursor-pointer">Esperar</button>

@@ -9,7 +9,8 @@
     "test:watch": "npx jest --watch --runInBand",
     "test:coverage": "npx jest --coverage --runInBand --forceExit",
     "migrate:turso": "node scripts/migrate-turso.js",
-    "make-admin": "node scripts/make-admin.js"
+    "make-admin": "node scripts/make-admin.js",
+    "bots": "node scripts/bots/run.js"
   },
   "keywords": [],
   "author": "",

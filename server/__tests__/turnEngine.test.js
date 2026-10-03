@@ -16,6 +16,8 @@ const makeCharacter = (overrides = {}) => ({
   loanDebt: 0,
   isBankrupt: false,
   gift: null,
+  // marcou "pronto": já resolveu o mês (sem cobranças de atraso na virada)
+  turnReady: true,
   ...overrides,
 })
 
@@ -1144,5 +1146,157 @@ describe('consequências dos dilemas na virada', () => {
 
     expect(prismaMock.fixedIncomeInvestment.update).toHaveBeenCalledWith({ where: { id: 'fi-1' }, data: { amount: { increment: 100 } } })
     expect(prismaMock.financialSnapshot.upsert.mock.calls[0][0].create.turn).toBe(13)
+  })
+})
+
+// ─── o que ficou em aberto quando o mês fecha ─────────────────────────────────
+
+describe('virada cobra o que ficou em aberto', () => {
+  const skill = (path, level) => ({ skillNode: { path, level, name: `${path}-${level}` } })
+
+  function setup(character, { turn = 3, logs = [], choices = [] } = {}) {
+    prismaMock.room.findUnique.mockResolvedValueOnce({ id: 'room-1', currentTurn: turn, maxTurns: 12, status: 'active', characters: [character] })
+    if (turn >= 12) {
+      prismaMock.room.findUnique.mockResolvedValueOnce({ id: 'room-1', characters: [{ id: character.id, snapshots: [] }] })
+      prismaMock.leaderboard.upsert.mockResolvedValue({})
+    }
+    prismaMock.marketAsset.findMany.mockResolvedValue([])
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([])
+    prismaMock.debentureInvestment.findMany.mockResolvedValue([])
+    prismaMock.characterEventLog.findMany.mockResolvedValue(logs)
+    prismaMock.characterChoice.findMany.mockResolvedValue(choices)
+    prismaMock.characterChoice.create.mockResolvedValue({})
+    prismaMock.scheduledEffect.findMany.mockResolvedValue([])
+    prismaMock.scheduledEffect.createMany.mockResolvedValue({})
+    prismaMock.characterEventLog.create.mockResolvedValue({})
+    prismaMock.character.update.mockResolvedValue({})
+    prismaMock.character.findUnique.mockResolvedValue({ ...character, fixedInvestments: [], positions: [], debentures: [], effects: [] })
+    prismaMock.financialSnapshot.upsert.mockResolvedValue({})
+    prismaMock.room.update.mockResolvedValue({})
+  }
+
+  const logs = () => prismaMock.characterEventLog.create.mock.calls.map(([a]) => a.data)
+  const logStarting = (prefix) => logs().filter((l) => l.description.startsWith(prefix))
+  const costsUpdate = () => prismaMock.character.update.mock.calls.find(([a]) => 'isBankrupt' in (a?.data ?? {}))[0].data
+  const lazy = (overrides = {}) => makeCharacter({ turnReady: false, cash: 10000, housingCost: 1000, foodCost: 1000, utilitiesCost: 250, transportCost: 250, ...overrides })
+  const paid = (turn, label) => ({ turn, description: `Conta: ${label} — Pago (-R$ 1)` })
+
+  beforeEach(() => jest.spyOn(Math, 'random').mockReturnValue(0.1))
+  afterEach(() => Math.random.mockRestore())
+
+  it('quem marcou pronto não é cobrado de nada (nem consulta)', async () => {
+    setup(makeCharacter({ turnReady: true }))
+    await processTurn('room-1')
+
+    expect(prismaMock.characterChoice.findMany).not.toHaveBeenCalled()
+    expect(logStarting('Conta atrasada')).toEqual([])
+  })
+
+  it('três contas em aberto viram contas atrasadas com 3% a mais, no mês que fechou', async () => {
+    setup(lazy(), { choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }] })
+    await processTurn('room-1')
+
+    expect(logStarting('Conta atrasada').map((l) => [l.turn, l.cashImpact])).toEqual([[3, -1030], [3, -257.5], [3, -257.5]])
+    expect(logStarting('Conta atrasada: Mercadinho')[0].description).toBe('Conta atrasada: Mercadinho — R$ 1000.00 + 2% de multa e 1% de juros (-R$ 1030.00)')
+  })
+
+  it('o saldo já sai com as contas atrasadas antes do salário e do aluguel', async () => {
+    setup(lazy(), { choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }] })
+    const { results } = await processTurn('room-1')
+
+    // 10000 - 1545 (atrasadas) + 7000 - 1000
+    expect(costsUpdate().cash).toBe(14455)
+    expect(results[0].cashDelta).toBe(-1545 + 7000 - 1000)
+  })
+
+  it('não pagar nunca sai mais barato que pagar em dia', async () => {
+    setup(lazy(), { choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }] })
+    await processTurn('room-1')
+    const late = -logStarting('Conta atrasada').reduce((s, l) => s + l.cashImpact, 0)
+    expect(late).toBeGreaterThan(1000 + 250 + 250)
+  })
+
+  it('conta atrasada usa o desconto das habilidades', async () => {
+    setup(lazy({ unlockedSkills: [skill('communication', 1)] }), { choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }] })
+    await processTurn('room-1')
+
+    // água e luz 250 - 30% = 175 → 180,25
+    expect(logStarting('Conta atrasada: Água e Luz')[0].cashImpact).toBe(-180.25)
+  })
+
+  it('só cobra a conta que faltou', async () => {
+    setup(lazy(), {
+      logs: [paid(3, 'Mercadinho'), paid(3, 'Água e Luz')],
+      choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }],
+    })
+    await processTurn('room-1')
+
+    expect(logStarting('Conta atrasada').map((l) => l.description.split(' —')[0])).toEqual(['Conta atrasada: Internet e Celular'])
+  })
+
+  it('lazer não escolhido: cobra o primeiro passeio e guarda a escolha', async () => {
+    setup(lazy(), { logs: [paid(3, 'Mercadinho'), paid(3, 'Água e Luz'), paid(3, 'Internet e Celular')], choices: [{ turn: 3, kind: 'dilemma' }] })
+    await processTurn('room-1')
+
+    expect(logStarting('Lazer')).toEqual([expect.objectContaining({ turn: 3, cashImpact: -200 })])
+    expect(prismaMock.characterChoice.create).toHaveBeenCalledWith({ data: { characterId: 'char-1', turn: 3, kind: 'leisure', option: 0, amount: 200 } })
+  })
+
+  it('dilema sem resposta: a inércia decide, sem ponto de habilidade', async () => {
+    setup(lazy(), {
+      logs: [paid(3, 'Mercadinho'), paid(3, 'Água e Luz'), paid(3, 'Internet e Celular')],
+      choices: [{ turn: 3, kind: 'leisure' }],
+    })
+    await processTurn('room-1')
+
+    // março: deixar o dente para depois → canal em junho
+    expect(prismaMock.characterChoice.create).toHaveBeenCalledWith({ data: { characterId: 'char-1', turn: 3, kind: 'dilemma', option: 0, amount: 0 } })
+    expect(prismaMock.scheduledEffect.createMany).toHaveBeenCalledWith({
+      data: [expect.objectContaining({ characterId: 'char-1', sourceTurn: 3, turn: 6, amount: -500 })],
+    })
+    expect(logStarting('Dilema "Dor de dente" — Sem resposta')).toHaveLength(1)
+    expect(prismaMock.characterSkillPoints.update).not.toHaveBeenCalled()
+  })
+
+  it('dilema do incêndio sem resposta: casa mais cara, e o aluguel do mês já usa o novo valor', async () => {
+    setup(lazy({ housingCost: 1500 }), {
+      turn: 10,
+      logs: [paid(10, 'Mercadinho'), paid(10, 'Água e Luz'), paid(10, 'Internet e Celular')],
+      choices: [{ turn: 10, kind: 'leisure' }],
+    })
+    await processTurn('room-1')
+
+    expect(prismaMock.character.update).toHaveBeenCalledWith({ where: { id: 'char-1' }, data: { housingCost: 2250 } })
+    expect(logStarting('Aluguel')[0].cashImpact).toBe(-2250)
+  })
+
+  it('a inércia de setembro também demite quem foi a pé em agosto', async () => {
+    setup(lazy(), {
+      turn: 9,
+      logs: [paid(9, 'Mercadinho'), paid(9, 'Água e Luz'), paid(9, 'Internet e Celular')],
+      choices: [{ turn: 9, kind: 'leisure' }, { turn: 8, kind: 'dilemma', option: 1 }],
+    })
+    await processTurn('room-1')
+
+    const effects = prismaMock.scheduledEffect.createMany.mock.calls[0][0].data
+    expect(effects.map((e) => e.kind)).toEqual(['notice', 'no_salary'])
+  })
+
+  it('dezembro: cobra contas e lazer no fechamento do ano, sem dilema', async () => {
+    setup(lazy(), { turn: 12 })
+    await processTurn('room-1')
+
+    expect(logStarting('Conta atrasada')).toHaveLength(3)
+    expect(logStarting('Lazer')).toEqual([expect.objectContaining({ turn: 12, cashImpact: -1000 })])
+    expect(logStarting('Dilema')).toEqual([])
+    // 10000 - 1545 - 1000, sem salário nem aluguel no fechamento do ano
+    expect(costsUpdate().cash).toBe(7455)
+  })
+
+  it('o Dorminhoco (não faz nada o ano todo) paga mais que quem faz tudo em dia', async () => {
+    setup(lazy(), { turn: 3 })
+    await processTurn('room-1')
+    const lazyCost = -logs().filter((l) => /^(Conta atrasada|Lazer|Dilema)/.test(l.description)).reduce((s, l) => s + l.cashImpact, 0)
+    expect(lazyCost).toBeGreaterThan(1000 + 250 + 250 + 200)
   })
 })

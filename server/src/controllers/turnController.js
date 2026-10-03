@@ -114,7 +114,7 @@ exports.chooseDilemma = async (req, res) => {
 
     await prisma.$transaction(async (tx) => {
       await tx.characterChoice.create({
-        data: { characterId: character.id, turn, kind: 'dilemma', option: optionIndex, amount: -outcome.cash }
+        data: { characterId: character.id, turn, kind: 'dilemma', option: optionIndex, amount: outcome.cash ? -outcome.cash : 0 }
       })
       await tx.character.update({
         where: { id: character.id },

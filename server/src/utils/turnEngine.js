@@ -1,9 +1,68 @@
 const prisma = require('../lib/prisma')
 const { monthlyReturn, debentureReturn, nextStockPrice, closeMonth, balanceSheet, cents, SALARY } = require('./finance')
-const { perksOf, rentAmount, eventImpact, savingsBonus, percentLabel } = require('./skills')
+const { perksOf, rentAmount, eventImpact, savingsBonus, percentLabel, billAmount } = require('./skills')
 const { giftIncome, giftIncomeEntry, giftEventImpact } = require('./gifts')
 const { eventsFor } = require('./events')
-const { dilemmaFor, summarizeEffects, installmentDebt } = require('./dilemmas')
+const { dilemmaFor, summarizeEffects, installmentDebt, resolveDilemma, inertiaOption } = require('./dilemmas')
+const { leisureFor, leisurePrice } = require('./leisure')
+const { BILLS, LATE_FEE, LATE_INTEREST, lateBillAmount, pendingForMonth } = require('./settle')
+
+const brl = (n) => Number(n).toFixed(2)
+
+// O que ficou em aberto no mês que está fechando (ver settle.js): conta não
+// paga vira conta atrasada com multa e juros, lazer não escolhido é cobrado e
+// dilema sem resposta é decidido pela inércia. Quem marcou "pronto" já
+// resolveu tudo (o servidor confere), então só olha quem não marcou.
+// O saldo é ajustado no `character` em memória: o applyFixedCosts grava.
+async function settleMonth(character, turn, perks = perksOf()) {
+  if (character.turnReady || turn < 1) return 0
+  const [logs, choices] = await Promise.all([
+    prisma.characterEventLog.findMany({ where: { characterId: character.id, turn } }),
+    prisma.characterChoice.findMany({ where: { characterId: character.id } }),
+  ])
+  const pending = pendingForMonth({
+    logs: logs ?? [], choices: choices ?? [], turn,
+    hasLeisure: Boolean(leisureFor(turn)), hasDilemma: Boolean(dilemmaFor(turn)),
+  })
+  const log = (cashImpact, description) =>
+    prisma.characterEventLog.create({ data: { characterId: character.id, turn, cashImpact, description } })
+  let total = 0
+
+  for (const type of pending.bills) {
+    const { field, label } = BILLS[type]
+    const base = billAmount(type, character[field], perks)
+    const amount = lateBillAmount(base)
+    total = cents(total - amount)
+    await log(-amount, `Conta atrasada: ${label} — R$ ${brl(base)} + ${percentLabel(LATE_FEE)} de multa e ${percentLabel(LATE_INTEREST)} de juros (-R$ ${brl(amount)})`)
+  }
+
+  if (pending.leisure) {
+    const price = leisurePrice(turn, perks)
+    const option = leisureFor(turn).options[0]
+    await prisma.characterChoice.create({ data: { characterId: character.id, turn, kind: 'leisure', option: 0, amount: price } })
+    total = cents(total - price)
+    await log(-price, `Lazer: ${option.title} (-R$ ${brl(price)}) — o mês fechou sem lazer escolhido`)
+  }
+
+  if (pending.dilemma) {
+    const option = inertiaOption(turn)
+    const answered = Object.fromEntries((choices ?? []).filter((c) => c.kind === 'dilemma').map((c) => [c.turn, c.option]))
+    const outcome = resolveDilemma(turn, option, { perks, choices: answered, housingCost: character.housingCost })
+    await prisma.characterChoice.create({ data: { characterId: character.id, turn, kind: 'dilemma', option, amount: outcome.cash ? -outcome.cash : 0 } })
+    if (outcome.effects.length) {
+      await prisma.scheduledEffect.createMany({ data: outcome.effects.map((e) => ({ characterId: character.id, sourceTurn: turn, ...e })) })
+    }
+    if (outcome.updates.housingCost) {
+      await prisma.character.update({ where: { id: character.id }, data: outcome.updates })
+      character.housingCost = outcome.updates.housingCost
+    }
+    total = cents(total + outcome.cash)
+    await log(outcome.cash, `Dilema "${dilemmaFor(turn).title}" — Sem resposta: ${outcome.text}. ${outcome.result}`)
+  }
+
+  character.cash = cents(Number(character.cash) + total)
+  return total
+}
 
 // Virada do mês na conta. Na ordem: juros do cheque especial sobre o saldo com
 // que o mês fechou, salário do mês novo (com os bônus e as rendas extras das
@@ -253,6 +312,8 @@ async function processTurn(roomId) {
 
   for (const character of room.characters) {
     const perks = perksOf(character.unlockedSkills)
+    // o que ficou em aberto no mês que fecha
+    const settled = await settleMonth(character, room.currentTurn, perks)
     // consequências de dilemas marcadas para esta virada (na última, as
     // parcelas que sobram ficam como dívida)
     const effects = final
@@ -274,7 +335,7 @@ async function processTurn(roomId) {
     results.push({
       characterId: character.id,
       characterName: character.name,
-      cashDelta: cents(costs.salary - costs.totalCosts + costs.effectsCash + returns + bonus + eventResult.cashImpact),
+      cashDelta: cents(settled + costs.salary - costs.totalCosts + costs.effectsCash + returns + bonus + eventResult.cashImpact),
       event: eventResult.events[0] ?? null,
       events: eventResult.events,
       netWorth: snapshot.netWorth
@@ -327,4 +388,4 @@ async function buildLeaderboard(roomId) {
   }
 }
 
-module.exports = { processTurn }
+module.exports = { processTurn, settleMonth }

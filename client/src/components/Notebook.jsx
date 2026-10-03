@@ -75,6 +75,8 @@ const CHAPTERS = [
           <H3>Na virada do mês</H3>
           <p>Nesta ordem: juros do cheque especial, salário, consequências das suas escolhas, aluguel e um imprevisto.</p>
           <Hand>As escolhas voltam. Um dilema de março pode cobrar a conta em junho.</Hand>
+          <H3>Esqueceu alguma coisa?</H3>
+          <p>O mês fecha mesmo assim. Conta não paga vira <b>conta atrasada</b>, com 2% de multa e 1% de juros. O lazer é cobrado, e o dilema sem resposta é decidido por você não ter decidido.</p>
           <H3>Pontos de habilidade</H3>
           <p>Cada dilema respondido dá <b>1 ponto</b> para gastar na Universidade.</p>
         </>

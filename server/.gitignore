@@ -10,3 +10,6 @@ node_modules
 
 # OS files
 .DS_Store
+
+# saída dos robôs de teste (npm run bots)
+bots-out/
