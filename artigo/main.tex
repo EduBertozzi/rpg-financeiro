@@ -58,25 +58,58 @@ Decisões financeiras do dia a dia raramente têm efeito imediato: um empréstim
 % ----------------------------------------------------------------------------
 \section{Introdução}
 
-A literacia financeira está associada a melhores decisões de poupança, endividamento e planejamento \cite{lusardi2014}, e avaliações internacionais mostram que boa parte dos estudantes não domina conceitos básicos como juros compostos e risco \cite{oecd2017pisa}. No Brasil, a educação financeira aparece como tema transversal na Base Nacional Comum Curricular \cite{bncc2018}. % TODO: incluir dado nacional recente sobre endividamento de jovens, com fonte.
+A literacia financeira está associada a melhores decisões de poupança, endividamento e planejamento \cite{lusardi2014}, e uma meta-análise de 76 experimentos randomizados mostra que a educação financeira melhora tanto o conhecimento quanto o comportamento \cite{kaiser2022}. Ainda assim, no PISA 2022, 18\% dos estudantes dos países da OCDE ficaram abaixo do nível básico de letramento financeiro \cite{oecd2024}. No Brasil, a educação financeira aparece como tema transversal na Base Nacional Comum Curricular \cite{bncc2018} e é acompanhada pelo Banco Central \cite{bcb2021}; entre jovens de 18 a 25 anos, as negociações de dívida cresceram 49\% de janeiro a julho de 2025 \cite{serasa2025}.
 
-Ensinar finanças por exposição tem um limite: as consequências de uma decisão financeira costumam aparecer muito depois dela, e é justamente essa distância entre escolha e efeito que leva ao viés de deixar para depois \cite{odonoghue1999}. Jogos permitem viver essa distância em minutos, com a segurança de errar sem prejuízo real \cite{gee2003}.
+Ensinar finanças por exposição tem um limite: as consequências de uma decisão financeira costumam aparecer muito depois dela, e é justamente essa distância entre escolha e efeito que favorece o adiamento \cite{odonoghue1999}. Jogos permitem viver essa distância em minutos, com a segurança de errar sem prejuízo real \cite{gee2003}.
 
-Este artigo apresenta o \emph{Fecha o Mês}, um jogo para turmas em sala de aula, conduzido por um administrador (o professor), em que cada mês de jogo dura cerca de dez minutos. Nossas contribuições são:
+Este trabalho nasceu como um projeto de iniciação científica para desenvolver um \emph{software de simulação do mercado financeiro}. Durante o projeto, o escopo foi redesenhado como um jogo: um simulador mostra produtos, mas um jogo consegue unir no mesmo ciclo orçamento, consumo, imprevistos, investimento, risco e consequências de longo prazo, e dar ao estudante um motivo para voltar a cada mês. O resultado é o \emph{Fecha o Mês}, um jogo para turmas em sala de aula, conduzido por um administrador (o professor), em que cada mês de jogo dura cerca de dez minutos. Nossas contribuições são:
 \begin{enumerate}[leftmargin=*,itemsep=2pt]
-  \item um ciclo mensal que combina obrigações (contas), escolhas de gosto (lazer), dilemas com \textbf{consequências agendadas} e investimentos com regras de produtos reais;
+  \item um ciclo mensal que combina obrigações (contas), escolhas de gosto (lazer), dilemas com \textbf{consequências agendadas} e investimentos com regras de produtos reais, fundamentado em teorias de motivação e aprendizagem;
   \item uma arquitetura em que toda a matemática financeira vive em funções puras, testadas isoladamente;
   \item um método de \textbf{balanceamento por agentes} que jogam pelo servidor real, com um agente de controle para medir o efeito de cada decisão isoladamente.
 \end{enumerate}
 
 % ----------------------------------------------------------------------------
-\section{Trabalhos relacionados}
+\section{Referencial teórico}
 
-\paragraph{Jogos e educação financeira.} % TODO: revisão a fazer pelo time.
-[Descrever 3 a 5 jogos ou aplicações de educação financeira, incluindo a referência levantada no mural do projeto: \emph{Aplicação de gestão financeira para jovens adultos promover a literacia financeira através da gamificação}, e comparar com o Fecha o Mês: duração, multijogador, consequências diferidas, produtos reais.]
-A distinção entre jogos sérios e gamificação \cite{deterding2011} posiciona o Fecha o Mês como um jogo completo, não como uma camada de pontos sobre uma tarefa.
+\subsection{Jogos sérios e gamificação}
 
-\paragraph{Testes automatizados e balanceamento.} Agentes que jogam com estilos diferentes já foram usados para testar fases e ajustar parâmetros: \citet{holmgard2019} propõem \emph{personas procedurais} que representam estilos de decisão, e \citet{zook2014} usam testes automáticos para ajustar parâmetros de jogo. Nossa abordagem é mais simples (agentes por regras, não aprendidos), mas joga pelo servidor de produção e adiciona um agente de controle para isolar o efeito de cada decisão.
+\citet{abt1970} cunhou o termo \emph{jogo sério} para jogos com propósito educacional explícito que não deixam de ser divertidos; \citet{michael2006} o ampliam para jogos que educam, treinam e informam. A \emph{gamificação}, por sua vez, é o uso de elementos de design de jogos em contextos que não são jogos \cite{deterding2011}: pontos, emblemas, rankings e níveis aplicados a uma atividade existente \cite{werbach2012}, com uso crescente na educação \cite{kapp2012}. A distinção importa para este trabalho. O \emph{Fecha o Mês} não acrescenta pontos a uma aula de finanças: é um jogo completo, com regras, objetivo e consequências, que \emph{também} usa elementos de gamificação (árvore de habilidades, conquistas, ranking).
+
+A evidência empírica é favorável, com ressalvas. Em revisão de estudos empíricos, \citet{hamari2014} encontram efeitos em geral positivos da gamificação, mas dependentes do contexto e de quem usa. A revisão sistemática de \citet{connolly2012}, com 129 estudos, associa jogos sérios à aquisição de conhecimento e a efeitos motivacionais em pessoas a partir de 14 anos.
+
+\subsection{Motivação e aprendizagem}
+
+A Teoria da Autodeterminação \cite{ryan2000} explica a motivação intrínseca pela satisfação de três necessidades: autonomia, competência e pertencimento. \citet{sailer2017} mostram experimentalmente que elementos específicos atendem a necessidades específicas: emblemas e rankings à competência; história e colegas de equipe ao pertencimento. O estado de \emph{fluxo} \cite{csikszentmihalyi1990}, em que desafio e habilidade se equilibram, justifica a preocupação com o balanceamento. O ciclo da aprendizagem experiencial \cite{kolb1984} --- experiência, reflexão, conceituação e nova experimentação --- descreve bem um jogo em turnos, e a aprendizagem baseada em jogos digitais \cite{prensky2001,gee2003} aponta princípios como identidade, risco seguro e retorno imediato. Para descrever o jogo, usamos o modelo MDA \cite{hunicke2004}: as \emph{mecânicas} (contas, produtos, dilemas) geram \emph{dinâmicas} (endividamento, poupança, efeito diferido) que produzem \emph{estéticas} (desafio, descoberta, fantasia de vida adulta). A Tabela~\ref{tab:teoria} liga cada referência a uma mecânica do jogo.
+
+\begin{table}[ht]
+  \centering\small
+  \caption{Fundamentos teóricos e onde aparecem no jogo.}
+  \label{tab:teoria}
+  \begin{tabularx}{\linewidth}{@{}l X@{}}
+    \toprule
+    Fundamento & Mecânica no Fecha o Mês \\
+    \midrule
+    Autonomia \cite{ryan2000} & escolher o lazer, o dom, o caminho de habilidades e onde investir \\
+    Competência \cite{ryan2000,sailer2017} & patrimônio mês a mês, conquistas e ranking da sala \\
+    Pertencimento \cite{ryan2000,sailer2017} & partida em turma, com o mesmo calendário para todos \\
+    Fluxo \cite{csikszentmihalyi1990} & balanceamento por agentes; nenhum caminho dominante \\
+    Ciclo experiencial \cite{kolb1984} & decidir (dilema), viver a consequência (virada), refletir (linha do tempo), decidir de novo \\
+    Risco seguro \cite{gee2003} & dívida, demissão e calote sem prejuízo real \\
+    MDA \cite{hunicke2004} & produtos reais (mecânica) $\rightarrow$ juros compostos (dinâmica) $\rightarrow$ descoberta (estética) \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\subsection{Jogos de educação financeira}
+
+No Brasil, o mapeamento sistemático de \citet{torrens2021} sobre jogos sérios de educação financeira aponta o modo multijogador e o uso de técnicas de inteligência artificial como lacunas da área. Um exemplo recente é o \emph{Grana} \cite{cavalcante2021}, jogo para dispositivos móveis voltado a crianças de escolas rurais. A revisão de \citet{andrade2025} conclui que jogos são eficazes em educação financeira, mas que medir o impacto no comportamento ainda é difícil. Em âmbito internacional, \citet{kalmi2021} discutem o potencial e os limites de jogos digitais, de tabuleiro e de interpretação de papéis na educação financeira. Fora da academia, o \emph{Cashflow 101} \cite{cashflow1996} popularizou o tema em tabuleiro, com foco em investimentos e fluxo de caixa, e o \emph{Spent} \cite{spent2011} simula sobreviver um mês com orçamento apertado, escolhendo entre contas. % TODO: incluir a referência do mural quando houver autores e ano.
+
+O \emph{Fecha o Mês} se posiciona em três pontos dessa paisagem: é multijogador e conduzido em sala, respondendo à primeira lacuna de \citet{torrens2021}; trata as consequências diferidas como mecânica central, em vez de feedback imediato; e usa agentes automatizados no próprio processo de design, o que toca a segunda lacuna.
+
+\subsection{Teste automatizado e balanceamento}
+
+A indústria de jogos ainda depende quase só de testes manuais \cite{politowski2021}. Agentes que jogam com estilos diferentes já foram usados para testar fases e ajustar parâmetros: \citet{holmgard2019} propõem \emph{personas procedurais} que representam estilos de decisão, e \citet{zook2014} usam testes automáticos para ajustar parâmetros de jogo. Nossa abordagem é mais simples (agentes por regras, não aprendidos), mas joga pelo servidor de produção e adiciona um agente de controle para isolar o efeito de cada decisão.
 
 % ----------------------------------------------------------------------------
 \section{O jogo}
