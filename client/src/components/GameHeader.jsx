@@ -229,7 +229,7 @@ function WorthCard({ character }) {
         <span className="font-toy text-[26px] font-extrabold leading-none tabular-nums">{brl(worth)}</span>
         {now.delta !== null && (
           <span className={`text-[12px] font-extrabold ${now.delta >= 0 ? 'text-[#2B8C41]' : 'text-[#C4283D]'}`}>
-            {now.delta >= 0 ? '▲' : '▼'} {brl(Math.abs(now.delta))} no mês
+            {now.delta >= 0 ? '▲' : '▼'} {brl(Math.abs(now.delta))} na virada
           </span>
         )}
       </div>

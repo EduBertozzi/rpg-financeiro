@@ -31,20 +31,26 @@ test('monthTasks: dilema sem resposta (inércia) também conta como feito', () =
 
 test('worthSeries: retrato da virada vira o mês que fechou, em ordem, Decimal em número', () => {
   const s = worthSeries([{ turn: 3, netWorth: '15000.5' }, { turn: 2, netWorth: 12000 }, { turn: 4, netWorth: null }])
-  assert.deepEqual(s, [{ turn: 1, value: 12000 }, { turn: 2, value: 15000.5 }])
+  assert.deepEqual(s, [{ turn: 1, value: 12000, cash: 0 }, { turn: 2, value: 15000.5, cash: 0 }])
 })
 
 test('worthSeries: o fechamento final (turn 13) é dezembro', () => {
-  assert.deepEqual(worthSeries([{ turn: 13, netWorth: 50000 }]), [{ turn: 12, value: 50000 }])
+  assert.deepEqual(worthSeries([{ turn: 13, netWorth: 50000, cash: '1200.5' }]), [{ turn: 12, value: 50000, cash: 1200.5 }])
 })
 
-test('worthNow: último patrimônio e a mudança da última virada', () => {
-  assert.deepEqual(worthNow([{ turn: 2, value: 12000 }, { turn: 3, value: 11700.4 }], 0), { value: 11700.4, delta: -299.6 })
+test('worthNow: na virada, igual ao retrato; a mudança é a da última virada', () => {
+  const series = [{ turn: 2, value: 12000, cash: 5000 }, { turn: 3, value: 11700.4, cash: 6000 }]
+  assert.deepEqual(worthNow(series, 6000), { value: 11700.4, delta: -299.6 })
+})
+
+test('worthNow: conta paga depois da virada baixa o patrimônio na hora', () => {
+  const series = [{ turn: 3, value: 18000, cash: 14000 }]
+  assert.deepEqual(worthNow(series, 12650.5), { value: 16650.5, delta: null })
 })
 
 test('worthNow: janeiro, sem virada ainda, mostra o saldo e nenhuma mudança', () => {
   assert.deepEqual(worthNow([], '7500'), { value: 7500, delta: null })
-  assert.deepEqual(worthNow([{ turn: 2, value: 9000 }], 1), { value: 9000, delta: null })
+  assert.deepEqual(worthNow([{ turn: 2, value: 9000, cash: 1 }], 1), { value: 9000, delta: null })
 })
 
 test('sparkPoints: 12 meses na largura toda, valor maior mais alto', () => {

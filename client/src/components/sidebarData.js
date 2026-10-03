@@ -30,17 +30,22 @@ export function monthTasks(eventLog, turn) {
 export function worthSeries(snapshots) {
   return (snapshots ?? [])
     .filter((s) => s.netWorth !== null && s.netWorth !== undefined)
-    .map((s) => ({ turn: Number(s.turn) - 1, value: Number(s.netWorth) }))
+    .map((s) => ({ turn: Number(s.turn) - 1, value: Number(s.netWorth), cash: Number(s.cash ?? 0) }))
     .filter((p) => p.turn >= 1)
     .sort((a, b) => a.turn - b.turn)
 }
 
 // Patrimônio de agora e quanto mudou na última virada (null se só há um mês).
+// O retrato é da virada; o que saiu da conta depois (contas, lazer, dilema)
+// entra pela diferença do saldo. Guardar numa caixinha não muda nada: o
+// dinheiro só troca de lugar.
 export function worthNow(series, cash) {
-  if (!series.length) return { value: Number(cash ?? 0), delta: null }
-  const last = series[series.length - 1].value
+  const now = Number(cash ?? 0)
+  if (!series.length) return { value: now, delta: null }
+  const last = series[series.length - 1]
   const prev = series.length > 1 ? series[series.length - 2].value : null
-  return { value: last, delta: prev === null ? null : Math.round((last - prev) * 100) / 100 }
+  const value = Math.round((last.value - (last.cash ?? 0) + now) * 100) / 100
+  return { value, delta: prev === null ? null : Math.round((last.value - prev) * 100) / 100 }
 }
 
 // Pontos da linha do gráfico pequeno num quadro w×h, com 12 meses no eixo x.

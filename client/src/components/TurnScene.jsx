@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { sfx } from '../services/sound'
 import { useRolling } from './hudHooks'
 
@@ -81,7 +82,8 @@ export default function TurnScene({ turn, net = 0, onDone }) {
   const night = stage === 'night' || stage === 'tear'
   const dawn = stage === 'dawn' || stage === 'money'
 
-  return (
+  // no body: por cima da barra lateral e do caderninho, que ficam fora do mapa
+  return createPortal(
     <div
       role="dialog"
       aria-label={`Virada para ${to}`}
@@ -116,9 +118,10 @@ export default function TurnScene({ turn, net = 0, onDone }) {
         </div>
       </div>
 
-      <button type="button" onClick={() => doneRef.current()} className="absolute bottom-6 right-6 rounded-full bg-white/85 px-4 py-1.5 text-sm font-extrabold text-[#24331F] cursor-pointer">
+      <button type="button" onClick={() => doneRef.current()} className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-full bg-white/85 px-4 py-1.5 text-sm font-extrabold text-[#24331F] cursor-pointer">
         Pular
       </button>
-    </div>
+    </div>,
+    document.body,
   )
 }
