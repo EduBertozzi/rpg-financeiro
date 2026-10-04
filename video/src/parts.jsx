@@ -156,7 +156,7 @@ export function Footage({ src, from, rate = 1, zooms = [], scale = 0.8 }) {
 }
 
 // ─── confete determinístico (papel picado saindo dos cantos)
-export function Confetti({ delay = 0, count = 140, dur = 110 }) {
+export function Confetti({ delay = 0, count = 140, dur = 110, w = 1920, h = 1080 }) {
   const frame = useCurrentFrame() - delay
   if (frame < 0 || frame > dur) return null
   const colors = [C.pink, C.yellow, C.teal, '#fff', C.blue, C.green]
@@ -167,11 +167,11 @@ export function Confetti({ delay = 0, count = 140, dur = 110 }) {
         const vx = (left ? 1 : -1) * (9 + random(`cx${i}`) * 16)
         const vy = -(22 + random(`cy${i}`) * 20)
         const t = frame
-        const x = (left ? 0 : 1920) + vx * t * 0.98
-        const y = 1000 + vy * t + 0.45 * t * t
+        const x = (left ? 0 : w) + vx * t * 0.98
+        const y = h - 80 + vy * t + 0.45 * t * t
         const r = random(`cr${i}`) * 360 + t * (8 + random(`cs${i}`) * 10)
-        const w = 12 + random(`cw${i}`) * 12
-        return <div key={i} style={{ position: 'absolute', left: x, top: y, width: w, height: w * 0.5, background: colors[i % colors.length], transform: `rotate(${r}deg) scaleY(${Math.cos(t / 5 + i)})`, borderRadius: 2 }} />
+        const size = 12 + random(`cw${i}`) * 12
+        return <div key={i} style={{ position: 'absolute', left: x, top: y, width: size, height: size * 0.5, background: colors[i % colors.length], transform: `rotate(${r}deg) scaleY(${Math.cos(t / 5 + i)})`, borderRadius: 2 }} />
       })}
     </AbsoluteFill>
   )
