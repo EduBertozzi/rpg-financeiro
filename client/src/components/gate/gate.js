@@ -3,7 +3,7 @@
 // navegador. Não é segurança (a chave fica no navegador e o servidor segue
 // aberto): é só para a equipe não ver o jogo antes da hora.
 // Para abrir para todo mundo: LOCKED = false.
-export const LOCKED = true
+export const LOCKED = false
 export const KEY_HASH = '5e183656'
 export const STORAGE_KEY = 'chave-surpresa'
 
