@@ -58,10 +58,12 @@ describe('turnSummary', () => {
     expect(d.events.map((e) => e.title)).toEqual(['13º salário', 'Gastos de fim de ano'])
   })
 
-  it('janeiro: o presente de boas-vindas', () => {
-    const j = turnSummary({ turn: 1, logs: [log(1, 'Presente de boas-vindas: Sua família fez um PIX.', 500)] })
-    expect(j.events).toEqual([expect.objectContaining({ title: 'Presente de boas-vindas', amount: 500 })])
-    expect(eventTitles(1)).toContain('Presente de boas-vindas')
+  it('janeiro: salário e aluguel do primeiro mês, sem imprevisto', () => {
+    const j = turnSummary({ turn: 1, logs: [log(1, 'Salário: Depósito do mês (+R$ 7000.00)', 7000), log(1, 'Aluguel: Casa — Pago (-R$ 1500)', -1500)] })
+    expect(j.events).toEqual([])
+    expect(j.money).toEqual({ salary: 7000, extras: 0, rent: -1500, interest: 0 })
+    expect(j.net).toBe(5500)
+    expect(eventTitles(1)).toEqual(['Nenhum imprevisto'])
   })
 
   it('aluguel adiantado entra como consequência, não como aluguel', () => {
@@ -100,5 +102,21 @@ describe('GET /api/v1/characters/:id/turn-summary/:turn', () => {
 
   it('400 para mês inválido', async () => {
     expect((await request(app).get('/api/v1/characters/c1/turn-summary/0').set(authHeader(TOKEN))).status).toBe(400)
+  })
+})
+
+describe('turnSummary — debêntures na virada', () => {
+  const log = (turn, description, cashImpact = 0) => ({ turn, description, cashImpact })
+
+  it('debênture que venceu entra no resumo e no saldo da virada', () => {
+    const s = turnSummary({ turn: 6, logs: [log(6, 'Debênture: Milhas Fácil venceu! Você recebeu R$ 5500.00.', 5500), log(6, 'Salário: Depósito do mês (+R$ 7000.00)', 7000)] })
+    expect(s.investments).toEqual([{ description: 'Milhas Fácil venceu! Você recebeu R$ 5500.00.', amount: 5500 }])
+    expect(s.net).toBe(12500)
+  })
+
+  it('calote aparece no resumo sem mexer no saldo (o dinheiro já tinha saído na compra)', () => {
+    const s = turnSummary({ turn: 6, logs: [log(6, 'Debênture: Milhas Fácil entrou em calote! Você perdeu os R$ 5000.00 aplicados.', 0)] })
+    expect(s.investments).toHaveLength(1)
+    expect(s.net).toBe(0)
   })
 })

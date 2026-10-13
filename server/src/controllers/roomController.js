@@ -1,7 +1,15 @@
 const prisma = require('../lib/prisma')
 const bcrypt = require('bcryptjs')
 const { roomCsv } = require('../utils/roomExport')
-const { cleanRoomName, playerProgress, roomSummary, roomStanding, CHARACTER_CHILD_MODELS, temporaryPassword } = require('../utils/roomAdmin')
+const { cleanRoomName, playerProgress, roomSummary, CHARACTER_CHILD_MODELS, temporaryPassword } = require('../utils/roomAdmin')
+const { roomClock, emit } = require('../realtime')
+const { DEFAULT_MONTH_MINUTES, DEFAULT_DILEMMA_MINUTES } = require('../utils/monthClock')
+
+// minutos do relógio do mês: inteiro entre 1 e 60, ou o padrão
+const minutesOr = (value, fallback) => {
+  const n = Number(value)
+  return Number.isInteger(n) && n >= 1 && n <= 60 ? n : fallback
+}
 
 const generateCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -12,6 +20,8 @@ exports.createRoom = async (req, res) => {
   try {
     const { maxTurns = 12 } = req.body
     const name = cleanRoomName(req.body?.name) ?? ''
+    const monthMinutes = minutesOr(req.body?.monthMinutes, DEFAULT_MONTH_MINUTES)
+    const dilemmaMinutes = minutesOr(req.body?.dilemmaMinutes, DEFAULT_DILEMMA_MINUTES)
 
     let code, exists
     do {
@@ -20,7 +30,7 @@ exports.createRoom = async (req, res) => {
     } while (exists)
 
     const room = await prisma.room.create({
-      data: { code, name, adminId: req.user.id, maxTurns }
+      data: { code, name, adminId: req.user.id, maxTurns, monthMinutes, dilemmaMinutes }
     })
 
     res.status(201).json(room)
@@ -57,7 +67,7 @@ exports.startRoom = async (req, res) => {
 
     const updated = await prisma.room.update({
       where: { id: req.params.id },
-      data: { status: 'active', currentTurn: 1, startedAt: new Date() }
+      data: { status: 'active', currentTurn: 1, startedAt: new Date(), turnStartedAt: new Date() }
     })
 
     res.json(updated)
@@ -85,25 +95,51 @@ exports.getLeaderboard = async (req, res) => {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
 }
-// Posição do jogador na turma e quantos já encerraram o mês (barra lateral).
-// Só quem joga na sala pode ver.
+// Relógio do mês para quem joga na sala: quanto tempo falta, em que fase o
+// jogador está e quantos da turma já encerraram. Sem posição no ranking.
 exports.getStanding = async (req, res) => {
   try {
-    const room = await prisma.room.findUnique({
-      where: { id: req.params.id },
-      include: {
-        characters: {
-          select: {
-            id: true, userId: true, turnReady: true,
-            snapshots: { orderBy: { turn: 'desc' }, take: 1, select: { netWorth: true } },
-          },
-        },
-      },
+    const state = await roomClock(req.params.id)
+    if (!state) return res.status(404).json({ error: 'Sala não encontrada' })
+    const me = state.players.find((p) => p.userId === req.user.id)
+    if (!me) return res.status(403).json({ error: 'Você não joga nesta sala' })
+    const { clock } = state
+    res.json({
+      ...clock,
+      ready: clock.closed,
+      me: { phase: me.phase, monthEndsAt: me.monthEndsAt, dilemmaEndsAt: me.dilemmaEndsAt },
     })
-    if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
-    const mine = room.characters.find((c) => c.userId === req.user.id)
-    if (!mine) return res.status(403).json({ error: 'Você não joga nesta sala' })
-    res.json({ ...roomStanding(room.characters, mine.id), turn: room.currentTurn, status: room.status })
+  } catch (err) {
+    res.status(500).json({ error: 'Erro interno', details: err.message })
+  }
+}
+
+// Pausar ou retomar o relógio da sala (fim da aula, explicação no meio do mês).
+// Ao retomar, o tempo parado é devolvido: o começo do mês e os horários de quem
+// já tinha encerrado andam para frente.
+exports.pauseRoom = async (req, res) => {
+  try {
+    const room = await ownRoom(req, res)
+    if (!room) return
+    if (room.status !== 'active') return res.status(400).json({ error: 'A sala não está em andamento' })
+    const pause = Boolean(req.body?.paused)
+    const now = new Date()
+
+    if (pause && !room.pausedAt) {
+      await prisma.room.update({ where: { id: room.id }, data: { pausedAt: now } })
+    } else if (!pause && room.pausedAt) {
+      const stopped = now.getTime() - new Date(room.pausedAt).getTime()
+      const shift = (d) => (d ? new Date(new Date(d).getTime() + stopped) : d)
+      const characters = await prisma.character.findMany({ where: { roomId: room.id, readyAt: { not: null } }, select: { id: true, readyAt: true } })
+      await prisma.$transaction([
+        prisma.room.update({ where: { id: room.id }, data: { pausedAt: null, turnStartedAt: shift(room.turnStartedAt) } }),
+        ...(characters ?? []).map((c) => prisma.character.update({ where: { id: c.id }, data: { readyAt: shift(c.readyAt) } })),
+      ])
+    }
+
+    const state = await roomClock(room.id)
+    emit(room.id, 'room:clock', state.clock)
+    res.json(state.clock)
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }
@@ -152,9 +188,12 @@ exports.getRoomProgress = async (req, res) => {
         snapshots: { orderBy: { turn: 'desc' }, take: 1 }
       }
     })
+    const state = await roomClock(room.id)
+    const phases = Object.fromEntries((state?.players ?? []).map((p) => [p.characterId, p.phase]))
     res.json({
       room: roomSummary({ ...room, characters }),
-      players: (characters ?? []).map((c) => playerProgress(c, turn))
+      players: (characters ?? []).map((c) => ({ ...playerProgress(c, turn), phase: phases[c.id] ?? null })),
+      clock: state?.clock ?? null,
     })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })

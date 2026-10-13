@@ -1,4 +1,6 @@
 const prisma = require('../lib/prisma')
+const { closedAt } = require('../utils/monthClock')
+const { clockNow } = require('../realtime')
 const { cents } = require('../utils/finance')
 const { perksOf, billAmount, billDiscount } = require('../utils/skills')
 const { foodBillWithCoupon, foodCouponDiscount, combinedDiscount, FOOD_COUPON_NOTE } = require('../utils/coupons')
@@ -90,6 +92,10 @@ exports.payBill = async (req, res) => {
       }
     })
     if (alreadyPaid) return res.status(400).json({ error: 'Conta já paga' })
+    // mês encerrado (clique ou fim do tempo): a conta fica para a virada, com atraso
+    if (character.room && closedAt(character, character.room, clockNow(character.room)) != null) {
+      return res.status(400).json({ error: 'O mês já foi encerrado' })
+    }
 
     let amount = billAmount(type, character[config.field], perksOf(character.unlockedSkills))
 

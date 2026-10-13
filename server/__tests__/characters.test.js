@@ -40,32 +40,46 @@ describe('POST /api/v1/characters', () => {
     expect(res.body.name).toBe('Dudu')
   })
 
-  it('começa com o salário de janeiro (R$ 7.000) + presente de boas-vindas (R$ 500)', async () => {
+  const created = () => prismaMock.character.create.mock.calls[0][0].data
+  const janLogs = () => prismaMock.characterEventLog.createMany.mock.calls[0][0].data
+  const createWith = async (body) => {
     prismaMock.room.findUnique.mockResolvedValue({ id: 'room-1', status: 'waiting' })
     prismaMock.character.findUnique.mockResolvedValue(null)
     prismaMock.character.create.mockResolvedValue({ id: 'char-1', name: 'Dudu' })
     prismaMock.characterSkillPoints.create.mockResolvedValue({})
+    return request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send(body)
+  }
 
-    await request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send(validBody)
+  it('janeiro: entra o salário e já sai o aluguel (sem PIX da família)', async () => {
+    await createWith({ ...validBody, gift: 'smart' })
 
-    expect(prismaMock.character.create).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ cash: 7500 }),
-    }))
-    expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ characterId: 'char-1', turn: 1, cashImpact: 500, description: expect.stringMatching(/^Presente de boas-vindas: /) }),
-    })
+    expect(created().cash).toBe(7000 - 1500)
+    expect(janLogs()).toEqual([
+      { characterId: 'char-1', turn: 1, cashImpact: 7000, description: 'Salário: Depósito do mês (+R$ 7000.00)' },
+      { characterId: 'char-1', turn: 1, cashImpact: -1500, description: 'Aluguel: Casa — Pago (-R$ 1500)' },
+    ])
+    expect(janLogs().some((l) => /PIX|boas-vindas/i.test(l.description))).toBe(false)
   })
 
-  it('Desenrolado ganha 50% a mais no presente de boas-vindas (R$ 750)', async () => {
-    prismaMock.room.findUnique.mockResolvedValue({ id: 'room-1', status: 'waiting' })
+  it('Mão de Vaca paga o aluguel de janeiro com 10% de desconto', async () => {
+    await createWith(validBody)
+    expect(created().cash).toBe(7000 - 1350)
+    expect(janLogs().at(-1)).toEqual(expect.objectContaining({ cashImpact: -1350 }))
+  })
+
+  it('Desenrolado recebe o freela já em janeiro', async () => {
+    await createWith({ ...validBody, gift: 'agile' })
+    expect(created().cash).toBe(7000 + 240 - 1500)
+    expect(janLogs().map((l) => l.description)).toContain('Freela: Desenrolado (+R$ 240.00)')
+  })
+
+  it('quem entra com a partida andando recebe e paga no mês atual', async () => {
+    prismaMock.room.findUnique.mockResolvedValue({ id: 'room-1', status: 'active', currentTurn: 4 })
     prismaMock.character.findUnique.mockResolvedValue(null)
     prismaMock.character.create.mockResolvedValue({ id: 'char-1', name: 'Dudu' })
     prismaMock.characterSkillPoints.create.mockResolvedValue({})
-
-    await request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send({ ...validBody, gift: 'agile' })
-
-    expect(prismaMock.character.create.mock.calls[0][0].data.cash).toBe(7750)
-    expect(prismaMock.characterEventLog.create.mock.calls[0][0].data.cashImpact).toBe(750)
+    await request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send({ ...validBody, gift: 'smart' })
+    expect(janLogs().every((l) => l.turn === 4)).toBe(true)
   })
 
   it('retorna 409 se usuário já tem personagem na sala', async () => {
@@ -341,36 +355,24 @@ describe('PATCH /api/v1/characters/:id/ready', () => {
   const paidBills = (turn) => ['Mercadinho', 'Água e Luz', 'Internet e Celular'].map((label) => ({ turn, description: `Conta: ${label} — Pago (-R$ 100)` }))
   const ready = () => request(app).patch('/api/v1/characters/char-1/ready').set(authHeader(TOKEN))
 
-  it('não fecha o mês sem o lazer e o dilema', async () => {
+  it('encerra mesmo com coisa em aberto e devolve o que ficou (vira atraso na virada)', async () => {
     prismaMock.character.findUnique.mockResolvedValue({ id: 'char-1', userId: 'user-1', room: activeRoom(3), choices: [] })
+    prismaMock.character.update.mockImplementation(async ({ data }) => ({ ...data }))
 
     const res = await ready()
 
-    expect(res.status).toBe(400)
-    expect(res.body.missing).toEqual(['Dilema', 'Lazer', 'Mercadinho', 'Água e Luz', 'Internet e Celular'])
-    expect(prismaMock.character.update).not.toHaveBeenCalled()
-  })
-
-  it('não fecha o mês com conta em aberto', async () => {
-    prismaMock.character.findUnique.mockResolvedValue({
-      id: 'char-1', userId: 'user-1', room: activeRoom(3),
-      choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }],
-      eventLog: paidBills(3).slice(0, 2),
-    })
-
-    const res = await ready()
-
-    expect(res.status).toBe(400)
-    expect(res.body.missing).toEqual(['Internet e Celular'])
-    expect(res.body.error).toBe('Falta resolver: Internet e Celular')
+    expect(res.status).toBe(200)
+    expect(res.body.missing).toEqual(['Lazer', 'Mercadinho', 'Água e Luz', 'Internet e Celular'])
+    expect(prismaMock.character.update).toHaveBeenCalled()
   })
 
   it('conta paga em outro mês não vale', async () => {
     prismaMock.character.findUnique.mockResolvedValue({
       id: 'char-1', userId: 'user-1', room: activeRoom(3),
-      choices: [{ turn: 3, kind: 'leisure' }, { turn: 3, kind: 'dilemma' }],
+      choices: [{ turn: 3, kind: 'leisure' }],
       eventLog: paidBills(2),
     })
+    prismaMock.character.update.mockImplementation(async ({ data }) => ({ ...data }))
 
     expect((await ready()).body.missing).toEqual(['Mercadinho', 'Água e Luz', 'Internet e Celular'])
   })
@@ -378,14 +380,21 @@ describe('PATCH /api/v1/characters/:id/ready', () => {
   it('escolhas de outro mês não contam', async () => {
     prismaMock.character.findUnique.mockResolvedValue({
       id: 'char-1', userId: 'user-1', room: activeRoom(3),
-      choices: [{ turn: 2, kind: 'leisure' }, { turn: 2, kind: 'dilemma' }, { turn: 3, kind: 'leisure' }],
+      choices: [{ turn: 2, kind: 'leisure' }],
       eventLog: paidBills(3),
     })
+    prismaMock.character.update.mockImplementation(async ({ data }) => ({ ...data }))
 
-    const res = await ready()
+    expect((await ready()).body.missing).toEqual(['Lazer'])
+  })
 
-    expect(res.status).toBe(400)
-    expect(res.body.missing).toEqual(['Dilema'])
+  it('tudo feito: nada em aberto', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({
+      id: 'char-1', userId: 'user-1', room: activeRoom(3), choices: [{ turn: 3, kind: 'leisure' }], eventLog: paidBills(3),
+    })
+    prismaMock.character.update.mockImplementation(async ({ data }) => ({ ...data }))
+
+    expect((await ready()).body.missing).toEqual([])
   })
 
   it('com lazer e dilema do mês, fecha', async () => {

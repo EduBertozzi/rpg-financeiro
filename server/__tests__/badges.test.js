@@ -17,7 +17,7 @@ describe('BADGES', () => {
   })
   it('títulos oficiais', () => {
     expect(BADGES.map(b => b.title)).toEqual([
-      'Nunca no vermelho', 'Reserva completa', 'Caçador de cupons', 'Constelação acesa', 'Investidor', 'Contas em dia',
+      'Nunca no vermelho', 'Reserva completa', 'Caçador de cupons', 'Árvore frondosa', 'Investidor', 'Contas em dia',
     ])
   })
   it('todas têm descrição', () => {

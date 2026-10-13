@@ -5,7 +5,7 @@ const fs = require('fs')
 const path = require('path')
 const { createClient } = require('@libsql/client')
 
-async function main() {
+async function migrate({ log = console.log } = {}) {
   const url = process.env.TURSO_DATABASE_URL
   const authToken = process.env.TURSO_AUTH_TOKEN
   if (!url) throw new Error('TURSO_DATABASE_URL não definida')
@@ -30,7 +30,7 @@ async function main() {
       args: [folder],
     })
     if (rows.length > 0) {
-      console.log(`✓ já aplicada: ${folder}`)
+      log(`✓ já aplicada: ${folder}`)
       continue
     }
 
@@ -41,7 +41,7 @@ async function main() {
       .map((s) => s.trim())
       .filter(Boolean)
 
-    console.log(`→ aplicando: ${folder} (${statements.length} statements)`)
+    log(`→ aplicando: ${folder} (${statements.length} statements)`)
     for (const statement of statements) {
       await client.execute(statement)
     }
@@ -50,13 +50,18 @@ async function main() {
       sql: 'INSERT INTO _migrations_applied (name) VALUES (?)',
       args: [folder],
     })
-    console.log(`✓ aplicada: ${folder}`)
+    log(`✓ aplicada: ${folder}`)
   }
 
-  console.log('Migrations sincronizadas com o Turso.')
+  log('Migrations sincronizadas com o Turso.')
 }
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
-})
+module.exports = { migrate }
+
+// `npm run migrate:turso` roda direto; o servidor também chama `migrate` ao subir
+if (require.main === module) {
+  migrate().catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+}

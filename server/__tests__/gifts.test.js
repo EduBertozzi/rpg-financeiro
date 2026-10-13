@@ -4,7 +4,7 @@ const {
   giftOf, isValidGift, startingCosts, startingSkillPoints,
   giftIncome, giftIncomeEntry, positiveEventMultiplier, giftEventImpact,
 } = require('../src/utils/gifts')
-const { expectedPositiveEvents, WELCOME_GIFT, EVENT_CALENDAR } = require('../src/utils/events')
+const { expectedPositiveEvents, EVENT_CALENDAR } = require('../src/utils/events')
 
 const NEUTRAL = [null, undefined, '', 'invalido', 'FRUGAL', 'toString', '__proto__', 'constructor', 42]
 
@@ -28,8 +28,8 @@ describe('tabela de dons', () => {
     expect(GIFTS.frugal.costDiscount).toBe(0.10)
   })
 
-  it('agile: freela de R$ 220 e +50% nos eventos positivos', () => {
-    expect(GIFTS.agile.monthlyIncome).toEqual({ label: 'Freela', amount: 220 })
+  it('agile: freela de R$ 240 e +50% nos eventos positivos', () => {
+    expect(GIFTS.agile.monthlyIncome).toEqual({ label: 'Freela', amount: 240 })
     expect(GIFTS.agile.positiveEventBonus).toBe(0.5)
   })
 
@@ -114,8 +114,8 @@ describe('startingSkillPoints', () => {
 // ─── renda do dom ─────────────────────────────────────────────────────────────
 
 describe('giftIncome / giftIncomeEntry', () => {
-  it('agile: R$ 220 por mês', () => {
-    expect(giftIncome('agile')).toBe(220)
+  it('agile: R$ 240 por mês', () => {
+    expect(giftIncome('agile')).toBe(240)
   })
 
   it.each(['frugal', 'smart', ...NEUTRAL])('%p: 0', (gift) => {
@@ -123,7 +123,7 @@ describe('giftIncome / giftIncomeEntry', () => {
   })
 
   it('agile: linha do extrato no formato das rendas das habilidades', () => {
-    expect(giftIncomeEntry('agile')).toEqual({ label: 'Freela', skill: 'Desenrolado', amount: 220 })
+    expect(giftIncomeEntry('agile')).toEqual({ label: 'Freela', skill: 'Desenrolado', amount: 240 })
   })
 
   it.each(['frugal', 'smart', ...NEUTRAL])('%p: sem linha', (gift) => {
@@ -180,8 +180,8 @@ describe('balanceamento anual dos dons', () => {
     expect(value).toBeLessThanOrEqual(TARGET * 1.1)
   }
 
-  // valor esperado dos eventos positivos do ano: calendário + presente de boas-vindas
-  const expectedPositiveYear = expectedPositiveEvents() + WELCOME_GIFT.cashImpact
+  // valor esperado dos eventos positivos do ano (o PIX de boas-vindas saiu)
+  const expectedPositiveYear = expectedPositiveEvents()
 
   const yearlyValue = {
     frugal: () => {
@@ -194,9 +194,9 @@ describe('balanceamento anual dos dons', () => {
       (positiveEventMultiplier('agile') - 1) * expectedPositiveYear,
   }
 
-  it('o modelo usa R$ 1.392 esperados do calendário + R$ 500 de boas-vindas', () => {
+  it('o modelo usa R$ 1.392 esperados do calendário', () => {
     expect(expectedPositiveEvents()).toBe(1392)
-    expect(expectedPositiveYear).toBe(1892)
+    expect(expectedPositiveYear).toBe(1392)
   })
 
   it('o 13º não entra no bônus do Desenrolado (é salário, não sorte)', () => {
@@ -209,8 +209,8 @@ describe('balanceamento anual dos dons', () => {
     within10(yearlyValue.frugal())
   })
 
-  it('agile vale ≈ R$ 3.586 por ano (220 × 12 + 50% de R$ 1.892)', () => {
-    expect(yearlyValue.agile()).toBeCloseTo(2640 + 946, 6)
+  it('agile vale ≈ R$ 3.576 por ano (240 × 12 + 50% de R$ 1.392)', () => {
+    expect(yearlyValue.agile()).toBeCloseTo(2880 + 696, 6)
     within10(yearlyValue.agile())
   })
 

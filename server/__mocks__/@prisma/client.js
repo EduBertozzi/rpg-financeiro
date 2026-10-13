@@ -67,6 +67,7 @@ const prismaMock = {
   },
   characterEventLog: {
     create: jest.fn(),
+    createMany: jest.fn(),
     findMany: jest.fn(),
     findFirst: jest.fn(),
     deleteMany: jest.fn(),

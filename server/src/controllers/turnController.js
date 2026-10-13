@@ -1,5 +1,6 @@
-const { processTurn } = require('../utils/turnEngine')
 const prisma = require('../lib/prisma')
+const { turnRoom, clockNow, checkSoon } = require('../realtime')
+const { closedAt, playerPhase } = require('../utils/monthClock')
 const { perksOf, percentLabel } = require('../utils/skills')
 const { cents } = require('../utils/finance')
 const { dilemmaFor, publicDilemma, resolveDilemma, LABELS } = require('../utils/dilemmas')
@@ -13,7 +14,9 @@ exports.nextTurn = async (req, res) => {
     if (!room) return res.status(404).json({ error: 'Sala não encontrada' })
     if (room.adminId !== req.user.id) return res.status(403).json({ error: 'Apenas o admin pode processar o turno' })
 
-    const result = await processTurn(req.params.id)
+    // vira o mês e avisa a turma pelo Socket.io
+    const result = await turnRoom(req.params.id)
+    if (!result) return res.status(409).json({ error: 'O mês já está virando' })
     res.json(result)
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
@@ -42,6 +45,30 @@ async function ownCharacter(req, res) {
 function checkCurrentTurn(character, turn, res) {
   if (character.room?.status !== 'active' || character.room.currentTurn !== turn) {
     res.status(400).json({ error: 'Esse mês não está aberto' })
+    return false
+  }
+  return true
+}
+
+// Depois de encerrar o mês (ou de o tempo acabar) a cidade trava: lazer e
+// contas não mudam mais. O banco continua aberto.
+function checkMonthOpen(character, res) {
+  if (closedAt(character, character.room, clockNow(character.room)) != null) {
+    res.status(400).json({ error: 'O mês já foi encerrado' })
+    return false
+  }
+  return true
+}
+
+// O dilema abre quando o mês é encerrado e fecha quando o tempo dele acaba.
+function checkDilemmaOpen(character, res) {
+  const { phase } = playerPhase({ character, room: character.room, hasDilemma: true, answered: false, now: clockNow(character.room) })
+  if (phase === 'month') {
+    res.status(400).json({ error: 'Encerre o mês para abrir o dilema' })
+    return false
+  }
+  if (phase === 'done') {
+    res.status(400).json({ error: 'O tempo do dilema acabou' })
     return false
   }
   return true
@@ -102,6 +129,7 @@ exports.chooseDilemma = async (req, res) => {
       where: { characterId_turn_kind: { characterId: character.id, turn, kind: 'dilemma' } }
     })
     if (already) return res.status(400).json({ error: 'Dilema já respondido' })
+    if (!checkDilemmaOpen(character, res)) return
 
     const perks = perksOf(character.unlockedSkills)
     const outcome = resolveDilemma(turn, optionIndex, {
@@ -139,6 +167,7 @@ exports.chooseDilemma = async (req, res) => {
       })
     })
 
+    checkSoon(character.roomId)
     res.json({ result: `${outcome.result}${paid}`, cashImpact: outcome.cash, lockSeconds: outcome.lockSeconds })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
@@ -187,6 +216,7 @@ exports.chooseLeisure = async (req, res) => {
       where: { characterId_turn_kind: { characterId: character.id, turn, kind: 'leisure' } }
     })
     if (already) return res.status(400).json({ error: 'Lazer já escolhido' })
+    if (!checkMonthOpen(character, res)) return
 
     const perks = perksOf(character.unlockedSkills)
     const price = leisurePrice(turn, perks)

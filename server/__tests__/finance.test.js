@@ -480,3 +480,22 @@ describe('balanceSheet', () => {
     expect(b.netWorth).toBe(0.3)
   })
 })
+
+// ─── caixinhas rendem juros compostos (conferência pedida pela equipe) ───────
+
+describe('caixinhas: juros compostos mês a mês', () => {
+  it.each(Object.keys(ANNUAL_RATES))('%s: o rendimento de cada mês entra no valor e rende no mês seguinte', (type) => {
+    const rate = getMonthlyRate(type)
+    let amount = 1000
+    const gains = []
+    for (let month = 0; month < 12; month++) {
+      const gain = monthlyReturn(amount, rate) // o turnEngine soma isso em `amount`
+      gains.push(gain)
+      amount += gain
+    }
+    // juros sobre juros: cada mês rende mais que o anterior, e o ano fecha na taxa anual
+    for (let i = 1; i < gains.length; i++) expect(gains[i]).toBeGreaterThan(gains[i - 1])
+    expect(amount).toBeCloseTo(1000 * (1 + ANNUAL_RATES[type]), 6)
+    expect(amount).toBeGreaterThan(1000 * (1 + rate * 12)) // mais que juros simples
+  })
+})

@@ -13,7 +13,6 @@ const ana = {
   snapshots: [{ turn: 2, netWorth: 9000.5, cash: 1000 }, { turn: 3, netWorth: '12345.67', cash: '-200' }],
   choices: [{ kind: 'dilemma', turn: 1, option: 0 }, { kind: 'leisure', turn: 1, option: 1 }, { kind: 'dilemma', turn: 2, option: 1 }],
   eventLog: [
-    { turn: 1, description: 'Presente de boas-vindas: Sua família fez um PIX.' },
     { turn: 1, description: 'Conta: Mercadinho — Pago (-R$ 1000)' },
     { turn: 1, description: 'Conta: Água e Luz — Pago (-R$ 250)' },
     { turn: 2, description: 'Convite para casamento: Um grande amigo…' },
@@ -40,7 +39,7 @@ describe('playerRows', () => {
   })
 
   it('evento, dilema, opção e lazer do mês', () => {
-    expect(rows[0][col('evento_da_virada')]).toBe('Presente de boas-vindas')
+    expect(rows[0][col('evento_da_virada')]).toBe('')
     expect(rows[0][col('dilema')]).toBe('A rotina desandou')
     expect(rows[0][col('opcao_dilema')]).toBe('A')
     expect(rows[0][col('lazer')]).toBe('Viagem em família')
@@ -78,7 +77,7 @@ describe('roomCsv', () => {
   })
 
   it('texto com ; vai entre aspas', () => {
-    const odd = { ...ana, eventLog: [{ turn: 1, description: 'Presente de boas-vindas: x' }], gift: 'a;b' }
+    const odd = { ...ana, eventLog: [{ turn: 2, description: 'Convite para casamento: x' }], gift: 'a;b' }
     expect(roomCsv([odd])).toContain('"a;b"')
   })
 })

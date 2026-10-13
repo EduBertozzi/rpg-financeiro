@@ -154,8 +154,8 @@ describe('agosto — ônibus quebrado', () => {
     expect(resolve(8, 0)).toEqual(expect.objectContaining({ cash: -45, lockSeconds: 0 }))
   })
 
-  it('a pé: grátis, mas trava a tela por 30 segundos', () => {
-    expect(resolve(8, 1)).toEqual(expect.objectContaining({ cash: 0, lockSeconds: 30, effects: [] }))
+  it('a pé: grátis, mas trava a tela por 2 minutos', () => {
+    expect(resolve(8, 1)).toEqual(expect.objectContaining({ cash: 0, lockSeconds: 120, effects: [] }))
   })
 })
 

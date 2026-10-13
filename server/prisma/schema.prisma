@@ -31,6 +31,12 @@ model Room {
   createdAt   DateTime @default(now())
   startedAt   DateTime?
   finishedAt  DateTime?
+  // relógio do mês: cada mês dura monthMinutes; quem encerra (ou quando o
+  // tempo acaba) tem dilemmaMinutes para responder o dilema
+  monthMinutes   Int       @default(10)
+  dilemmaMinutes Int       @default(5)
+  turnStartedAt  DateTime?
+  pausedAt       DateTime? // relógio parado pelo administrador (fim da aula)
   characters  Character[]
   assetPrices AssetPrice[]
   leaderboard Leaderboard[]
@@ -58,6 +64,7 @@ model Character {
   overdraftDebt Decimal  @default(0)
   loanDebt      Decimal  @default(0)
   turnReady     Boolean  @default(false)
+  readyAt       DateTime? // quando encerrou o mês (zera na virada)
   createdAt     DateTime @default(now())
 
   skillPoints       CharacterSkillPoints?

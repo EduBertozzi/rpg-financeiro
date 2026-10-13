@@ -76,7 +76,17 @@ function setupHappyPath({ turn = 1, isLast = false, character = makeCharacter() 
   }
 }
 
-beforeEach(() => jest.clearAllMocks())
+// por padrão o mês de todo mundo está em dia: dilema respondido, lazer
+// escolhido e as três contas pagas (nada em aberto na virada)
+const MONTHS_ALL = Array.from({ length: 14 }, (_, turn) => turn)
+const allAnswered = () => MONTHS_ALL.flatMap((turn) => [{ turn, kind: 'dilemma', option: 0 }, { turn, kind: 'leisure', option: 0 }])
+const allPaid = () => MONTHS_ALL.flatMap((turn) => ['Mercadinho', 'Água e Luz', 'Internet e Celular'].map((label) => ({ turn, description: `Conta: ${label} — Pago (-R$ 1)` })))
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  prismaMock.characterChoice.findMany.mockImplementation(async () => allAnswered())
+  prismaMock.characterEventLog.findMany.mockImplementation(async () => allPaid())
+})
 
 // ─── processTurn ──────────────────────────────────────────────────────────────
 
@@ -394,11 +404,27 @@ describe('checkDebentures', () => {
     expect(prismaMock.debentureInvestment.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'defaulted', returnedValue: 0 } })
     )
+    // o dinheiro já tinha saído na compra: o calote não mexe de novo no saldo
     expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ cashImpact: -5000 }) })
+      expect.objectContaining({ data: expect.objectContaining({ cashImpact: 0, description: expect.stringContaining('calote') }) })
     )
+    expect(prismaMock.characterEventLog.create.mock.calls.find(([a]) => a.data.description.includes('calote'))[0].data.description).toContain('R$ 5000.00')
 
     jest.spyOn(Math, 'random').mockRestore()
+  })
+
+  it('confere as debêntures vencidas até o mês (a de dezembro vence na última virada)', async () => {
+    setupWithDebenture({
+      id: 'deb-1', amount: 5000, status: 'active', maturesAt: 6,
+      investedAt: 3, annualRate: 0.12,
+      company: { name: 'TechCorp', defaultProbability: 0.1 }
+    })
+
+    await processTurn('room-1')
+
+    expect(prismaMock.debentureInvestment.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ status: 'active', maturesAt: { lte: expect.any(Number) } }) })
+    )
   })
 
   it('debênture paga — credita valor com juros via $transaction', async () => {
@@ -795,11 +821,11 @@ describe('dons na virada do mês', () => {
 
   // ─── Desenrolado (agile) ────────────────────────────────────────────────────
 
-  it('Desenrolado: +R$ 220 de freela no saldo do mês', async () => {
+  it('Desenrolado: +R$ 240 de freela no saldo do mês', async () => {
     setup(agile())
     await processTurn('room-1')
 
-    expect(costsUpdate().cash).toBe(6220) // 7000 + 220 - 1000
+    expect(costsUpdate().cash).toBe(6240) // 7000 + 240 - 1000
   })
 
   it('Desenrolado: linha própria no extrato', async () => {
@@ -807,7 +833,7 @@ describe('dons na virada do mês', () => {
     await processTurn('room-1')
 
     expect(logStarting('Freela')).toEqual([
-      expect.objectContaining({ characterId: 'char-1', turn: 2, cashImpact: 220, description: 'Freela: Desenrolado (+R$ 220.00)' }),
+      expect.objectContaining({ characterId: 'char-1', turn: 2, cashImpact: 240, description: 'Freela: Desenrolado (+R$ 240.00)' }),
     ])
   })
 
@@ -824,24 +850,24 @@ describe('dons na virada do mês', () => {
 
     expect(logStarting('Freela').map((l) => l.description)).toEqual([
       'Freela: Fundamentos e Lógica (+R$ 200.00)',
-      'Freela: Desenrolado (+R$ 220.00)',
+      'Freela: Desenrolado (+R$ 240.00)',
     ])
-    expect(costsUpdate().cash).toBe(6420) // 7000 + 200 + 220 - 1000
+    expect(costsUpdate().cash).toBe(6440) // 7000 + 200 + 240 - 1000
   })
 
   it('Desenrolado: o freela entra no resultado do mês', async () => {
     setup(agile())
     const { results } = await processTurn('room-1')
 
-    expect(results[0].cashDelta).toBe(7000 + 220 - 1000)
+    expect(results[0].cashDelta).toBe(7000 + 240 - 1000)
   })
 
   it('Desenrolado: o freela ajuda a cobrir o cheque especial', async () => {
     setup(agile({ cash: -1000 }))
     await processTurn('room-1')
 
-    // -1000 - 80 de juros (8%) + 7000 + 220 - 1000
-    expect(costsUpdate().cash).toBe(5140)
+    // -1000 - 80 de juros (8%) + 7000 + 240 - 1000
+    expect(costsUpdate().cash).toBe(5160)
   })
 
   it('Desenrolado: venda de usados paga 50% a mais (600 → 900)', async () => {
@@ -860,7 +886,7 @@ describe('dons na virada do mês', () => {
 
     expect(logStarting('Participação nos resultados')).toEqual([expect.objectContaining({ cashImpact: 1050 })])
     expect(cashIncrements()).toContain(1050)
-    expect(results[0].cashDelta).toBe(7000 + 220 - 1000 + 1050)
+    expect(results[0].cashDelta).toBe(7000 + 240 - 1000 + 1050)
   })
 
   it.each(['Celular no chão', 'Multa de trânsito', 'Chuva forte', 'Convite para casamento'])(
@@ -1026,11 +1052,11 @@ describe('consequências dos dilemas na virada', () => {
     }), { turn: 11, effects: [effect('no_salary', 0, 'Sem salário: Você foi demitido em novembro')] })
     await processTurn('room-1')
 
-    // 200 (freela Técnico) + 220 (freela dom) - 1000 aluguel
-    expect(costsUpdate().cash).toBe(-580)
+    // 200 (freela Técnico) + 240 (freela dom) - 1000 aluguel
+    expect(costsUpdate().cash).toBe(-560)
     expect(logStarting('Salário')).toEqual([])
     expect(logStarting('Bônus salarial')).toEqual([])
-    expect(logStarting('Freela').map((l) => l.cashImpact)).toEqual([200, 220])
+    expect(logStarting('Freela').map((l) => l.cashImpact)).toEqual([200, 240])
     expect(logStarting('Sem salário')).toEqual([expect.objectContaining({ cashImpact: 0 })])
   })
 
@@ -1184,12 +1210,28 @@ describe('virada cobra o que ficou em aberto', () => {
   beforeEach(() => jest.spyOn(Math, 'random').mockReturnValue(0.1))
   afterEach(() => Math.random.mockRestore())
 
-  it('quem marcou pronto não é cobrado de nada (nem consulta)', async () => {
-    setup(makeCharacter({ turnReady: true }))
+  it('quem encerrou com tudo em dia e respondeu o dilema não é cobrado de nada', async () => {
+    setup(makeCharacter({ turnReady: true }), { choices: [{ turn: 3, kind: 'dilemma', option: 0 }, { turn: 3, kind: 'leisure' }], logs: [paid(3, 'Mercadinho'), paid(3, 'Água e Luz'), paid(3, 'Internet e Celular')] })
     await processTurn('room-1')
 
-    expect(prismaMock.characterChoice.findMany).not.toHaveBeenCalled()
     expect(logStarting('Conta atrasada')).toEqual([])
+    expect(logs().filter((l) => l.description.includes('Sem resposta'))).toEqual([])
+  })
+
+  it('quem encerrou com conta em aberto paga a conta atrasada na virada', async () => {
+    setup(makeCharacter({ turnReady: true }), { choices: [{ turn: 3, kind: 'dilemma', option: 0 }, { turn: 3, kind: 'leisure' }], logs: [paid(3, 'Mercadinho')] })
+    await processTurn('room-1')
+
+    expect(logStarting('Conta atrasada').map((l) => l.description.split(' — ')[0])).toEqual(['Conta atrasada: Água e Luz', 'Conta atrasada: Internet e Celular'])
+  })
+
+  it('quem encerrou mas deixou o tempo do dilema acabar: o dilema vai pela inércia, sem cobrar contas', async () => {
+    setup(makeCharacter({ turnReady: true }), { choices: [{ turn: 3, kind: 'leisure' }], logs: [paid(3, 'Mercadinho'), paid(3, 'Água e Luz'), paid(3, 'Internet e Celular')] })
+    await processTurn('room-1')
+
+    expect(logStarting('Conta atrasada')).toEqual([])
+    expect(logs().filter((l) => l.turn === 3 && l.description.includes('— Sem resposta:'))).toHaveLength(1)
+    expect(prismaMock.characterChoice.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ turn: 3, kind: 'dilemma' }) }))
   })
 
   it('três contas em aberto viram contas atrasadas com 3% a mais, no mês que fechou', async () => {

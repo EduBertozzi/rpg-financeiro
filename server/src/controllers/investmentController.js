@@ -6,7 +6,7 @@ const {
 
 // Nome de cada tipo como caixinha no banco (tabela oficial de investimentos).
 const TYPE_LABELS = {
-  POUPANCA: 'Reserva de Emergência',
+  POUPANCA: 'Poupança',
   CDB: 'CDB',
   TESOURO_SELIC: 'Tesouro Selic',
   TESOURO_PRE: 'Tesouro Prefixado',

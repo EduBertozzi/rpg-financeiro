@@ -25,13 +25,13 @@ const monthlyBillsOf = (character = {}) =>
   cents(['housingCost', 'foodCost', 'utilitiesCost', 'transportCost']
     .reduce((sum, key) => sum + Number(character[key] ?? 0), 0))
 
-// Saldo atual da Reserva de Emergência (POUPANCA ainda não resgatada).
+// Saldo atual da Poupança, a reserva de emergência (POUPANCA ainda não resgatada).
 const emergencyReserveOf = (fixedInvestments = []) =>
   cents(fixedInvestments
     .filter((inv) => inv.type === 'POUPANCA' && inv.redeemedAt == null)
     .reduce((sum, inv) => sum + Number(inv.amount), 0))
 
-// Reserva completa: a Reserva de Emergência cobre 3 meses de contas fixas.
+// Reserva completa: a Poupança cobre 3 meses de contas fixas.
 function reserveComplete({ fixedInvestments = [], monthlyBills = 0 } = {}) {
   const reserve = emergencyReserveOf(fixedInvestments)
   if (reserve <= 0) return false
@@ -43,7 +43,7 @@ function couponHunter({ coupons = [] } = {}) {
   return coupons.filter((c) => c.claimedAt != null).length >= COUPONS_PER_GAME
 }
 
-// Constelação acesa: pelo menos 5 habilidades desbloqueadas.
+// Árvore frondosa: pelo menos 5 habilidades desbloqueadas.
 function constellation({ unlockedSkills = [] } = {}) {
   return unlockedSkills.length >= MIN_UNLOCKED_SKILLS
 }
@@ -79,9 +79,9 @@ function billsOnTime({ eventLog = [], currentTurn = 0 } = {}) {
 
 const BADGES = [
   { id: 'never_overdraft', title: 'Nunca no vermelho', description: 'Passou o ano inteiro sem entrar no cheque especial.', rule: neverOverdraft },
-  { id: 'reserve_complete', title: 'Reserva completa', description: 'Terminou com 3 meses de contas guardados na Reserva de Emergência.', rule: reserveComplete },
+  { id: 'reserve_complete', title: 'Reserva completa', description: 'Terminou com 3 meses de contas guardados na Poupança.', rule: reserveComplete },
   { id: 'coupon_hunter', title: 'Caçador de cupons', description: 'Achou os 3 cupons escondidos pela cidade.', rule: couponHunter },
-  { id: 'constellation', title: 'Constelação acesa', description: 'Desbloqueou pelo menos 5 habilidades.', rule: constellation },
+  { id: 'constellation', title: 'Árvore frondosa', description: 'Desbloqueou pelo menos 5 habilidades.', rule: constellation },
   { id: 'investor', title: 'Investidor', description: 'Teve pelo menos 4 tipos diferentes de investimento.', rule: investor },
   { id: 'bills_on_time', title: 'Contas em dia', description: 'Pagou Mercadinho, Água e Luz e Internet e Celular em todos os meses.', rule: billsOnTime },
 ]

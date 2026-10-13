@@ -3,7 +3,7 @@
 // em aberto no mês anterior e o dinheiro de sempre (salário, aluguel, juros).
 // Tudo sai do extrato (CharacterEventLog); cada linha entra em um lugar só.
 const { cents } = require('./finance')
-const { EVENT_CALENDAR, QUIET, WELCOME_GIFT } = require('./events')
+const { EVENT_CALENDAR, QUIET } = require('./events')
 
 const MONEY = {
   salary: ['Salário:'],
@@ -11,12 +11,13 @@ const MONEY = {
   rent: ['Aluguel:'],
   interest: ['Cheque especial:'],
 }
+// debênture que venceu ou deu calote na virada
+const INVEST = (d) => d.startsWith('Debênture:')
 const LATE = (d) => d.startsWith('Conta atrasada:') || d.includes('— Sem resposta:') || d.includes('o mês fechou sem lazer')
 
 // títulos dos imprevistos que podem cair na virada para `turn`
 function eventTitles(turn) {
   const titles = (EVENT_CALENDAR[Number(turn)] ?? []).map((e) => e.title)
-  if (Number(turn) === 1) titles.push(WELCOME_GIFT.title)
   return [...titles, QUIET.title]
 }
 
@@ -25,7 +26,7 @@ function eventTitles(turn) {
 function turnSummary({ turn, logs = [], effectLabels = [] }) {
   const t = Number(turn)
   const titles = eventTitles(t)
-  const summary = { turn: t, events: [], consequences: [], late: [], money: { salary: 0, extras: 0, rent: 0, interest: 0 }, net: 0 }
+  const summary = { turn: t, events: [], consequences: [], investments: [], late: [], money: { salary: 0, extras: 0, rent: 0, interest: 0 }, net: 0 }
   const amount = (l) => cents(Number(l.cashImpact ?? 0))
 
   for (const l of logs.filter((x) => Number(x.turn) === t)) {
@@ -41,6 +42,10 @@ function turnSummary({ turn, logs = [], effectLabels = [] }) {
       summary.consequences.push({ title: head, description: rest.join(': ') || head, amount: amount(l) })
       continue
     }
+    if (INVEST(d)) {
+      summary.investments.push({ description: d.slice('Debênture:'.length).trim(), amount: amount(l) })
+      continue
+    }
     const kind = Object.keys(MONEY).find((k) => MONEY[k].some((prefix) => d.startsWith(prefix)))
     if (kind) summary.money[kind] = cents(summary.money[kind] + amount(l))
   }
@@ -50,7 +55,7 @@ function turnSummary({ turn, logs = [], effectLabels = [] }) {
   }
 
   const all = [
-    ...summary.events, ...summary.consequences, ...summary.late,
+    ...summary.events, ...summary.consequences, ...summary.investments, ...summary.late,
     ...Object.values(summary.money).map((v) => ({ amount: v })),
   ]
   summary.net = cents(all.reduce((s, x) => s + x.amount, 0))

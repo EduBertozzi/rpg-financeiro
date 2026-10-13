@@ -1,5 +1,5 @@
 // __tests__/events.test.js — calendário de imprevistos e lazer do mês
-const { EVENT_CALENDAR, QUIET, QUIET_CHANCE, WELCOME_GIFT, eventsFor, expectedPositiveEvents } = require('../src/utils/events')
+const { EVENT_CALENDAR, QUIET, QUIET_CHANCE, eventsFor, expectedPositiveEvents } = require('../src/utils/events')
 const { LEISURE, leisureFor, leisurePrice, yearlyLeisureCost } = require('../src/utils/leisure')
 
 const fixedRng = (value) => () => value
@@ -19,8 +19,8 @@ describe('calendário de eventos', () => {
     }
   })
 
-  it('o presente de boas-vindas de janeiro é R$ 500', () => {
-    expect(WELCOME_GIFT.cashImpact).toBe(500)
+  it('janeiro não tem imprevisto: o PIX de boas-vindas saiu do jogo', () => {
+    expect(EVENT_CALENDAR[1]).toBeUndefined()
   })
 
   it('dezembro sempre tem 13º (R$ 7.000) e gastos de fim de ano (R$ 550)', () => {

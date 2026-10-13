@@ -1,9 +1,9 @@
 // Resumo de fim de ano: patrimônio mês a mês (o seu e a média da sala), como
-// está o patrimônio agora, o ranking da sala e as conquistas.
+// está o patrimônio agora e as conquistas. Sem ranking: ninguém vê a posição.
 const prisma = require('../lib/prisma')
 const { choicesTimeline } = require('../utils/dilemmas')
 const { evaluateBadges, monthlyBillsOf } = require('../utils/badges')
-const { latestPrices, breakdownOf, monthsOf, roomAverageOf, rankPlayers } = require('../utils/yearSummary')
+const { latestPrices, breakdownOf, monthsOf, roomAverageOf } = require('../utils/yearSummary')
 
 const byTurn = { orderBy: { turn: 'asc' } }
 
@@ -50,22 +50,10 @@ exports.getYearSummary = async (req, res) => {
       ? roomCharacters
       : [...(roomCharacters ?? []), character]
 
-    const { players, rank } = rankPlayers(
-      everyone.map((c) => ({
-        characterId: c.id,
-        name: c.name,
-        avatarId: c.avatarId,
-        netWorth: breakdownOf(c, priceMap).netWorth,
-      })),
-      character.id
-    )
-
     res.json({
       months: monthsOf(character.snapshots ?? []),
       roomAverage: roomAverageOf(everyone.map((c) => c.snapshots ?? [])),
       breakdown: breakdownOf(character, priceMap),
-      players,
-      rank,
       timeline: choicesTimeline(character.choices ?? [], character.effects ?? []),
       badges: evaluateBadges({
         snapshots: character.snapshots ?? [],

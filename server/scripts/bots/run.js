@@ -117,9 +117,22 @@ async function main() {
       if (PER_ROOM) await Promise.all(players.map((p) => playMonth(p, turn, room)))
       else for (const p of players) await playMonth(p, turn, room)
       monthTimes.push(Date.now() - t0)
+      const before = {}
+      for (const p of players) before[p.id] = Number((await call(p.token, 'GET', `/characters/${p.id}`)).data?.cash)
       const t1 = Date.now()
       await call(adminToken, 'POST', `/rooms/${room.id}/next-turn`)
       closeTimes.push(Date.now() - t1)
+      // o resumo da virada tem que explicar todo o dinheiro que entrou e saiu
+      if (turn < MONTHS) {
+        for (const p of players) {
+          const after = Number((await call(p.token, 'GET', `/characters/${p.id}`)).data?.cash)
+          const s = (await call(p.token, 'GET', `/characters/${p.id}/turn-summary/${turn + 1}`)).data
+          const delta = Math.round((after - before[p.id]) * 100) / 100
+          if (Math.abs(delta - Number(s?.net)) > 0.02) {
+            failures.push({ method: 'CHECK', url: `virada ${turn}→${turn + 1} ${p.bot.name}`, status: 0, error: `saldo mudou ${delta}, resumo diz ${s?.net}`, details: JSON.stringify(s).slice(0, 300) })
+          }
+        }
+      }
     }
 
     for (const p of players) {
@@ -136,8 +149,6 @@ async function main() {
         invest: p.bot.invest ?? 'nada',
         netWorth: summary?.breakdown?.netWorth ?? null,
         breakdown: summary?.breakdown,
-        rank: summary?.rank,
-        players: summary?.players?.length,
         badges: (summary?.badges ?? []).filter((b) => b.earned).map((b) => b.id),
         overdraftMonths: logs.filter((l) => l.description.startsWith('Cheque especial')).length,
         overdraftInterest: Math.round(logs.filter((l) => l.description.startsWith('Cheque especial')).reduce((s, l) => s - Number(l.cashImpact), 0) * 100) / 100,
@@ -157,12 +168,7 @@ async function main() {
     const get = (url) => call(token, 'GET', url)
     const post = (url, body, expect) => call(token, 'POST', url, body, { expect })
 
-    // 1. dilema
-    const d = (await get(`/characters/${id}/dilemma/${turn}`)).data
-    if (d?.dilemma && !d.alreadyAnswered) {
-      await post(`/characters/${id}/dilemma/${turn}/choose`, { optionIndex: dilemmaChoice(bot.dilemma, turn, d.dilemma.options, rng) })
-    }
-    // 2. lazer (as duas opções custam igual)
+    // 1. lazer (as duas opções custam igual)
     await post(`/characters/${id}/leisure/${turn}/choose`, { optionIndex: Math.floor(rng() * 2) })
     // 3. cupom escondido
     if (bot.huntsCoupons) {
@@ -216,8 +222,12 @@ async function main() {
       }
     }
 
-    // 7. fecha o mês
+    // 7. encerra o mês: a cidade trava e o dilema abre (o banco segue aberto)
     await call(token, 'PATCH', `/characters/${id}/ready`)
+    const d = (await get(`/characters/${id}/dilemma/${turn}`)).data
+    if (d?.dilemma && !d.alreadyAnswered) {
+      await post(`/characters/${id}/dilemma/${turn}/choose`, { optionIndex: dilemmaChoice(bot.dilemma, turn, d.dilemma.options, rng) })
+    }
   }
 
   // ─── resumo ──────────────────────────────────────────────────────────────────

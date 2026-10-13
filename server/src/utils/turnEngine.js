@@ -15,11 +15,12 @@ const CLOSE_CONCURRENCY = 8
 
 // O que ficou em aberto no mês que está fechando (ver settle.js): conta não
 // paga vira conta atrasada com multa e juros, lazer não escolhido é cobrado e
-// dilema sem resposta é decidido pela inércia. Quem marcou "pronto" já
-// resolveu tudo (o servidor confere), então só olha quem não marcou.
+// dilema sem resposta é decidido pela inércia.
 // O saldo é ajustado no `character` em memória: o applyFixedCosts grava.
 async function settleMonth(character, turn, perks = perksOf()) {
-  if (character.turnReady || turn < 1) return 0
+  if (turn < 1) return 0
+  // Encerrar o mês não garante nada: dá para encerrar com conta em aberto, e
+  // o dilema vem depois. Então olha o mês de todo mundo.
   const [logs, choices] = await Promise.all([
     prisma.characterEventLog.findMany({ where: { characterId: character.id, turn } }),
     prisma.characterChoice.findMany({ where: { characterId: character.id } }),
@@ -81,7 +82,7 @@ async function applyFixedCosts(character, turn, perks = perksOf(), { effects = [
   const rent = final || fx.rentWaived ? 0 : rentAmount(character.housingCost, perks)
   const paidSalary = !final && !fx.skipSalary
   const salary = paidSalary ? cents(SALARY + perks.salaryBonus + fx.raise) : 0
-  // renda fixa do dom (Desenrolado: freela de R$ 220) entra junto com o salário
+  // renda fixa do dom (Desenrolado: freela de R$ 240) entra junto com o salário
   const extras = final ? 0 : cents(perks.extraIncome + giftIncome(character.gift))
   const income = cents(salary + extras)
   const giftExtra = final ? null : giftIncomeEntry(character.gift)
@@ -227,7 +228,8 @@ async function generateAssetPrices(roomId, turn) {
 
 async function checkDebentures(character, turn) {
   const debentures = await prisma.debentureInvestment.findMany({
-    where: { characterId: character.id, status: 'active', maturesAt: turn },
+    // `lte`: a debênture comprada em dezembro vence na última virada
+    where: { characterId: character.id, status: 'active', maturesAt: { lte: turn } },
     include: { company: true }
   })
 
@@ -243,8 +245,9 @@ async function checkDebentures(character, turn) {
       await prisma.characterEventLog.create({
         data: {
           characterId: character.id, turn,
-          cashImpact: -Number(deb.amount),
-          description: `${deb.company.name} entrou em calote! Você perdeu R$ ${deb.amount}.`
+          // o dinheiro já tinha saído da conta na compra: o calote não mexe no saldo
+          cashImpact: 0,
+          description: `Debênture: ${deb.company.name} entrou em calote! Você perdeu os R$ ${Number(deb.amount).toFixed(2)} aplicados.`
         }
       })
     } else {
@@ -265,7 +268,7 @@ async function checkDebentures(character, turn) {
         data: {
           characterId: character.id, turn,
           cashImpact: rounded,
-          description: `Debênture da ${deb.company.name} venceu! Você recebeu R$ ${rounded.toFixed(2)}.`
+          description: `Debênture: ${deb.company.name} venceu! Você recebeu R$ ${rounded.toFixed(2)}.`
         }
       })
     }
@@ -365,7 +368,9 @@ async function processTurn(roomId) {
       currentTurn: nextTurn,
       status: isFinished ? 'finished' : 'active',
       finishedAt: isFinished ? new Date() : null,
-      characters: { updateMany: { where: {}, data: { turnReady: false } } }
+      // o relógio do mês novo começa agora
+      turnStartedAt: isFinished ? null : new Date(),
+      characters: { updateMany: { where: {}, data: { turnReady: false, readyAt: null } } }
     }
   })
 

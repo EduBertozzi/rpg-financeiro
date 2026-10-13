@@ -69,11 +69,14 @@ describe('POST /api/v1/rooms/:id/next-turn', () => {
 // ─── dilemas e lazer: personagem e sala de teste ──────────────────────────────
 
 const skill = (path, level) => ({ skillNode: { path, level, name: `${path}-${level}` } })
+// por padrão o personagem acabou de encerrar o mês: o dilema está aberto
+// (os testes de lazer usam um personagem com o mês ainda aberto)
 const makeChar = (overrides = {}) => ({
-  id: 'char-1', userId: 'user-1', cash: 5000, housingCost: 1500,
+  id: 'char-1', userId: 'user-1', cash: 5000, housingCost: 1500, readyAt: new Date(), turnReady: true,
   room: { status: 'active', currentTurn: 2 }, unlockedSkills: [],
   ...overrides,
 })
+const openMonth = (overrides = {}) => makeChar({ readyAt: null, turnReady: false, ...overrides })
 
 // prepara o personagem, as escolhas já feitas e o que já foi respondido
 function setup({ character = makeChar(), choices = [], answered = null } = {}) {
@@ -230,11 +233,11 @@ describe('POST chooseDilemma', () => {
     expect(res.body.result).toContain('30% a menos com Trabalho em Equipe')
   })
 
-  it('ir a pé em agosto trava a tela por 30 segundos', async () => {
+  it('ir a pé em agosto trava a tela por 2 minutos', async () => {
     setup({ character: makeChar({ room: { status: 'active', currentTurn: 8 } }) })
     const res = await choose(8, 1)
 
-    expect(res.body.lockSeconds).toBe(30)
+    expect(res.body.lockSeconds).toBe(120)
   })
 
   it('aplicativo em agosto não trava', async () => {
@@ -315,6 +318,33 @@ describe('POST chooseDilemma', () => {
     setup()
     await choose(2, 0)
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
+  })
+
+  it('o dilema só abre depois de encerrar o mês', async () => {
+    setup({ character: openMonth({ room: { status: 'active', currentTurn: 2, turnStartedAt: new Date(), monthMinutes: 10, dilemmaMinutes: 5 } }) })
+    const res = await choose(2, 0)
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('Encerre o mês para abrir o dilema')
+    expect(prismaMock.characterChoice.create).not.toHaveBeenCalled()
+  })
+
+  it('o tempo do mês acabou: o dilema abre mesmo sem clicar em encerrar', async () => {
+    const started = new Date(Date.now() - 11 * 60 * 1000)
+    setup({ character: openMonth({ room: { status: 'active', currentTurn: 2, turnStartedAt: started, monthMinutes: 10, dilemmaMinutes: 5 } }) })
+    expect((await choose(2, 1)).status).toBe(200)
+  })
+
+  it('o tempo do dilema acabou: não dá mais para responder (vai pela inércia na virada)', async () => {
+    setup({ character: makeChar({ readyAt: new Date(Date.now() - 6 * 60 * 1000), room: { status: 'active', currentTurn: 2, dilemmaMinutes: 5 } }) })
+    const res = await choose(2, 0)
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('O tempo do dilema acabou')
+  })
+
+  it('com a sala pausada o tempo não corre', async () => {
+    const pausedAt = new Date(Date.now() - 20 * 60 * 1000)
+    setup({ character: makeChar({ readyAt: new Date(pausedAt.getTime() - 60 * 1000), room: { status: 'active', currentTurn: 2, dilemmaMinutes: 5, pausedAt } }) })
+    expect((await choose(2, 0)).status).toBe(200)
   })
 })
 
@@ -405,7 +435,7 @@ describe('GET /api/v1/characters/:id/leisure/:turn', () => {
 
 describe('POST chooseLeisure', () => {
   it('cobra o preço do mês e registra no extrato', async () => {
-    setup()
+    setup({ character: openMonth() })
     const res = await chooseLeisure(2, 0)
 
     expect(res.status).toBe(200)
@@ -414,13 +444,13 @@ describe('POST chooseLeisure', () => {
   })
 
   it('as duas opções custam igual', async () => {
-    setup()
+    setup({ character: openMonth() })
     await chooseLeisure(2, 1)
     expect(cashIncrement()).toBe(-300)
   })
 
   it('guarda a escolha', async () => {
-    setup()
+    setup({ character: openMonth() })
     await chooseLeisure(2, 1)
     expect(prismaMock.characterChoice.create).toHaveBeenCalledWith({
       data: { characterId: 'char-1', turn: 2, kind: 'leisure', option: 1, amount: 300 },
@@ -428,7 +458,7 @@ describe('POST chooseLeisure', () => {
   })
 
   it('Trabalho em Equipe: 30% a menos e o extrato avisa', async () => {
-    setup({ character: makeChar({ unlockedSkills: [skill('communication', 2)] }) })
+    setup({ character: openMonth({ unlockedSkills: [skill('communication', 2)] }) })
     await chooseLeisure(2, 0)
 
     expect(cashIncrement()).toBe(-210)
@@ -436,13 +466,13 @@ describe('POST chooseLeisure', () => {
   })
 
   it('lazer não dá ponto de habilidade (o ponto é do dilema)', async () => {
-    setup()
+    setup({ character: openMonth() })
     await chooseLeisure(2, 0)
     expect(prismaMock.characterSkillPoints.update).not.toHaveBeenCalled()
   })
 
   it('400 se já escolheu', async () => {
-    setup({ answered: { option: 0, amount: 300 } })
+    setup({ character: openMonth(), answered: { option: 0, amount: 300 } })
     const res = await chooseLeisure(2, 1)
 
     expect(res.status).toBe(400)
@@ -450,23 +480,31 @@ describe('POST chooseLeisure', () => {
   })
 
   it('400 fora do mês atual', async () => {
-    setup({ character: makeChar({ room: { status: 'active', currentTurn: 5 } }) })
+    setup({ character: openMonth({ room: { status: 'active', currentTurn: 5 } }) })
     expect((await chooseLeisure(2, 0)).status).toBe(400)
   })
 
   it('400 para opção inválida', async () => {
-    setup()
+    setup({ character: openMonth() })
     expect((await chooseLeisure(2, 2)).status).toBe(400)
   })
 
   it('403 para personagem de outro usuário', async () => {
-    setup({ character: makeChar({ userId: 'outro' }) })
+    setup({ character: openMonth({ userId: 'outro' }) })
     expect((await chooseLeisure(2, 0)).status).toBe(403)
   })
 
   it('dezembro também tem lazer', async () => {
-    setup({ character: makeChar({ room: { status: 'active', currentTurn: 12 } }) })
+    setup({ character: openMonth({ room: { status: 'active', currentTurn: 12 } }) })
     await chooseLeisure(12, 1)
     expect(cashIncrement()).toBe(-1000)
+  })
+
+  it('mês encerrado: a cidade travou e o lazer não muda mais', async () => {
+    setup({ character: makeChar() })
+    const res = await request(app).post('/api/v1/characters/char-1/leisure/2/choose').set(authHeader(TOKEN)).send({ optionIndex: 0 })
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('O mês já foi encerrado')
+    expect(prismaMock.characterChoice.create).not.toHaveBeenCalled()
   })
 })

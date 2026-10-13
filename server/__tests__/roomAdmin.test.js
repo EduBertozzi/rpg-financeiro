@@ -322,70 +322,34 @@ describe('POST /api/v1/rooms/:id/players/:characterId/reset-password', () => {
   })
 })
 
-// ─── posição na turma (barra lateral do jogador) ─────────────────────────────
-
-const { roomStanding } = require('../src/utils/roomAdmin')
-const snap = (netWorth) => [{ netWorth }]
-
-describe('roomStanding', () => {
-  const players = [
-    { id: 'a', turnReady: true, snapshots: snap(30000) },
-    { id: 'b', turnReady: false, snapshots: snap(25000) },
-    { id: 'c', turnReady: true, snapshots: snap('41000.50') },
-    { id: 'd', turnReady: false, snapshots: snap(25000) },
-  ]
-
-  it('posição pelo patrimônio da última virada (Decimal vira número)', () => {
-    expect(roomStanding(players, 'c').rank).toBe(1)
-    expect(roomStanding(players, 'a').rank).toBe(2)
-  })
-
-  it('empate divide a posição', () => {
-    expect(roomStanding(players, 'b').rank).toBe(3)
-    expect(roomStanding(players, 'd').rank).toBe(3)
-  })
-
-  it('conta quantos jogam e quantos já encerraram', () => {
-    expect(roomStanding(players, 'a')).toEqual({ rank: 2, total: 4, ready: 2 })
-  })
-
-  it('janeiro, sem patrimônio fechado: sem posição', () => {
-    const jan = [{ id: 'a', turnReady: false, snapshots: [] }, { id: 'b', turnReady: true }]
-    expect(roomStanding(jan, 'a')).toEqual({ rank: null, total: 2, ready: 1 })
-  })
-
-  it('quem ainda não tem patrimônio não entra na conta dos outros', () => {
-    const mixed = [{ id: 'a', snapshots: snap(100) }, { id: 'novo', snapshots: [] }]
-    expect(roomStanding(mixed, 'a').rank).toBe(1)
-  })
-
-  it('sala vazia ou jogador de fora', () => {
-    expect(roomStanding(undefined, 'x')).toEqual({ rank: null, total: 0, ready: 0 })
-    expect(roomStanding(players, 'x').rank).toBeNull()
-  })
-})
+// ─── relógio do mês (barra lateral do jogador) ───────────────────────────────
 
 describe('GET /api/v1/rooms/:id/standing', () => {
   const PLAYER = makeToken({ id: 'user-2' })
+  const startedAt = new Date(Date.now() - 4 * 60 * 1000) // 4 min de mês
   const withPlayers = () => room({
+    turnStartedAt: startedAt, monthMinutes: 10, dilemmaMinutes: 5,
     characters: [
-      { id: 'c1', userId: 'user-1', turnReady: true, snapshots: snap(20000) },
-      { id: 'c2', userId: 'user-2', turnReady: false, snapshots: snap(18000) },
-      { id: 'c3', userId: 'user-3', turnReady: true, snapshots: snap(12000) },
+      { id: 'c1', userId: 'user-1', turnReady: true, readyAt: new Date(Date.now() - 60 * 1000), choices: [{ turn: 3 }] },
+      { id: 'c2', userId: 'user-2', turnReady: true, readyAt: new Date(Date.now() - 60 * 1000), choices: [] },
+      { id: 'c3', userId: 'user-3', turnReady: false, readyAt: null, choices: [] },
     ],
   })
 
-  it('devolve a posição de quem pediu, o total, os prontos e o mês', async () => {
+  it('devolve o relógio do mês, a fase de quem pediu e quantos já encerraram, sem posição', async () => {
     prismaMock.room.findUnique.mockResolvedValue(withPlayers())
     const res = await request(app).get('/api/v1/rooms/room-1/standing').set(authHeader(PLAYER))
     expect(res.status).toBe(200)
-    expect(res.body).toEqual({ rank: 2, total: 3, ready: 2, turn: 3, status: 'active' })
+    expect(res.body).toEqual(expect.objectContaining({ total: 3, ready: 2, done: 1, turn: 3, status: 'active', paused: false, hasDilemma: true, monthMinutes: 10, dilemmaMinutes: 5 }))
+    expect(res.body.monthEndsAt).toBe(startedAt.getTime() + 10 * 60 * 1000)
+    expect(res.body.me.phase).toBe('dilemma')
+    expect(res.body.rank).toBeUndefined()
   })
 
   it('não mostra patrimônio nem nome de ninguém', async () => {
     prismaMock.room.findUnique.mockResolvedValue(withPlayers())
     const res = await request(app).get('/api/v1/rooms/room-1/standing').set(authHeader(PLAYER))
-    expect(JSON.stringify(res.body)).not.toMatch(/netWorth|20000|c1|user-1/)
+    expect(JSON.stringify(res.body)).not.toMatch(/netWorth|c1|user-1|c3/)
   })
 
   it('403 para quem não joga na sala', async () => {

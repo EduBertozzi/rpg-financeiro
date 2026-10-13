@@ -1,7 +1,8 @@
 const prisma = require('../lib/prisma')
-const { SALARY } = require('../utils/finance')
-const { isValidGift, startingCosts, startingSkillPoints, giftEventImpact } = require('../utils/gifts')
-const { WELCOME_GIFT } = require('../utils/events')
+const { SALARY, cents } = require('../utils/finance')
+const { isValidGift, startingCosts, startingSkillPoints, giftIncomeEntry } = require('../utils/gifts')
+const { closedAt } = require('../utils/monthClock')
+const { clockNow, checkSoon } = require('../realtime')
 const { leisureFor } = require('../utils/leisure')
 const { dilemmaFor } = require('../utils/dilemmas')
 const { BILLS, pendingForMonth } = require('../utils/settle')
@@ -31,8 +32,12 @@ exports.createCharacter = async (req, res) => {
     })
     if (existing) return res.status(409).json({ error: 'Personagem já criado nessa sala' })
 
-    // janeiro não tem virada de mês: o evento dele (PIX da família) entra aqui
-    const welcome = giftEventImpact(WELCOME_GIFT.cashImpact, gift)
+    // O primeiro mês não tem virada: o salário dele (e a renda do dom) entra
+    // aqui e o aluguel já sai, igual nos outros meses.
+    const costs = startingCosts(gift) // aluguel, mercado, contas e transporte (Mão de Vaca: -10%)
+    const extra = giftIncomeEntry(gift) // Desenrolado: freela
+    const turn = room.status === 'active' ? room.currentTurn : 1
+    const rent = Number(costs.housingCost)
 
     const character = await prisma.character.create({
       data: {
@@ -43,18 +48,17 @@ exports.createCharacter = async (req, res) => {
         avatarId,
         course,
         gift,
-        cash: SALARY + welcome, // salário de janeiro + presente de boas-vindas
-        ...startingCosts(gift), // aluguel, mercado, contas e transporte (Mão de Vaca: -10%)
+        cash: cents(SALARY + (extra?.amount ?? 0) - rent),
+        ...costs,
       }
     })
 
-    await prisma.characterEventLog.create({
-      data: {
-        characterId: character.id,
-        turn: 1,
-        cashImpact: welcome,
-        description: `${WELCOME_GIFT.title}: ${WELCOME_GIFT.description}`
-      }
+    await prisma.characterEventLog.createMany({
+      data: [
+        { characterId: character.id, turn, cashImpact: SALARY, description: `Salário: Depósito do mês (+R$ ${SALARY.toFixed(2)})` },
+        ...(extra ? [{ characterId: character.id, turn, cashImpact: extra.amount, description: `${extra.label}: ${extra.skill} (+R$ ${extra.amount.toFixed(2)})` }] : []),
+        { characterId: character.id, turn, cashImpact: -rent, description: `Aluguel: Casa — Pago (-R$ ${rent})` },
+      ]
     })
 
     await prisma.characterSkillPoints.create({
@@ -106,24 +110,28 @@ exports.setReady = async (req, res) => {
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
 
-    // dilema, lazer e as três contas são obrigatórios para fechar o mês
+    // Dá para encerrar com coisa em aberto, como quando o tempo acaba: na
+    // virada a conta vira atraso e o lazer é cobrado. O cliente avisa antes.
+    // O dilema abre depois de encerrar.
     const turn = character.room?.status === 'active' ? character.room.currentTurn : 0
     const chose = (kind) => (character.choices ?? []).some((c) => c.turn === turn && c.kind === kind)
     const missing = []
-    if (turn > 0 && dilemmaFor(turn) && !chose('dilemma')) missing.push('Dilema')
     if (turn > 0 && leisureFor(turn) && !chose('leisure')) missing.push('Lazer')
     if (turn > 0) {
       const pending = pendingForMonth({ logs: character.eventLog ?? [], choices: [], turn })
       for (const type of pending.bills) missing.push(BILLS[type].label)
     }
-    if (missing.length) return res.status(400).json({ error: `Falta resolver: ${missing.join(', ')}`, missing })
 
+    // quem encerra depois do fim do tempo fica com o horário do fim do tempo
+    const now = clockNow(character.room)
+    const readyAt = new Date(closedAt(character, character.room, now) ?? now)
     const updated = await prisma.character.update({
       where: { id: req.params.id },
-      data: { turnReady: true }
+      data: { turnReady: true, readyAt: character.readyAt ?? readyAt }
     })
 
-    res.json({ turnReady: updated.turnReady })
+    checkSoon(character.roomId)
+    res.json({ turnReady: updated.turnReady, readyAt: updated.readyAt, hasDilemma: Boolean(turn > 0 && dilemmaFor(turn)), missing })
   } catch (err) {
     res.status(500).json({ error: 'Erro interno', details: err.message })
   }

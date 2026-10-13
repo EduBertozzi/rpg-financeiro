@@ -10,14 +10,6 @@ const QUIET_CHANCE = 0.2
 
 const QUIET = { title: 'Nenhum imprevisto', description: 'Mês tranquilo, sem surpresas.', cashImpact: 0, category: 'none' }
 
-// Janeiro não tem virada: o presente de boas-vindas entra na criação do personagem.
-const WELCOME_GIFT = {
-  title: 'Presente de boas-vindas',
-  description: 'Sua família fez um PIX para ajudar nos primeiros gastos do apartamento.',
-  cashImpact: 500,
-  category: 'positive',
-}
-
 const EVENT_CALENDAR = {
   2: [
     { title: 'Convite para casamento', description: 'Um grande amigo da faculdade se casou. Entre presente, roupa e viagem, surgiram uns gastos.', cashImpact: -500, category: 'daily' },
@@ -93,4 +85,4 @@ function expectedPositiveEvents() {
   return Math.round(total * 100) / 100
 }
 
-module.exports = { EVENT_CALENDAR, QUIET, QUIET_CHANCE, WELCOME_GIFT, eventsFor, expectedPositiveEvents }
+module.exports = { EVENT_CALENDAR, QUIET, QUIET_CHANCE, eventsFor, expectedPositiveEvents }

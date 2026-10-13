@@ -110,7 +110,7 @@ exports.claimCoupon = async (req, res) => {
       await prisma.$transaction([
         prisma.character.update({ where: { id: character.id }, data: { cash: { increment: amount } } }),
         markClaimed(amount),
-        log(amount, `Cupom: Cashback do Maré (+R$ ${amount.toFixed(2)})`),
+        log(amount, `Cupom: Cashback do Inabank (+R$ ${amount.toFixed(2)})`),
       ])
       return res.json({ reward: rewardInfo('cashback', amount), cashAfter: cents(cash + amount) })
     }
@@ -124,7 +124,7 @@ exports.claimCoupon = async (req, res) => {
           create: { characterId: character.id, ...start, totalPoints: start.totalPoints + 1 },
         }),
         markClaimed(null),
-        log(0, 'Cupom: Bilhete da Universidade (+1 ponto de habilidade)'),
+        log(0, 'Cupom: Semente da Árvore (+1 ponto de habilidade)'),
       ])
       return res.json({ reward: rewardInfo('skill_point', 0), cashAfter: cents(cash) })
     }

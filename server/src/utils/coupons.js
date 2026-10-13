@@ -24,11 +24,11 @@ const COUPON_REWARDS = {
     description: '20% de desconto na conta do Mercadinho deste mês.',
   },
   cashback: {
-    title: 'Cashback do Maré',
+    title: 'Cashback do Inabank',
     description: `R$ ${CASHBACK_AMOUNT} de volta direto na sua conta.`,
   },
   skill_point: {
-    title: 'Bilhete da Universidade',
+    title: 'Semente da Árvore',
     description: '+1 ponto de habilidade para a sua constelação.',
   },
 }

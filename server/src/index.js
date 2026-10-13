@@ -4,12 +4,15 @@ const { Server } = require('socket.io')
 require('dotenv').config()
 
 const app = require('./app')
+const realtime = require('./realtime')
 
 const httpServer = http.createServer(app)
 
 const io = new Server(httpServer, {
   cors: { origin: true, methods: ['GET', 'POST'] }
 })
+
+realtime.setIo(io)
 
 io.on('connection', (socket) => {
   console.log('Jogador conectado:', socket.id)
@@ -25,26 +28,24 @@ io.on('connection', (socket) => {
     socket.to(roomId).emit('room:player-ready', { characterId })
   })
 
-  socket.on('admin:next-turn', async ({ roomId }) => {
-    try {
-      const { processTurn } = require('./utils/turnEngine')
-      io.to(roomId).emit('turn:processing')
-      const result = await processTurn(roomId)
-      io.to(roomId).emit('turn:result', result)
-      if (result.isFinished) io.to(roomId).emit('room:finished', result)
-    } catch (err) {
-      socket.emit('turn:error', { error: err.message })
-    }
-  })
-
-  socket.on('turn:broadcast', ({ roomId, result }) => {
-    io.to(roomId).emit('turn:result', result)
-  })
-
   socket.on('disconnect', () => {
     console.log('Jogador desconectado:', socket.id)
   })
 })
 
 const PORT = process.env.PORT || 3001
-httpServer.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`))
+
+// no Turso, aplica as migrations que faltam antes de abrir as portas
+async function boot() {
+  if (process.env.TURSO_DATABASE_URL) {
+    try {
+      await require('../scripts/migrate-turso').migrate()
+    } catch (err) {
+      console.error('Migrations do Turso falharam:', err.message)
+    }
+  }
+  realtime.startClock()
+  httpServer.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`))
+}
+
+boot()

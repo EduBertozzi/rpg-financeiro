@@ -95,7 +95,7 @@ describe('GET /api/v1/characters/:id/year-summary — resposta', () => {
     setup()
     const res = await summary()
     expect(res.status).toBe(200)
-    expect(Object.keys(res.body).sort()).toEqual(['badges', 'breakdown', 'months', 'players', 'rank', 'roomAverage', 'timeline'])
+    expect(Object.keys(res.body).sort()).toEqual(['badges', 'breakdown', 'months', 'roomAverage', 'timeline'])
   })
 
   it('carrega o personagem com tudo que as conquistas usam', async () => {
@@ -162,47 +162,12 @@ describe('GET /api/v1/characters/:id/year-summary — resposta', () => {
     expect(res.body.breakdown).toMatchObject({ cash: 0, debts: 600.5, netWorth: -600.5 })
   })
 
-  it('players: ranking da sala pelo patrimônio atual, com o próprio marcado', async () => {
+  it('sem ranking: não devolve posição nem o nome ou o patrimônio dos outros', async () => {
     setup()
     const res = await summary()
-    expect(res.body.players).toEqual([
-      { characterId: 'char-2', name: 'Ana', avatarId: 5, netWorth: 5000, rank: 1, isSelf: false },
-      { characterId: 'char-1', name: 'Dudu', avatarId: 3, netWorth: 2000, rank: 2, isSelf: true },
-      { characterId: 'char-3', name: 'Caio', avatarId: 2, netWorth: 1000, rank: 3, isSelf: false },
-    ])
-    expect(res.body.rank).toBe(2)
-  })
-
-  it('o patrimônio do próprio no ranking é o mesmo do breakdown', async () => {
-    setup(makeSelf({ positions: [{ assetId: 1, quantity: 100, asset: { basePrice: 10 } }] }), [OTHER], [{ assetId: 1, turn: 4, price: 40 }])
-    const res = await summary()
-    const self = res.body.players.find(p => p.isSelf)
-    expect(self.netWorth).toBe(res.body.breakdown.netWorth)
-    expect(self.netWorth).toBe(6000)
-    expect(res.body.rank).toBe(1)
-  })
-
-  it('ações dos outros também entram no ranking', async () => {
-    setup(makeSelf(), [{ ...OTHER, cash: 0, positions: [{ assetId: 1, quantity: 10, asset: { basePrice: 1 } }] }], [{ assetId: 1, turn: 2, price: 500 }])
-    const res = await summary()
-    expect(res.body.players[0]).toMatchObject({ characterId: 'char-2', netWorth: 5000 })
-  })
-
-  it('empate: mesma posição', async () => {
-    setup(makeSelf({ cash: 5000 }), [OTHER, THIRD])
-    const res = await summary()
-    expect(res.body.rank).toBe(1)
-    expect(res.body.players.map(p => p.rank)).toEqual([1, 1, 3])
-    expect(res.body.players.map(p => p.name)).toEqual(['Ana', 'Dudu', 'Caio'])
-  })
-
-  it('se a lista da sala vier sem o personagem, ele entra assim mesmo', async () => {
-    prismaMock.character.findUnique.mockResolvedValue(makeSelf())
-    prismaMock.character.findMany.mockResolvedValue([roomRow(OTHER)])
-    prismaMock.assetPrice.findMany.mockResolvedValue([])
-    const res = await summary()
-    expect(res.body.players).toHaveLength(2)
-    expect(res.body.rank).toBe(2)
+    expect(res.body.players).toBeUndefined()
+    expect(res.body.rank).toBeUndefined()
+    expect(JSON.stringify(res.body)).not.toMatch(/Ana|Caio|char-2|char-3/)
   })
 
   it('sala sem nenhum mês fechado: listas vazias, sem quebrar', async () => {

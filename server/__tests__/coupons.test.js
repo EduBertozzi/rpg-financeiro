@@ -193,8 +193,8 @@ describe('seededRandom / seedFrom', () => {
 describe('prêmios (puro)', () => {
   it('títulos oficiais', () => {
     expect(COUPON_REWARDS.food_discount.title).toBe('Cupom do Mercadinho')
-    expect(COUPON_REWARDS.cashback.title).toBe('Cashback do Maré')
-    expect(COUPON_REWARDS.skill_point.title).toBe('Bilhete da Universidade')
+    expect(COUPON_REWARDS.cashback.title).toBe('Cashback do Inabank')
+    expect(COUPON_REWARDS.skill_point.title).toBe('Semente da Árvore')
   })
   it('cashback é R$ 150 e o cupom do Mercadinho é 20%', () => {
     expect(CASHBACK_AMOUNT).toBe(150)
@@ -207,7 +207,7 @@ describe('prêmios (puro)', () => {
   })
   it('rewardInfo monta { kind, title, description, amount } em centavos', () => {
     expect(rewardInfo('cashback', 150)).toEqual({
-      kind: 'cashback', title: 'Cashback do Maré', description: COUPON_REWARDS.cashback.description, amount: 150,
+      kind: 'cashback', title: 'Cashback do Inabank', description: COUPON_REWARDS.cashback.description, amount: 150,
     })
     expect(rewardInfo('food_discount', 66.666).amount).toBe(66.67)
     expect(rewardInfo('skill_point').amount).toBe(0)
@@ -577,7 +577,7 @@ describe('POST /api/v1/characters/:id/coupon/:turn/claim — validações', () =
   })
 })
 
-describe('resgate: Cashback do Maré', () => {
+describe('resgate: Cashback do Inabank', () => {
   const setup = (overrides = {}) => {
     prismaMock.character.findUnique.mockResolvedValue(makeCharacter(overrides))
     prismaMock.characterCoupon.findMany.mockResolvedValue(PLAN)
@@ -589,7 +589,7 @@ describe('resgate: Cashback do Maré', () => {
 
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
-      reward: { kind: 'cashback', title: 'Cashback do Maré', description: COUPON_REWARDS.cashback.description, amount: 150 },
+      reward: { kind: 'cashback', title: 'Cashback do Inabank', description: COUPON_REWARDS.cashback.description, amount: 150 },
       cashAfter: 5150,
     })
     expect(prismaMock.character.update).toHaveBeenCalledWith({ where: { id: 'char-1' }, data: { cash: { increment: 150 } } })
@@ -599,7 +599,7 @@ describe('resgate: Cashback do Maré', () => {
     setup()
     await claim(3)
     expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith({
-      data: { characterId: 'char-1', turn: 3, cashImpact: 150, description: 'Cupom: Cashback do Maré (+R$ 150.00)' }
+      data: { characterId: 'char-1', turn: 3, cashImpact: 150, description: 'Cupom: Cashback do Inabank (+R$ 150.00)' }
     })
   })
 
@@ -632,7 +632,7 @@ describe('resgate: Cashback do Maré', () => {
   })
 })
 
-describe('resgate: Bilhete da Universidade', () => {
+describe('resgate: Semente da Árvore', () => {
   const setup = (overrides = {}) => {
     prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { currentTurn: 10, status: 'active' }, ...overrides }))
     prismaMock.characterCoupon.findMany.mockResolvedValue(PLAN)
@@ -644,7 +644,7 @@ describe('resgate: Bilhete da Universidade', () => {
 
     expect(res.status).toBe(200)
     expect(res.body).toEqual({
-      reward: { kind: 'skill_point', title: 'Bilhete da Universidade', description: COUPON_REWARDS.skill_point.description, amount: 0 },
+      reward: { kind: 'skill_point', title: 'Semente da Árvore', description: COUPON_REWARDS.skill_point.description, amount: 0 },
       cashAfter: 5000,
     })
     expect(prismaMock.character.update).not.toHaveBeenCalled()
@@ -676,7 +676,7 @@ describe('resgate: Bilhete da Universidade', () => {
     setup()
     await claim(10)
     expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith({
-      data: { characterId: 'char-1', turn: 10, cashImpact: 0, description: 'Cupom: Bilhete da Universidade (+1 ponto de habilidade)' }
+      data: { characterId: 'char-1', turn: 10, cashImpact: 0, description: 'Cupom: Semente da Árvore (+1 ponto de habilidade)' }
     })
     expect(prismaMock.characterCoupon.update.mock.calls[0][0].data.value).toBeNull()
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
