@@ -70,7 +70,7 @@ export default function Tour({ onDone }) {
               onClick={() => (last ? onDone() : setStep(step + 1))}
               className="rounded-[14px] bg-[#3DBE5A] px-4 py-1.5 font-toy text-[16px] font-extrabold text-white shadow-[0_4px_0_#2B8C41] cursor-pointer"
             >
-              {last ? 'Ver o dilema' : 'Próximo'}
+              {last ? 'Começar o mês' : 'Próximo'}
             </button>
           </div>
         </div>

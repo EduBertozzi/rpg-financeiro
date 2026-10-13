@@ -147,8 +147,8 @@ function song(seconds, { introBars = 2, outroAt } = {}) {
   return buf
 }
 
-writeWav('music-full.wav', song(123, { introBars: 2 }))
-writeWav('music-short.wav', song(46, { introBars: 1 }))
+writeWav('music-full.wav', song(184, { introBars: 2 }))
+writeWav('music-short.wav', song(52, { introBars: 1 }))
 
 // ─── efeitos (os mesmos do jogo, em versão de vídeo) ─────────────────────────
 const sfx = {

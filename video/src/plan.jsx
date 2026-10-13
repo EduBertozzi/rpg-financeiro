@@ -5,157 +5,189 @@ import { C } from './parts'
 
 const clip = (o) => ({ kind: 'clip', ...o, dur: (o.to - o.from) / (o.rate ?? 1) })
 
-const ADMIN = (rate = 1.6, from = 9.8, to = 26.5) => clip({
+const ADMIN = (rate = 1.3, from = 10.6, to = 34.5) => clip({
   src: 'admin.webm', from, to, rate, hue: '#F2B53A',
   sticker: { text: 'O professor cria a sala', color: C.yellow, n: '1' },
   captions: [
-    { t: 0.6, dur: 3.2, text: 'Painel do administrador', accent: '🧑‍🏫' },
-    { t: (17.1 - from) / rate, dur: 3, text: 'Sala criada! O código vai pra turma', accent: '🔑' },
-    { t: (22.6 - from) / rate, dur: 2.6, text: 'Todo mundo dentro? Iniciar partida!', accent: '🚀' },
+    { t: 0.6, dur: (19.4 - from) / rate - 0.8, text: 'Painel do professor: nome da turma e minutos por mês', accent: '🧑‍🏫' },
+    { t: (19.8 - from) / rate, dur: 3.2, text: 'Sala criada! O código vai pra turma', accent: '🔑' },
+    { t: (25.3 - from) / rate, dur: 2.6, text: 'Todo mundo dentro? Iniciar partida!', accent: '🚀' },
+    { t: (29.4 - from) / rate, dur: (to - 29.4) / rate - 0.4, text: 'O relógio do mês começa. Dá pra pausar no fim da aula', accent: '⏱️' },
   ],
-  zooms: [{ at: 0, x: 960, y: 380, s: 1.4 }, { at: (17.4 - from) / rate, to: (21.5 - from) / rate, x: 1470, y: 170, s: 2.1 }],
-  sfx: [[(16.8 - from) / rate, 'pop'], [(23.6 - from) / rate, 'tada']],
+  zooms: [
+    { at: 0, x: 960, y: 380, s: 1.3 },
+    { at: (20 - from) / rate, to: (24.4 - from) / rate, x: 1470, y: 170, s: 2.1 },
+    { at: (29.4 - from) / rate, x: 960, y: 360, s: 1.7 },
+  ],
+  sfx: [[(19.5 - from) / rate, 'pop'], [(28.8 - from) / rate, 'tada']],
 })
 
-const CREATE = (rate = 1.8, from = 9.6, to = 34.8) => clip({
+const CREATE = (rate = 1.6, from = 11.6, to = 39.5) => clip({
   src: 'player.webm', from, to, rate, hue: C.pink,
   sticker: { text: 'Quem é você?', color: C.pink, ink: '#fff', n: '2' },
   captions: [
-    { t: 0.5, dur: 4.6, text: 'Cada personagem tem a sua cor', accent: '🎨' },
-    { t: (27.2 - from) / rate, dur: 2.2, text: 'Escolha um dom', accent: '✨' },
-    { t: (31.1 - from) / rate, dur: 2.2, text: 'Sua carteira profissional', accent: '🪪' },
+    { t: 0.5, dur: (23.7 - from) / rate - 0.8, text: 'Cada personagem tem a sua cor', accent: '🎨' },
+    { t: (31.6 - from) / rate, dur: 2.4, text: 'Escolha um dom', accent: '✨' },
+    { t: (35.7 - from) / rate, dur: (to - 35.7) / rate - 0.3, text: 'Sua carteira profissional', accent: '🪪' },
   ],
-  zooms: [{ at: 0.3, to: (19.6 - from) / rate, x: 760, y: 300, s: 1.7 }],
-  sfx: [[(20.3 - from) / rate, 'pop'], [(27.9 - from) / rate, 'sparkle'], [(32.8 - from) / rate, 'tada']],
+  zooms: [{ at: 0.3, to: (23.4 - from) / rate, x: 760, y: 300, s: 1.6 }],
+  sfx: [[(24.2 - from) / rate, 'pop'], [(32 - from) / rate, 'sparkle'], [(37.5 - from) / rate, 'tada']],
 })
 
-const JANUARY = clip({
-  src: 'player.webm', from: 35, to: 56, rate: 2.4, hue: C.green,
+const JANUARY = (rate = 2, from = 39.6, to = 63.8) => clip({
+  src: 'player.webm', from, to, rate, hue: C.green,
   sticker: { text: 'Janeiro: o mês de aprender', color: C.green, ink: '#fff' },
-  captions: [{ t: 1.6, dur: 6.6, text: 'Um tour mostra cada canto da tela', accent: '🗺️' }],
+  captions: [
+    { t: 0.4, dur: (43.6 - from) / rate - 0.5, text: 'O salário cai e o aluguel já sai', accent: '💸' },
+    { t: (44 - from) / rate, dur: (to - 44) / rate - 0.5, text: 'Um tour mostra cada canto da tela', accent: '🗺️' },
+  ],
+  zooms: [{ at: 0.2, to: (43.4 - from) / rate, x: 960, y: 520, s: 1.5 }],
   sfx: [[0.3, 'sparkle']],
 })
 
-const DILEMMA = (rate = 1.5, from = 56.2, to = 65.5) => clip({
-  src: 'player.webm', from, to, rate, hue: C.yellow,
-  sticker: { text: 'Abra a carta do dilema', color: C.yellow, n: '1' },
-  captions: [{ t: 0.4, dur: (to - from) / rate - 0.8, text: 'Não tem resposta certa. Toda escolha tem consequência.', accent: '✉️' }],
-  zooms: [{ at: 0.2, x: 960, y: 520, s: 1.3 }],
-  sfx: [[0.1, 'page'], [(60.3 - from) / rate, 'pop'], [(64.1 - from) / rate, 'sparkle']],
+const TIMER = clip({
+  src: 'player.webm', from: 63.8, to: 67.3, rate: 1, hue: C.red,
+  sticker: { text: 'Cada mês tem um relógio', color: C.red, ink: '#fff' },
+  captions: [{ t: 0.3, dur: 3, text: '10 minutos para fazer tudo. Acabou o tempo, o mês fecha', accent: '⏱️' }],
+  zooms: [{ at: 0.4, x: 1700, y: 170, s: 2.2 }],
+  sfx: [[0.4, 'click']],
 })
 
-const LEISURE = clip({
-  src: 'player.webm', from: 66.6, to: 76.2, rate: 2, hue: C.pink,
-  sticker: { text: 'Escolha o lazer', color: '#EC4899', ink: '#fff', n: '2' },
-  captions: [{ t: 0.5, dur: 4, text: 'Descansar também é parte do orçamento', accent: '🎡' }],
-  sfx: [[2.0, 'coin']],
+const LEISURE = (rate = 1.5, from = 67.4, to = 80) => clip({
+  src: 'player.webm', from, to, rate, hue: C.pink,
+  sticker: { text: 'Escolha o lazer', color: '#EC4899', ink: '#fff', n: '1' },
+  captions: [{ t: 0.5, dur: (to - from) / rate - 1, text: 'Descansar também é parte do orçamento', accent: '🎡' }],
+  sfx: [[(70.5 - from) / rate, 'coin']],
 })
 
-const BILLS = (rate = 2.6, from = 76.4, to = 99.5) => clip({
+const BILLS = (rate = 2.3, from = 80.2, to = 110.8) => clip({
   src: 'player.webm', from, to, rate, hue: C.green,
-  sticker: { text: 'Pague as três contas', color: C.green, ink: '#fff', n: '3' },
+  sticker: { text: 'Pague as três contas', color: C.green, ink: '#fff', n: '2' },
   captions: [
-    { t: 0.4, dur: (94.4 - from) / rate - 0.6, text: 'Conta esquecida vira conta atrasada, com juros', accent: '🧾' },
-    { t: (94.7 - from) / rate, dur: 2.6, text: 'Conquista: mês em dia!', accent: '🏅', color: C.ink, ink: '#fff' },
+    { t: 0.4, dur: (108.3 - from) / rate - 0.6, text: 'Conta esquecida vira conta atrasada, com juros', accent: '🧾' },
+    { t: (108.6 - from) / rate, dur: (to - 108.6) / rate, text: 'Conquista: mês em dia!', accent: '🏅', color: C.ink, ink: '#fff' },
   ],
-  sfx: [[(79.2 - from) / rate, 'coin'], [(86.8 - from) / rate, 'coin'], [(94.4 - from) / rate, 'coin'], [(94.9 - from) / rate, 'win']],
-  coins: [[(94.4 - from) / rate, [960, 560], [140, 300]]],
+  sfx: [[(83 - from) / rate, 'coin'], [(92.5 - from) / rate, 'coin'], [(102 - from) / rate, 'coin'], [(108.6 - from) / rate, 'win']],
+  coins: [[(108.4 - from) / rate, [960, 560], [140, 300]]],
 })
 
-const HUD = (rate = 1.3) => clip({
-  src: 'hud.webm', from: 5.0, to: 13.6, rate, hue: C.pink,
+const HUD = (rate = 1.1, from = 5.0, to = 15.2) => clip({
+  src: 'hud.webm', from, to, rate, hue: C.pink,
   sticker: { text: 'A barra é sua', color: '#fff', x: 760 },
   captions: [
-    { t: 0.3, dur: (9.4 - 5.0) / rate - 0.3, text: 'Patrimônio igual ao do banco, com o gráfico do ano', accent: '📊' },
-    { t: (9.4 - 5.0) / rate, dur: (12.2 - 9.4) / rate, text: 'Tarefas do mês e quem da turma já terminou', accent: '✅' },
-    { t: (12.2 - 5.0) / rate, dur: (13.6 - 12.2) / rate, text: 'Pontos para gastar', accent: '⭐' },
+    { t: 0.3, dur: (9.8 - from) / rate - 0.3, text: 'Patrimônio igual ao do banco, com o gráfico do ano', accent: '📊' },
+    { t: (9.8 - from) / rate, dur: (13 - 9.8) / rate, text: 'O relógio, as tarefas do mês e quem da turma já encerrou', accent: '⏱️' },
+    { t: (13 - from) / rate, dur: (to - 13) / rate, text: 'Pontos para gastar na árvore', accent: '🌳' },
   ],
   zooms: [{ at: 0.6 / rate, x: 330, y: 480, s: 1.6 }],
-  sfx: [[0.1, 'swoosh'], [(12.4 - 5.0) / rate, 'sparkle']],
+  sfx: [[0.1, 'swoosh'], [(13.2 - from) / rate, 'sparkle']],
 })
 
-const BANK = (rate = 2, from = 105.3, to = 119.5) => clip({
+const BANK = (rate = 1.6, from = 114.9, to = 131) => clip({
   src: 'player.webm', from, to, rate, hue: C.teal,
-  sticker: { text: 'Guarde o que sobrar', color: C.teal, ink: '#fff', n: '4' },
-  captions: [{ t: 0.5, dur: (to - from) / rate - 1, text: 'No Banco Maré o dinheiro parado rende', accent: '🏦' }],
-  zooms: [{ at: (110 - from) / rate, x: 1000, y: 760, s: 1.45 }],
-  sfx: [[(116 - from) / rate, 'coin'], [(116.4 - from) / rate, 'win']],
+  sticker: { text: 'Guarde o que sobrar', color: C.teal, ink: '#fff', n: '3' },
+  captions: [{ t: 0.5, dur: (to - from) / rate - 1, text: 'No Inabank, o dinheiro investido rende', accent: '🏦' }],
+  zooms: [{ at: (120 - from) / rate, x: 1000, y: 760, s: 1.45 }],
+  sfx: [[(126 - from) / rate, 'coin'], [(126.4 - from) / rate, 'win']],
 })
 
-const TURN = (from = 122.6, to = 136) => clip({
-  src: 'player.webm', from, to, rate: 1, hue: '#3B4BA8',
-  sticker: { text: 'O professor vira o mês', color: '#3B4BA8', ink: '#fff', n: '5' },
+const CLOSE = (rate = 1.2, from = 132.3, to = 141.1) => clip({
+  src: 'player.webm', from, to, rate, hue: '#3B4BA8',
+  sticker: { text: 'Encerre o mês', color: '#3B4BA8', ink: '#fff', n: '4' },
+  captions: [{ t: 0.4, dur: (to - from) / rate - 0.8, text: 'O pop-up mostra o que falta. Depois, a cidade fecha', accent: '✅' }],
+  zooms: [{ at: (135 - from) / rate, x: 960, y: 560, s: 1.4 }],
+  sfx: [[(134.2 - from) / rate, 'pop'], [(139.5 - from) / rate, 'bell']],
+})
+
+const DILEMMA = (rate = 1.5, from = 141.2, to = 163) => clip({
+  src: 'player.webm', from, to, rate, hue: C.yellow,
+  sticker: { text: 'O dilema chega no fim', color: C.yellow, n: '5' },
   captions: [
-    { t: Math.max(0.3, 123.9 - from), dur: 1.6, text: 'Encerrar mês', accent: '✅' },
-    { t: 125.9 - from, dur: 2.6, text: 'A cidade anoitece…', accent: '🌙' },
-    { t: 128.6 - from, dur: 2.8, text: 'Salário caiu! Moedas pra conta', accent: '💰' },
-    { t: 131.9 - from, dur: to - 131.9 - 0.4, text: 'E o resumo mostra tudo o que aconteceu', accent: '📜' },
+    { t: 0.4, dur: (149 - from) / rate, text: 'Com relógio próprio. E dá pra olhar o banco antes', accent: '✉️' },
+    { t: (149.5 - from) / rate, dur: (to - 149.5) / rate - 0.6, text: 'Não tem resposta certa. Toda escolha tem consequência', accent: '⚖️' },
   ],
-  sfx: [[Math.max(0.2, 124.1 - from), 'pop'], [125.7 - from, 'whoosh'], [127 - from, 'rip'], [127.9 - from, 'bell'], [128.7 - from, 'coin'], [129.1 - from, 'coin'], [129.5 - from, 'coin'], [132 - from, 'pop']],
-  coins: [[128.7 - from, [960, 560], [70, 180]]],
+  zooms: [{ at: 0.3, to: (149 - from) / rate, x: 960, y: 420, s: 1.5 }],
+  sfx: [[0.1, 'page'], [(154.5 - from) / rate, 'pop'], [(158.6 - from) / rate, 'sparkle']],
 })
 
-const SKILLS = (rate = 1.5, from = 142.2, to = 153) => clip({
-  src: 'player.webm', from, to, rate, hue: C.purple,
-  sticker: { text: 'Cada dilema vira um ponto', color: C.purple, ink: '#fff' },
-  captions: [{ t: 0.5, dur: (to - from) / rate - 1, text: 'Pontos viram habilidades na Universidade', accent: '⭐' }],
-  sfx: [[(149.6 - from) / rate, 'tada'], [(149.7 - from) / rate, 'sparkle']],
-  confetti: [(149.6 - from) / rate],
+const TURN = (from = 163, to = 178.4) => clip({
+  src: 'player.webm', from, to, rate: 1, hue: '#3B4BA8',
+  sticker: { text: 'O mês vira sozinho', color: '#3B4BA8', ink: '#fff' },
+  captions: [
+    { t: 0.3, dur: 166.1 - from - 0.3, text: 'A cidade espera a turma terminar', accent: '⏳' },
+    { t: 166.1 - from, dur: 3, text: 'Anoitece… a folha do mês cai', accent: '🌙' },
+    { t: 169.2 - from, dur: 3, text: 'Salário caiu! Moedas pra conta', accent: '💰' },
+    { t: 172.3 - from, dur: to - 172.3 - 0.4, text: 'E o resumo mostra tudo o que aconteceu', accent: '📜' },
+  ],
+  sfx: [[166.2 - from, 'whoosh'], [167.4 - from, 'rip'], [168.3 - from, 'bell'], [169.2 - from, 'coin'], [169.6 - from, 'coin'], [170 - from, 'coin'], [172.4 - from, 'pop']],
+  coins: [[169.2 - from, [960, 560], [70, 180]]],
 })
 
-const NOTEBOOK = clip({
-  src: 'player.webm', from: 153.6, to: 165.5, rate: 2, hue: C.blue,
+const SKILLS = (rate = 1.2, from = 179.3, to = 190.6) => clip({
+  src: 'player.webm', from, to, rate, hue: C.green,
+  sticker: { text: 'Árvore de habilidades', color: C.green, ink: '#fff' },
+  captions: [{ t: 0.5, dur: (to - from) / rate - 1, text: 'Cada dilema vale 1 ponto. Pontos viram vantagens para o ano todo', accent: '🌳' }],
+  sfx: [[(186.7 - from) / rate, 'tada'], [(186.8 - from) / rate, 'sparkle']],
+  confetti: [(186.7 - from) / rate],
+})
+
+const NOTEBOOK = (rate = 1.7, from = 191.2, to = 204.6) => clip({
+  src: 'player.webm', from, to, rate, hue: C.blue,
   sticker: { text: 'O caderninho', color: C.blue, ink: '#fff' },
-  captions: [{ t: 0.6, dur: 4.8, text: 'CDB, Selic, inflação… tudo explicado', accent: '📘' }],
-  sfx: [[0.45, 'page'], [2.2, 'page'], [3.45, 'page']],
+  captions: [{ t: 0.6, dur: (to - from) / rate - 1, text: 'CDB, Selic, juros compostos… tudo explicado', accent: '📘' }],
+  sfx: [[0.6, 'page'], [(195.2 - from) / rate, 'page'], [(197.8 - from) / rate, 'page']],
 })
 
-const HOWTO = clip({
-  src: 'player.webm', from: 165.7, to: 176, rate: 2.2, hue: C.red,
+const HOWTO = (rate = 1.7, from = 204.8, to = 218) => clip({
+  src: 'player.webm', from, to, rate, hue: C.red,
   sticker: { text: 'Ficou com dúvida?', color: C.red, ink: '#fff' },
-  captions: [{ t: 0.5, dur: 3.8, text: 'O ? vermelho ensina em 5 passos', accent: '❓' }],
-  sfx: [[0.4, 'pop'], [1.7, 'page'], [2.9, 'page']],
+  captions: [{ t: 0.5, dur: (to - from) / rate - 1, text: 'O ponto de interrogação vermelho ensina passo a passo', accent: '❓' }],
+  sfx: [[0.4, 'pop'], [(207.5 - from) / rate, 'page'], [(209.3 - from) / rate, 'page']],
 })
 
-const FINISHED = (rate = 1, from = 5, to = 13.7) => clip({
+const FINISHED = (rate = 1, from = 5, to = 14) => clip({
   src: 'finished.webm', from, to, rate, hue: C.yellow,
   sticker: { text: 'Dezembro: fechou o ano!', color: C.yellow, n: '12' },
-  captions: [{ t: 0.8, dur: (to - from) / rate - 1.4, text: 'Vence quem terminar com mais patrimônio', accent: '🏆' }],
+  captions: [{ t: 0.8, dur: (to - from) / rate - 1.4, text: 'Cada um vê o próprio ano: patrimônio, escolhas e conquistas', accent: '🏆' }],
   sfx: [[0.3, 'tada']],
   confetti: [0.3],
 })
 
 export const FULL = [
-  { kind: 'intro', dur: 6 },
+  { kind: 'intro', dur: 8 },
   ADMIN(),
   CREATE(),
-  JANUARY,
-  { kind: 'chapter', dur: 2.2, text: 'Todo mês, 4 coisas', color: C.yellow },
-  DILEMMA(),
-  LEISURE,
+  JANUARY(),
+  TIMER,
+  { kind: 'chapter', dur: 2.6, text: 'Todo mês, 5 passos', color: C.yellow },
+  LEISURE(),
   BILLS(),
   HUD(),
   BANK(),
+  CLOSE(),
+  DILEMMA(),
   TURN(),
   SKILLS(),
-  NOTEBOOK,
-  HOWTO,
+  NOTEBOOK(),
+  HOWTO(),
   FINISHED(),
-  { kind: 'outro', dur: 7.5 },
+  { kind: 'outro', dur: 8 },
 ]
 
+const firstCaptions = (seg, n) => (seg.captions ? { ...seg, captions: seg.captions.slice(0, n) } : seg)
+
 export const SHORT = [
-  { kind: 'intro', dur: 3.6, fast: true },
-  ADMIN(4.2, 12, 26.5),
-  CREATE(2.8, 9.8, 22),
-  DILEMMA(2, 58, 65),
-  BILLS(3.4, 84, 99.5),
-  HUD(2.4),
-  BANK(3.2, 108, 119),
-  TURN(124.6, 131.8),
-  SKILLS(2, 145, 152.5),
-  FINISHED(2, 5, 13),
+  { kind: 'intro', dur: 4.5, fast: true },
+  firstCaptions(ADMIN(3.4, 19, 34), 2),
+  firstCaptions(CREATE(3.2, 14, 30), 1),
+  TIMER,
+  firstCaptions(BILLS(4, 92, 110.8), 2),
+  firstCaptions(BANK(3.2, 119, 130), 1),
+  firstCaptions(DILEMMA(3, 143, 158.6), 1),
+  { ...TURN(166, 173.5), captions: TURN(166, 173.5).captions.slice(1, 3) },
+  firstCaptions(SKILLS(2.2, 182, 190), 1),
+  firstCaptions(FINISHED(2, 5, 13), 1),
   { kind: 'outro', dur: 5 },
-].map((s) => (s.captions ? { ...s, captions: s.captions.slice(0, s.kind === 'clip' && s.src === 'player.webm' && s.from > 120 && s.from < 125 ? 3 : 2) } : s))
+]
 
 export const totalSeconds = (plan) => plan.reduce((a, s) => a + s.dur, 0)

@@ -4,19 +4,11 @@
 import { chromium } from 'playwright'
 import fs from 'node:fs'
 import path from 'node:path'
-import { io } from '../../client/node_modules/socket.io-client/build/esm-debug/index.js'
+import { BOTS, botMonth, call, makeBot as makeBotIn, wait, waitTurn } from './game.mjs'
 
-const API = 'http://localhost:3001/api/v1'
 const WEB = 'http://localhost:5173'
 const OUT = path.resolve('footage')
-const GATE_HASH = '5e183656' // libera a trava de surpresa no navegador da gravação
 fs.mkdirSync(OUT, { recursive: true })
-
-const call = async (token, method, url, body) => {
-  const r = await fetch(API + url, { method, headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body ? JSON.stringify(body) : undefined })
-  return r.json().catch(() => null)
-}
-const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 const n = Date.now()
 const markers = {}
 
@@ -48,7 +40,6 @@ async function session(name) {
   const browser = await chromium.launch()
   const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, recordVideo: { dir: OUT, size: { width: 1920, height: 1080 } } })
   await context.addInitScript(CURSOR)
-  await context.addInitScript((h) => { try { localStorage.setItem('chave-surpresa', h) } catch {} }, GATE_HASH)
   const page = await context.newPage()
   const t0 = Date.now()
   markers[name] = {}
@@ -92,21 +83,9 @@ async function session(name) {
 }
 
 // ─── preparação: professora, sala e colegas robôs ────────────────────────────
-const admin = await call(null, 'POST', '/auth/register-admin', { name: 'Profa. Marta', email: `marta${n}@escola.br`, password: 'santarita', inviteCode: 'SANTA-RITA-DEV' })
-const BOTS = [['Caio', 4, 'frugal'], ['Lia', 2, 'agile'], ['Theo', 5, 'frugal'], ['Nina', 6, 'smart']]
-async function makeBot([name, avatarId, gift], roomId) {
-  const email = `${name.toLowerCase()}${n}@bots.br`
-  await call(null, 'POST', '/auth/register', { name, email, password: 'santarita' })
-  const l = await call(null, 'POST', '/auth/login', { email, password: 'santarita' })
-  const c = await call(l.token, 'POST', '/characters', { roomId, name, avatarId, course: 'Administração', gift })
-  return { t: l.token, id: c.id }
-}
-async function botMonth(b, turn, opt) {
-  await call(b.t, 'POST', `/characters/${b.id}/dilemma/${turn}/choose`, { optionIndex: opt })
-  await call(b.t, 'POST', `/characters/${b.id}/leisure/${turn}/choose`, { optionIndex: opt % 2 })
-  for (const type of ['food', 'utilities', 'transport']) await call(b.t, 'POST', `/characters/${b.id}/bills/${turn}/pay`, { type })
-  await call(b.t, 'PATCH', `/characters/${b.id}/ready`)
-}
+const INVITE = Object.fromEntries(fs.readFileSync('../server/.env', 'utf8').split('\n').filter((l) => l.includes('=')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()])).ADMIN_INVITE_CODE
+const admin = await call(null, 'POST', '/auth/register-admin', { name: 'Profa. Marta', email: `marta${n}@escola.br`, password: 'fechaomes', inviteCode: INVITE })
+const makeBot = (b, roomId) => makeBotIn(b, roomId, n)
 
 // ─── 1. a professora cria a sala e inicia a partida ──────────────────────────
 let room
@@ -117,7 +96,7 @@ let room
   await wait(1200)
   s.mark('login')
   await s.type('input[type=email]', `marta${n}@escola.br`)
-  await s.type('input[type=password]', 'santarita')
+  await s.type('input[type=password]', 'fechaomes')
   await s.to('button[type=submit]')
   await page.waitForURL('**/admin')
   await wait(1500)
@@ -125,6 +104,7 @@ let room
   await s.to('text=+ Nova sala')
   s.mark('newRoom')
   await s.type('#new-room-name', '3º ano A · manhã')
+  await s.to('text=Minutos por mês', { click: false, pause: 900 })
   await s.to('text=Criar sala')
   await wait(1500)
   s.mark('roomCreated')
@@ -141,7 +121,10 @@ let room
   await s.to('text=Iniciar partida')
   await wait(2200)
   s.mark('started')
-  await wait(1500)
+  await s.to(page.locator('text=para o mês fechar sozinho').first(), { click: false, pause: 1400 })
+  await s.to('text=Pausar relógio', { click: false, pause: 1200 })
+  s.mark('clock')
+  await wait(1200)
   await s.finish()
 }
 const bots = global.bots
@@ -149,14 +132,14 @@ const bots = global.bots
 // ─── 2. a aluna: personagem, janeiro, um mês inteiro, virada e mais ─────────
 {
   const email = `duda${n}@escola.br`
-  await call(null, 'POST', '/auth/register', { name: 'Duda', email, password: 'santarita' })
+  await call(null, 'POST', '/auth/register', { name: 'Duda', email, password: 'fechaomes' })
   const s = await session('player')
   const { page } = s
   await page.goto(`${WEB}/login`)
   await wait(1000)
   s.mark('login')
   await s.type('input[type=email]', email)
-  await s.type('input[type=password]', 'santarita')
+  await s.type('input[type=password]', 'fechaomes')
   await s.to('button[type=submit]')
   await page.waitForURL('**/character')
   await wait(1200)
@@ -181,18 +164,13 @@ const bots = global.bots
   await s.to('text=Bora para', { pause: 900 })
   await wait(900)
   s.mark('tour')
-  for (let i = 0; i < 5; i++) { await wait(1500); await s.to('text=Próximo', { pause: 300 }) }
+  for (let i = 0; i < 6; i++) { await wait(1500); await s.to('text=Próximo', { pause: 300 }) }
   await wait(1500)
-  await s.to('text=Ver o dilema')
-  await wait(1800)
-  s.mark('dilemma')
-  await s.to(page.locator('[role=dialog] button:has(span)').first(), { click: false, pause: 900 })
-  await s.to(page.locator('[role=dialog] button:has(span)').nth(1), { click: false, pause: 900 })
-  await s.to(page.locator('[role=dialog] button:has(span)').first(), { pause: 500 })
-  await wait(1800)
-  s.mark('dilemmaResult')
-  await s.to('text=Seguir o mês')
+  await s.to('text=Começar o mês')
   await wait(800)
+  // o relógio do mês
+  s.mark('timer')
+  await s.to('[role=timer]', { click: false, pause: 1600 })
 
   // lazer
   s.mark('leisure')
@@ -224,7 +202,7 @@ const bots = global.bots
 
   // banco: guardar na caixinha
   s.mark('bank')
-  await s.nav('Banco')
+  await s.nav('Inabank')
   await wait(1800)
   await s.glide(1100, 300, 20)
   await s.to('text=Guardar')
@@ -236,33 +214,38 @@ const bots = global.bots
   await wait(3000)
   s.mark('bankDone')
 
-  // encerra o mês; colegas terminam e a professora vira o mês
+  // encerra o mês: pop-up, a cidade trava e chega o dilema
   await s.nav('Mapa')
   await wait(1500)
   s.mark('close')
   await s.to('text=Encerrar mês', { pause: 600 })
-  await wait(1500)
+  await wait(1600)
+  await s.to('text=Encerrar o mês', { pause: 700 })
+  await wait(2200)
+  s.mark('dilemma')
+  await s.to('[role=dialog] [role=timer]', { click: false, pause: 1200 })
+  await s.to(page.locator('[role=dialog] button:has(span)').first(), { click: false, pause: 900 })
+  await s.to(page.locator('[role=dialog] button:has(span)').nth(1), { click: false, pause: 900 })
+  await s.to(page.locator('[role=dialog] button:has(span)').first(), { pause: 500 })
+  await wait(1800)
+  s.mark('dilemmaResult')
+  await s.to('text=Fechar o mês')
+  await wait(1200)
+  s.mark('waiting')
+  await wait(2500)
+  // os colegas terminam e o mês vira sozinho
   for (const [i, b] of bots.entries()) await botMonth(b, 1, i % 2)
-  // como o painel da professora: fecha o mês e avisa a sala pelo socket
-  const result = await call(admin.token, 'POST', `/rooms/${room.id}/next-turn`)
-  const sock = io('http://localhost:3001', { transports: ['websocket'] })
-  await new Promise((r) => sock.on('connect', r))
-  sock.emit('room:join', { roomId: room.id, characterId: 'admin' })
-  sock.emit('turn:broadcast', { roomId: room.id, result })
-  await wait(300)
-  sock.close()
+  await waitTurn(room.code, 1, admin.token, room.id)
   s.mark('scene')
   await wait(6200)
   s.mark('summary')
   await wait(3000)
   await s.to('text=Bora para', { pause: 600 })
   await wait(1500)
-  await s.to('text=Decidir depois').catch(() => {})
-  await wait(800)
 
-  // universidade: desbloqueia uma habilidade (confete)
+  // árvore de habilidades: desbloqueia uma habilidade (confete)
   s.mark('skills')
-  await s.nav('Universidade')
+  await s.nav('Árvore de habilidades')
   await wait(2500)
   const intro = page.locator('text=Começar').first()
   if (await intro.isVisible().catch(() => false)) { await s.to(intro); await wait(1200) }
@@ -299,28 +282,29 @@ const bots = global.bots
   await s.finish()
 }
 
-// ─── 3. dezembro: o fim do ano e o ranking ──────────────────────────────────
+// ─── 3. dezembro: o fim do ano ───────────────────────────────────────────────
 {
   const r2 = await call(admin.token, 'POST', '/rooms', { name: '3º ano B' })
   const email = `bia${n}@escola.br`
-  await call(null, 'POST', '/auth/register', { name: 'Bia', email, password: 'santarita' })
-  const l = await call(null, 'POST', '/auth/login', { email, password: 'santarita' })
+  await call(null, 'POST', '/auth/register', { name: 'Bia', email, password: 'fechaomes' })
+  const l = await call(null, 'POST', '/auth/login', { email, password: 'fechaomes' })
   const me = await call(l.token, 'POST', '/characters', { roomId: r2.id, name: 'Bia', avatarId: 3, course: 'Engenharia', gift: 'smart' })
   const others = []
   for (const b of BOTS) others.push(await makeBot(b, r2.id))
   await call(admin.token, 'POST', `/rooms/${r2.id}/start`)
   const all = [{ t: l.token, id: me.id }, ...others]
   for (let turn = 1; turn <= 12; turn++) {
+    // o investimento sai antes de encerrar (o banco está sempre aberto)
     for (const [i, b] of all.entries()) await botMonth(b, turn, (i + turn) % 2)
     if (turn === 2) await call(l.token, 'POST', `/investments/fixed/${me.id}`, { type: 'CDB', amount: 8000 })
-    await call(admin.token, 'POST', `/rooms/${r2.id}/next-turn`)
+    await waitTurn(r2.code, turn, admin.token, r2.id)
   }
   const s = await session('finished')
   const { page } = s
   await page.goto(`${WEB}/login`)
   await wait(800)
   await page.fill('input[type=email]', email)
-  await page.fill('input[type=password]', 'santarita')
+  await page.fill('input[type=password]', 'fechaomes')
   await page.keyboard.press('Enter')
   await wait(2500)
   if (!page.url().includes('/finished')) await page.goto(`${WEB}/finished`)

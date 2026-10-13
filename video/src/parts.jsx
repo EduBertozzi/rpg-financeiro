@@ -51,8 +51,10 @@ export const Star = ({ size = 40, color = C.yellow }) => (
 
 // ─── a logo: calendário com check; `flip` folhas caindo antes do check
 const MONTHS = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
-export function Logo({ size = 260, flipFrames = 0, perPage = 6 }) {
-  const frame = useCurrentFrame()
+// hold: quadros parados na primeira folha (JAN) antes de começar a virar
+export function Logo({ size = 260, flipFrames = 0, perPage = 6, hold = 0 }) {
+  const frame = Math.max(0, useCurrentFrame() - hold)
+  flipFrames = Math.max(0, flipFrames - hold)
   const { fps } = useVideoConfig()
   const page = Math.min(11, Math.floor(frame / perPage))
   const local = frame - page * perPage
@@ -124,7 +126,7 @@ export function GameWindow({ children, dur, tilt = 0, scale = 0.8, y = 40 }) {
     <div style={{ position: 'absolute', left: (1920 - W) / 2, top: (1080 - H) / 2 + y, width: W, height: H + 44, transform: `translateY(${(1 - enter) * 700 + exit * -40}px) rotate(${(1 - enter) * 6 + tilt}deg) scale(${1 - exit * 0.06})`, opacity: 1 - exit, borderRadius: 28, overflow: 'hidden', background: '#fff', boxShadow: '0 22px 0 rgba(0,0,0,.18), 0 50px 90px rgba(0,0,0,.35)', border: '6px solid #fff' }}>
       <div style={{ height: 44, background: '#F1EBDD', display: 'flex', alignItems: 'center', gap: 10, padding: '0 18px' }}>
         {['#E5484D', '#F4C430', '#3DBE5A'].map((c) => <span key={c} style={{ width: 16, height: 16, borderRadius: '50%', background: c }} />)}
-        <span style={{ marginLeft: 18, background: '#fff', borderRadius: 999, padding: '4px 22px', fontFamily: BODY, fontWeight: 700, fontSize: 18, color: '#6B7A62' }}>Fecha o Mês · Santa Rita</span>
+        <span style={{ marginLeft: 18, background: '#fff', borderRadius: 999, padding: '4px 22px', fontFamily: BODY, fontWeight: 700, fontSize: 18, color: '#6B7A62' }}>Fecha o Mês</span>
       </div>
       <div style={{ position: 'relative', width: W, height: H, overflow: 'hidden' }}>{children}</div>
     </div>

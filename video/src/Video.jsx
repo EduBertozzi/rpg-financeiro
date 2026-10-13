@@ -4,23 +4,28 @@ import { BODY, C, Caption, CoinBurst, Confetti, Footage, GameWindow, Logo, Stick
 const FPS = 30
 const f = (s) => Math.round(s * FPS)
 
+// quadros parados em JAN antes de as folhas começarem a cair
+export const introHold = (fast) => (fast ? 14 : 30)
+export const introPer = (fast) => (fast ? 4 : 8) // quadros por folha
+
 function Intro({ dur, fast }) {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
-  const per = fast ? 3 : 6 // quadros por folha
-  const flip = per * 12
+  const hold = introHold(fast)
+  const per = introPer(fast)
+  const flip = hold + per * 12
   const logoScale = spring({ frame, fps, config: { damping: 12 } })
   const lift = interpolate(frame, [flip + 6, flip + 22], [0, -150], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' })
   const out = interpolate(frame, [f(dur) - 8, f(dur)], [1, 0], { extrapolateLeft: 'clamp' })
   return (
     <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', opacity: out }}>
       <div style={{ transform: `translateY(${lift}px) scale(${logoScale})` }}>
-        <Logo size={300} flipFrames={flip} perPage={per} />
+        <Logo size={300} flipFrames={flip} perPage={per} hold={hold} />
       </div>
       <div style={{ position: 'absolute', top: 600 }}>
         <Title delay={flip + 10} size={170}>Fecha o Mês</Title>
         <div style={{ textAlign: 'center', marginTop: 24, fontFamily: BODY, fontWeight: 700, fontSize: 46, color: C.mint, opacity: interpolate(frame, [flip + 34, flip + 46], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
-          Um ano de vida financeira em Santa Rita
+          Um ano de vida financeira, jogado com a turma
         </div>
       </div>
       <Confetti delay={flip + 4} count={120} />
@@ -33,7 +38,7 @@ function Chapter({ dur, text, color }) {
   const { fps } = useVideoConfig()
   const s = spring({ frame, fps, config: { damping: 10, stiffness: 140 } })
   const out = interpolate(frame, [f(dur) - 8, f(dur)], [1, 0], { extrapolateLeft: 'clamp' })
-  const icons = ['✉️', '🎡', '🧾', '🏦']
+  const icons = ['🎡', '🧾', '🏦', '✅', '✉️']
   return (
     <AbsoluteFill style={{ alignItems: 'center', justifyContent: 'center', opacity: out, gap: 60 }}>
       <div style={{ transform: `scale(${s}) rotate(${(1 - s) * -10}deg)`, background: color, borderRadius: 50, padding: '30px 70px 18px', border: '8px solid #fff', boxShadow: '0 16px 0 rgba(0,0,0,.2)', fontFamily: TOY, fontWeight: 800, fontSize: 120, color: C.ink }}>{text}</div>
@@ -124,13 +129,14 @@ export function Movie({ plan, music }) {
         </Sequence>
       )))}
       {items.filter(({ seg }) => seg.kind === 'intro').map(({ seg, start }) => {
-        const per = seg.fast ? 3 : 6
+        const per = introPer(seg.fast)
+        const hold = introHold(seg.fast)
         return Array.from({ length: 12 }, (_, k) => (
-          <Sequence key={`ip${k}`} from={start + k * per} durationInFrames={f(0.5)}>
+          <Sequence key={`ip${k}`} from={start + hold + k * per} durationInFrames={f(0.5)}>
             <Audio src={staticFile('sfx-page.wav')} volume={0.35} />
           </Sequence>
         )).concat(
-          <Sequence key="itada" from={start + per * 12} durationInFrames={f(1.8)}><Audio src={staticFile('sfx-tada.wav')} volume={0.8} /></Sequence>,
+          <Sequence key="itada" from={start + hold + per * 12} durationInFrames={f(1.8)}><Audio src={staticFile('sfx-tada.wav')} volume={0.8} /></Sequence>,
         )
       })}
       <Audio src={staticFile(music)} volume={0.42} />
