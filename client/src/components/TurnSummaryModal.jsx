@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { TOY_BUTTON, TOY_CARD } from './town/toy'
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -36,14 +37,14 @@ function Row({ label, value, strong }) {
 // Cartão da virada do mês: abre no começo de cada mês, antes do dilema.
 export default function TurnSummaryModal({ summary, onClose }) {
   if (!summary) return null
-  const { turn, events, consequences, late, money, net } = summary
+  const { turn, events, consequences, investments = [], late, money, net } = summary
   const first = turn === 1
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && onClose()}>
+  return createPortal(
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-label={`Virada para ${MONTHS[turn - 1]}`} className={`turn-pop grid max-h-[calc(100vh-32px)] w-full max-w-lg gap-4 overflow-y-auto ${TOY_CARD} px-6 py-6`}>
         <div className="text-center">
           <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">{first ? 'Começou o ano' : 'Virou o mês'}</p>
-          <h2 className="font-toy text-[32px] font-extrabold leading-tight">{MONTHS[turn - 1]} em Santa Rita</h2>
+          <h2 className="font-toy text-[32px] font-extrabold leading-tight">{MONTHS[turn - 1]}</h2>
         </div>
 
         {events.map((e) => <EventCard key={e.title} event={e} />)}
@@ -55,6 +56,13 @@ export default function TurnSummaryModal({ summary, onClose }) {
           </div>
         )}
 
+        {investments.length > 0 && (
+          <div className="grid gap-1.5 rounded-[18px] bg-[#EAF6F4] p-4">
+            <p className="font-toy text-[17px] font-extrabold text-[#0A7F75]">Debêntures</p>
+            {investments.map((d, i) => <Row key={i} label={d.description} value={d.amount} />)}
+          </div>
+        )}
+
         {late.length > 0 && (
           <div className="grid gap-1.5 rounded-[18px] border-2 border-[#F5B8C0] bg-[#FDE2E5] p-4">
             <p className="font-toy text-[17px] font-extrabold text-[#9F1D2F]">Ficou em aberto no mês passado</p>
@@ -62,7 +70,9 @@ export default function TurnSummaryModal({ summary, onClose }) {
           </div>
         )}
 
-        {!first && (
+        {first && <p className="text-center text-[15px] text-[#4A5A42]">O salário de janeiro já caiu e o aluguel já saiu. Agora é pagar as contas do mês, escolher o lazer e guardar o que sobrar.</p>}
+
+        {(
           <div className="grid gap-1 rounded-[18px] border-2 border-[#EFE6D3] bg-white p-4">
             {money.salary !== 0 && <Row label="Salário" value={money.salary} />}
             {money.extras !== 0 && <Row label="Freelas e bônus" value={money.extras} />}
@@ -74,6 +84,7 @@ export default function TurnSummaryModal({ summary, onClose }) {
 
         <button type="button" onClick={onClose} className={TOY_BUTTON}>Bora para {MONTHS[turn - 1].toLowerCase()}</button>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

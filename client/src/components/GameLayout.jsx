@@ -3,7 +3,7 @@ import GameHeader from './GameHeader'
 import Notebook from './Notebook'
 import Celebrations from './Celebrations'
 
-// `light`: fundo claro de manhã, para telas claras como o banco Maré.
+// `light`: fundo claro de manhã, para telas claras como o Inabank.
 export default function GameLayout({ children, light = false }) {
   const sidebarExpanded = useGameStore((s) => s.sidebarExpanded)
 

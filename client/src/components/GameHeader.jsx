@@ -2,7 +2,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import useGameStore from '../store/gameStore'
 import { Avatar } from './Avatars'
 import { TASK_EVENT, monthTasks, worthSeries, worthNow, sparkPoints, pointsLeft } from './sidebarData'
-import { useRolling, useStanding } from './hudHooks'
+import { useRolling, useMonthClock } from './hudHooks'
+import { clockText, formatClock, isUrgent } from './monthClock'
 import { sfx, setSoundOn, useSoundOn } from '../services/sound'
 
 const brl = (value = 0) => `R$ ${Math.round(Number(value)).toLocaleString('pt-BR')}`
@@ -50,7 +51,9 @@ function Icon({ name, className = 'h-5 w-5' }) {
     ),
     skills: (
       <svg {...commonProps}>
-        <path d="M12 2l2.2 6.1L20 10.3l-5.1 3.6.2 6.1L12 15.9 8.9 20l.2-6.1L4 10.3l5.8-2.2L12 2z" />
+        {/* árvore: copa redonda e tronco com dois galhos */}
+        <path d="M12 21v-7M12 16l-3-2.5M12 14.5l3-2.5" />
+        <path d="M7.5 15.5a4.5 4.5 0 0 1-1.3-8.4 5.8 5.8 0 0 1 11.6 0 4.5 4.5 0 0 1-1.3 8.4z" />
       </svg>
     ),
     close: (
@@ -146,7 +149,7 @@ function Badge({ n }) {
 const TONES = {
   map: { bg: '#3DBE5A', edge: '#2B8C41', soft: '#E2F4E5' },
   bank: { bg: '#12B5A6', edge: '#0A7F75', soft: '#DDF4F1' },
-  skills: { bg: '#8A5CF6', edge: '#6538C9', soft: '#EEE7FE' },
+  skills: { bg: '#3DBE5A', edge: '#2B8C41', soft: '#E2F4E5' },
   admin: { bg: '#F2B53A', edge: '#C98A12', soft: '#FDF1D6' },
 }
 
@@ -243,9 +246,9 @@ function WorthCard({ character }) {
 }
 
 // O mês: as tarefas em ícones e quantos da turma já encerraram.
-function MonthCard({ turn, tasks, standing, onTask }) {
-  const total = standing?.total ?? 0
-  const ready = standing?.ready ?? 0
+function MonthCard({ turn, tasks, clock, onTask }) {
+  const total = clock?.total ?? 0
+  const ready = clock?.closed ?? 0
   return (
     <div data-tour="mes" className="grid gap-2.5 rounded-[20px] border-2 border-[#EFE6D3] bg-white p-3">
       <div className="flex items-baseline justify-between">
@@ -278,7 +281,7 @@ function MonthCard({ turn, tasks, standing, onTask }) {
         <div className="grid gap-1">
           <div className="flex justify-between text-[12px] font-bold text-[#6B7A62]">
             <span>Turma</span>
-            <b className="text-[#24331F]">{ready} de {total} {ready === 1 ? 'pronto' : 'prontos'}</b>
+            <b className="text-[#24331F]">{ready} de {total} {ready === 1 ? 'encerrou' : 'encerraram'}</b>
           </div>
           <div className="flex gap-[3px]" aria-hidden="true">
             {Array.from({ length: total }, (_, i) => (
@@ -291,14 +294,18 @@ function MonthCard({ turn, tasks, standing, onTask }) {
   )
 }
 
-function RankChip({ standing }) {
-  if (!standing?.total) return null
-  if (!standing.rank) return <span className="mt-2 inline-block rounded-full bg-white/20 px-2.5 py-1 text-[11px] font-extrabold">Ranking a partir de fevereiro</span>
+function ClockChip({ clock, onDilemma }) {
+  const text = clockText(clock)
+  if (!text) return null
+  const urgent = isUrgent(text.time)
+  // no dilema, o relógio leva de volta para a carta (no mapa)
+  const Tag = clock?.phase === 'dilemma' ? 'button' : 'span'
   return (
-    <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/20 py-1 pl-1 pr-2.5 text-[12px] font-extrabold" title="Posição pelo patrimônio da última virada">
-      <span className="grid h-5 w-5 place-items-center rounded-full bg-[#FFD45C] text-[11px] text-[#5C3B00]">{standing.rank}</span>
-      {standing.rank}º de {standing.total} na sala
-    </span>
+    <Tag type={Tag === 'button' ? 'button' : undefined} onClick={Tag === 'button' ? onDilemma : undefined} className={`mt-2 inline-flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-2.5 text-[12px] font-extrabold ${urgent ? 'animate-pulse bg-[#C4283D]' : 'bg-white/20'} ${Tag === 'button' ? 'cursor-pointer hover:bg-white/30' : ''}`} role="timer" aria-live="off">
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M9 2h6" /></svg>
+      {text.time != null && <b className="font-toy text-[15px] tabular-nums">{formatClock(text.time)}</b>}
+      {text.label}
+    </Tag>
   )
 }
 
@@ -308,22 +315,23 @@ export default function GameHeader() {
   const { character, room, user, logout, sidebarExpanded, setSidebarExpanded } = useGameStore()
   const soundOn = useSoundOn()
   const playing = room?.status === 'active'
-  const standing = useStanding(room?.id, playing && user?.role !== 'admin')
+  const turn = playing ? Math.min(room?.currentTurn ?? 0, 12) : 0
+  const tasks = monthTasks(character?.eventLog, turn)
+  const answered = Boolean(tasks.find((t) => t.id === 'dilemma')?.done)
+  const clock = useMonthClock(room?.id, playing && user?.role !== 'admin', answered)
 
   const path = location.pathname
 
   if (!character) return null
 
-  const turn = playing ? Math.min(room?.currentTurn ?? 0, 12) : 0
-  const tasks = monthTasks(character.eventLog, turn)
   const doneCount = tasks.filter((t) => t.done).length
   const points = pointsLeft(character.skillPoints)
   const negative = Number(character.cash) < 0
 
   const navItems = [
     { label: 'Mapa', path: '/map', icon: 'map', description: 'Cidade e tarefas do mês' },
-    { label: 'Banco', path: '/bank', icon: 'bank', description: 'Conta, caixinhas e ações' },
-    { label: 'Universidade', path: '/skills', icon: 'skills', description: points ? `${points} ${points === 1 ? 'ponto' : 'pontos'} para gastar` : 'Constelação de habilidades', badge: points },
+    { label: 'Inabank', path: '/bank', icon: 'bank', description: 'Conta, caixinhas e ações', tour: 'banco' },
+    { label: 'Árvore de habilidades', path: '/skills', icon: 'skills', tour: 'arvore', description: points ? `${points} ${points === 1 ? 'ponto' : 'pontos'} para gastar` : 'Pontos viram vantagens', badge: points },
   ]
 
   function handleLogout() {
@@ -378,18 +386,13 @@ export default function GameHeader() {
                 <Icon name="close" className="h-5 w-5" />
               </button>
             </div>
-            <RankChip standing={standing} />
+            <ClockChip clock={clock} onDilemma={() => openTask('dilemma')} />
             <span className="absolute inset-x-0 -bottom-px h-3.5 rounded-t-[14px] bg-[#FFFDF7]" />
           </div>
         ) : (
           <div className="shrink-0 border-b-2 border-dashed border-[#EFE6D3] p-4">
             <button type="button" onClick={() => setSidebarExpanded(true)} title="Expandir" className="relative mx-auto flex justify-center cursor-pointer">
               <Avatar id={character.avatarId} size={48} selected />
-              {standing?.rank && (
-                <span className="absolute -bottom-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full border-2 border-[#FFFDF7] bg-[#FFD45C] px-1 text-[10px] font-extrabold text-[#5C3B00]" title={`${standing.rank}º de ${standing.total} na sala`}>
-                  {standing.rank}º
-                </span>
-              )}
             </button>
           </div>
         )}
@@ -399,7 +402,7 @@ export default function GameHeader() {
             {sidebarExpanded ? (
               <>
                 <WorthCard character={character} />
-                {turn > 0 && <MonthCard turn={turn} tasks={tasks} standing={standing} onTask={openTask} />}
+                {turn > 0 && <MonthCard turn={turn} tasks={tasks} clock={clock} onTask={openTask} />}
               </>
             ) : (
               <div className="flex flex-col items-center gap-3">
@@ -411,6 +414,11 @@ export default function GameHeader() {
                   <div data-tour="mes" className="flex flex-col items-center gap-1" title={`${MONTHS[turn - 1]}: ${doneCount} de ${tasks.length} tarefas`}>
                     <TaskRing done={doneCount} total={tasks.length} />
                     <span className="font-toy text-[12px] font-extrabold leading-none text-[#6B7A62]">{turn}/12</span>
+                    {clockText(clock)?.time != null && (
+                      <span className={`mt-0.5 rounded-full px-1.5 font-toy text-[12px] font-extrabold tabular-nums ${isUrgent(clockText(clock).time) ? 'animate-pulse bg-[#C4283D] text-white' : 'bg-[#F1EBDD] text-[#24331F]'}`} title={clockText(clock).label}>
+                        {formatClock(clockText(clock).time)}
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -420,16 +428,17 @@ export default function GameHeader() {
               {sidebarExpanded && <p className={`mb-2 ${LABEL}`}>Lugares</p>}
               <div className={sidebarExpanded ? 'space-y-1.5' : 'flex flex-col items-center gap-3'}>
                 {navItems.map((item) => (
-                  <MenuItem
-                    key={item.path}
-                    icon={item.icon}
-                    label={item.label}
-                    description={item.description}
-                    badge={item.badge}
-                    active={path === item.path}
-                    expanded={sidebarExpanded}
-                    onClick={() => go(item.path)}
-                  />
+                  <div key={item.path} data-tour={item.tour}>
+                    <MenuItem
+                      icon={item.icon}
+                      label={item.label}
+                      description={item.description}
+                      badge={item.badge}
+                      active={path === item.path}
+                      expanded={sidebarExpanded}
+                      onClick={() => go(item.path)}
+                    />
+                  </div>
                 ))}
               </div>
             </nav>

@@ -1,9 +1,9 @@
-// Quem é quem em Santa Rita: o nome, a história e uma dica de dinheiro de cada
+// Quem é quem na cidade: o nome, a história e uma dica de dinheiro de cada
 // empresa da cidade. Aparece no botão "i" dos prédios e no Guia rápido.
 export const COMPANIES = {
   bank: {
-    name: 'Banco Maré',
-    story: 'Banco digital que nasceu numa garagem de Santa Rita. Guarda as caixinhas, as ações e as debêntures da cidade.',
+    name: 'Inabank',
+    story: 'Banco digital que nasceu numa garagem da cidade. Guarda as caixinhas, as ações e as debêntures da cidade.',
     pays: 'Contas do mês, investimentos e o cheque especial.',
     tip: 'Dinheiro parado na conta não rende. O que sobrar, guarde numa caixinha.',
   },
@@ -38,8 +38,8 @@ export const COMPANIES = {
     tip: 'Aluguel é o maior gasto fixo. Negociar faz diferença.',
   },
   university: {
-    name: 'Universidade de Santa Rita',
-    story: 'Onde fica o Cruzeiro, a constelação de habilidades. Cada estrela é um curso que vira vantagem no seu bolso.',
+    name: 'Árvore de habilidades',
+    story: 'A árvore mais antiga da cidade. Cada galho é um curso que vira vantagem no seu bolso.',
     pays: 'Nada em dinheiro: você paga com pontos de habilidade.',
     tip: 'Estudar cedo rende o ano inteiro.',
   },

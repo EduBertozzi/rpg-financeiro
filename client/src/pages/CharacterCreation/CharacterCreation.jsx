@@ -196,11 +196,11 @@ export default function CharacterCreation() {
               <div className="grid gap-5">
                 <div>
                   <h2 className="font-toy text-3xl font-extrabold">Tudo pronto, {form.name.trim().split(' ')[0]}!</h2>
-                  <p className="text-[#6B7A62]">Você acabou de se formar e se mudou para Santa Rita. Agora é cuidar do dinheiro por 12 meses.</p>
+                  <p className="text-[#6B7A62]">Você acabou de se formar e se mudou para uma cidade nova. Agora é cuidar do dinheiro por 12 meses.</p>
                 </div>
                 <dl className="grid gap-2 rounded-[20px] border-2 border-[#EFE6D3] bg-white p-4 text-[15px]">
                   <Row label="Salário" value="R$ 7.000 por mês" />
-                  <Row label="Saldo inicial" value="Salário de janeiro + um PIX da família" />
+                  <Row label="Saldo inicial" value="Salário de janeiro, já com o aluguel pago" />
                   <Row label="Profissão" value={form.course} />
                   <Row label="Dom" value={gift?.name} />
                   <Row label="Sala" value={form.roomCode.trim()} mono />

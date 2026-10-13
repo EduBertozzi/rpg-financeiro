@@ -6,13 +6,14 @@ export const TASK_EVENT = 'fecha:task'
 
 export const LAST_DILEMMA_MONTH = 11 // dezembro não tem dilema
 
-// As tarefas obrigatórias do mês, na ordem da lista do mapa.
+// As tarefas do mês, na ordem em que acontecem: lazer e contas com a cidade
+// aberta; o dilema por último, depois de encerrar o mês.
 export const TASKS = [
-  { id: 'dilemma', label: 'Dilema do mês', prefix: 'Dilema' },
   { id: 'leisure', label: 'Lazer', prefix: 'Lazer:' },
   { id: 'food', label: 'Mercadinho', prefix: 'Conta: Mercadinho' },
   { id: 'utilities', label: 'Água e Luz', prefix: 'Conta: Água e Luz' },
   { id: 'internet', label: 'Internet e Celular', prefix: 'Conta: Internet e Celular' },
+  { id: 'dilemma', label: 'Dilema do mês', prefix: 'Dilema' },
 ]
 
 // [{ ...task, done }] do mês `turn`. Fora de jogo (turn 0) não há tarefas.

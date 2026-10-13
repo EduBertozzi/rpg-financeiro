@@ -20,5 +20,5 @@ export default function SlowServer() {
   }, [since])
 
   if (!slow) return null
-  return <CalendarLoader text="Carregando Santa Rita…" hint="Na primeira vez do dia a cidade demora um pouquinho para acordar. Pode levar até 1 minuto." />
+  return <CalendarLoader text="Carregando a cidade…" hint="Na primeira vez do dia a cidade demora um pouquinho para acordar. Pode levar até 1 minuto." />
 }

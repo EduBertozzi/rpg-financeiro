@@ -6,12 +6,15 @@ export const STATUS_LABEL = { waiting: 'Esperando', active: 'Jogando', finished:
 
 // tarefas do mês de cada jogador, na ordem da tabela
 export const TASKS = [
-  ['dilemma', '✉', 'Dilema'],
   ['leisure', '★', 'Lazer'],
   ['food', '🛒', 'Mercadinho'],
   ['utilities', '💡', 'Água e Luz'],
   ['transport', '📶', 'Internet'],
+  ['dilemma', '✉', 'Dilema'],
 ]
+
+// fase de cada jogador no mês (relógio do servidor)
+export const PHASE_LABEL = { month: 'No mês', dilemma: 'No dilema', done: 'Terminou' }
 
 export const FILTERS = [
   ['all', 'Todas'],
@@ -34,8 +37,15 @@ export function closeLabel(room) {
   return `Fechar ${monthName(room.currentTurn).toLowerCase()}`
 }
 
-// quantos jogadores ainda não terminaram o mês
-export const missingCount = (players = []) => players.filter((p) => !p.ready).length
+// quantos jogadores ainda não terminaram o mês (encerrou e respondeu o dilema)
+export const missingCount = (players = []) => players.filter((p) => (p.phase ? p.phase !== 'done' : !p.ready)).length
+
+// tempo que falta para o fim do mês, pelo relógio do servidor (ms ou null)
+export function monthLeft(clock, now = Date.now(), offset = 0) {
+  if (!clock?.monthEndsAt) return null
+  const at = clock.paused && clock.pausedAt ? clock.pausedAt : now + offset
+  return Math.max(0, clock.monthEndsAt - at)
+}
 
 // tarefas feitas / tarefas do mês (as que valem neste mês)
 export function taskCount(tasks) {

@@ -15,8 +15,8 @@ describe('empresas da cidade', () => {
     }
   })
 
-  it('o banco continua sendo o Maré', () => {
-    assert.equal(COMPANIES.bank.name, 'Banco Maré')
+  it('o banco agora é o Inabank', () => {
+    assert.equal(COMPANIES.bank.name, 'Inabank')
   })
 })
 

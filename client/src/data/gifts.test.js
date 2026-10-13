@@ -30,8 +30,8 @@ describe('profissões', () => {
 })
 
 describe('registrationNumber', () => {
-  it('tem o formato SR-000000', () => {
-    for (const name of ['Dudu', 'Ana Paula', '', null]) assert.match(registrationNumber(name), /^SR-\d{6}$/)
+  it('tem o formato FM-000000', () => {
+    for (const name of ['Dudu', 'Ana Paula', '', null]) assert.match(registrationNumber(name), /^FM-\d{6}$/)
   })
 
   it('é o mesmo para o mesmo nome, ignorando maiúsculas e espaços nas pontas', () => {

@@ -1,7 +1,7 @@
 // Testes do painel do administrador. Rodar com: npm test
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { closeLabel, filterRooms, missingCount, playersLabel, ranked, roomTitle, taskCount, TASKS } from './adminData.js'
+import { closeLabel, filterRooms, missingCount, monthLeft, playersLabel, ranked, roomTitle, taskCount, TASKS } from './adminData.js'
 
 const rooms = [
   { id: 1, status: 'active' }, { id: 2, status: 'waiting' }, { id: 3, status: 'finished' }, { id: 4, status: 'active' },
@@ -33,12 +33,14 @@ describe('fechar o mês', () => {
   it('conta quem falta', () => {
     assert.equal(missingCount([{ ready: true }, { ready: false }, { ready: false }]), 2)
     assert.equal(missingCount([]), 0)
+    // com o relógio: só conta como terminado quem já respondeu o dilema
+    assert.equal(missingCount([{ ready: true, phase: 'dilemma' }, { ready: true, phase: 'done' }, { ready: false, phase: 'month' }]), 2)
   })
 })
 
 describe('tarefas do jogador', () => {
   it('cinco tarefas na ordem da tabela', () => {
-    assert.deepEqual(TASKS.map(([k]) => k), ['dilemma', 'leisure', 'food', 'utilities', 'transport'])
+    assert.deepEqual(TASKS.map(([k]) => k), ['leisure', 'food', 'utilities', 'transport', 'dilemma'])
   })
 
   it('conta só as tarefas que valem no mês (dezembro sem dilema)', () => {
@@ -60,5 +62,19 @@ describe('ranking e textos', () => {
   it('singular e plural', () => {
     assert.equal(playersLabel(1), '1 jogador')
     assert.equal(playersLabel(0), '0 jogadores')
+  })
+})
+
+describe('monthLeft', () => {
+  const clock = { monthEndsAt: 10_000, paused: false, pausedAt: null }
+  it('quanto falta pelo relógio do servidor', () => {
+    assert.equal(monthLeft(clock, 4_000), 6_000)
+    assert.equal(monthLeft(clock, 4_000, 1_000), 5_000)
+    assert.equal(monthLeft(clock, 20_000), 0)
+  })
+  it('pausado congela; sem relógio, null', () => {
+    assert.equal(monthLeft({ ...clock, paused: true, pausedAt: 7_000 }, 99_000), 3_000)
+    assert.equal(monthLeft(null), null)
+    assert.equal(monthLeft({ monthEndsAt: null }), null)
   })
 })

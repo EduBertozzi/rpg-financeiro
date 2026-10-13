@@ -17,7 +17,7 @@ export default function CouponModal({ reward, onClose }) {
         <p className="rounded-2xl border-[3px] border-dashed border-[#E0A100] bg-[#FFF3C4] px-5 py-3 font-toy text-[20px] font-extrabold leading-snug text-[#7A5200]">
           {reward.description}
         </p>
-        <p className="text-sm text-[#6B7A62]">Fica registrado no extrato do Maré.</p>
+        <p className="text-sm text-[#6B7A62]">Fica registrado no extrato do Inabank.</p>
         <button type="button" onClick={onClose} className={`${TOY_BUTTON} mt-1`}>Guardar cupom</button>
       </div>
     </div>

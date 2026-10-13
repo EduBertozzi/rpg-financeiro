@@ -1,11 +1,11 @@
-// Dados e regras da constelação Cruzeiro (Árvore de Habilidades).
+// Dados e regras da Árvore de habilidades.
 // As regras de desbloqueio espelham server/src/controllers/skillController.js
 // e são testadas em skillData.test.js.
 
 export const PATHS = {
-  technical: { short: 'Técnico', label: 'Raciocínio Lógico e Técnico', theme: 'Renda garantida', hex: '#5AA2FF' },
-  communication: { short: 'Comunicação', label: 'Comunicação e Trabalho em Equipe', theme: 'Contas mais baratas', hex: '#3FD48A' },
-  management: { short: 'Gestão', label: 'Gestão e Visão de Negócio', theme: 'Rende sobre o que você guarda', hex: '#B884FF' },
+  technical: { short: 'Técnico', label: 'Raciocínio Lógico e Técnico', theme: 'Renda garantida', hex: '#2F7FE0' },
+  communication: { short: 'Comunicação', label: 'Comunicação e Trabalho em Equipe', theme: 'Contas mais baratas', hex: '#E0762B' },
+  management: { short: 'Gestão', label: 'Gestão e Visão de Negócio', theme: 'Rende sobre o que você guarda', hex: '#8A5CF6' },
 }
 
 export const PATH_ORDER = ['technical', 'communication', 'management']
@@ -21,14 +21,15 @@ export const PERKS = {
   'communication-3': { desc: 'Você senta com o dono do apê e negocia.', perk: 'Aluguel 15% mais barato', note: 'R$ 225 por mês sobre os R$ 1.500 do aluguel.' },
   'communication-4': { desc: 'Você passa a coordenar uma equipe.', perk: 'Salário +R$ 400 (cargo de coordenação)' },
   'management-1': { desc: 'Lista de compras e comparação de preço.', perk: 'Mercadinho 15% mais barato', note: 'R$ 150 por mês sobre os R$ 1.000 do mercado.' },
-  'management-2': { desc: 'Você conversa com o gerente do Maré e consegue condições melhores.', perk: 'Caixinhas +0,8% ao mês e cheque especial a 4%', note: 'Com R$ 20 mil guardados, são R$ 160 a mais por mês.' },
+  'management-2': { desc: 'Você conversa com o gerente do Inabank e consegue condições melhores.', perk: 'Caixinhas +0,8% ao mês e cheque especial a 4%', note: 'Com R$ 20 mil guardados, são R$ 160 a mais por mês.' },
   'management-3': { desc: 'Você lê o jornal com outros olhos.', perk: 'Caixinhas +1,3% ao mês e dica das ações', note: 'A dica do evento das ações chega um mês antes.' },
   'management-4': { desc: 'Investidores passam a te chamar para rodadas fechadas.', perk: 'Caixinhas +1,7% ao mês', note: 'Com R$ 30 mil guardados, são R$ 510 a mais por mês.' },
 }
 
 export const perkOf = (skill) => PERKS[`${skill.path}-${skill.level}`] ?? { desc: skill.description, perk: skill.description }
 
-// Posições na constelação (viewBox 1000 × 740), do nível 1 ao 4.
+// Posições na árvore (viewBox 1000 × 740), do nível 1 ao 4: o tronco embaixo
+// e um galho para cada caminho.
 export const CORE = [500, 670]
 export const SPOTS = {
   technical: [[388, 592], [296, 490], [222, 380], [166, 262]],

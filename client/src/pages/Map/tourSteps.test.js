@@ -12,8 +12,12 @@ describe('passos do tour', () => {
     assert.equal(TOUR_STEPS.at(-1).target, 'caderninho')
   })
 
-  it('passa por saldo, checklist, lugares e encerrar', () => {
-    assert.deepEqual(TOUR_STEPS.map((s) => s.target).filter(Boolean), ['saldo', 'checklist', 'lugares', 'encerrar', 'caderninho'])
+  it('passa por saldo, checklist, banco, árvore (cada um na sua caixa) e encerrar', () => {
+    assert.deepEqual(TOUR_STEPS.map((s) => s.target).filter(Boolean), ['saldo', 'checklist', 'banco', 'arvore', 'encerrar', 'caderninho'])
+  })
+
+  it('sem Santa Rita, sem ranking e sem inflação', () => {
+    for (const s of TOUR_STEPS) assert.doesNotMatch(`${s.title} ${s.text}`, /Santa Rita|Vence|ranking|inflação|Maré|Universidade/i)
   })
 
   it('todo passo tem título e texto curtos', () => {

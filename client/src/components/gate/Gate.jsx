@@ -34,7 +34,7 @@ export default function Gate({ children }) {
       <div className="grid justify-items-center gap-5">
         <img src="/favicon.svg" alt="" className="h-24 w-24 drop-shadow-[0_6px_0_rgba(0,0,0,0.18)]" />
         <h1 className="font-toy text-[56px] font-extrabold leading-[0.9]">Fecha o Mês</h1>
-        <p className="max-w-sm text-lg text-[#D7F5F1]">Santa Rita está quase pronta. Em breve a cidade abre as portas.</p>
+        <p className="max-w-sm text-lg text-[#D7F5F1]">O jogo está quase pronto. Em breve a cidade abre as portas.</p>
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#8FE3D9]">Simulador financeiro · Inatel</p>
       </div>
     </main>

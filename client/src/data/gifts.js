@@ -13,7 +13,7 @@ export const GIFTS = [
   {
     id: 'agile',
     name: 'Desenrolado',
-    effect: 'Um freela fixo de R$ 220 por mês, e eventos bons rendem 50% a mais.',
+    effect: 'Um freela fixo de R$ 240 por mês, e eventos bons rendem 50% a mais.',
     style: 'Parte sorte',
     year: 3550,
     color: '#F07A26',
@@ -21,8 +21,8 @@ export const GIFTS = [
   {
     id: 'smart',
     name: 'Inteligente',
-    effect: 'Começa com 2 pontos de habilidade e pode usar até 10, em vez de 8.',
-    style: 'Acelera a Universidade',
+    effect: 'Começa com 2 pontos para gastar na Árvore de habilidades, onde pontos viram vantagens (salário maior, contas mais baratas…). E pode juntar até 10 pontos, em vez de 8.',
+    style: 'Acelera a Árvore',
     year: 3640,
     color: '#3F84EA',
   },
@@ -47,5 +47,5 @@ export function registrationNumber(name) {
     h ^= ch.codePointAt(0)
     h = Math.imul(h, 16777619) >>> 0
   }
-  return `SR-${String(h % 1000000).padStart(6, '0')}`
+  return `FM-${String(h % 1000000).padStart(6, '0')}`
 }

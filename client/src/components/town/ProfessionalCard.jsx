@@ -14,7 +14,7 @@ export default function ProfessionalCard({ avatarId = 1, name, profession, gift,
       <div className="flex items-end justify-between gap-3 bg-[var(--theme-primary)] px-5 pb-3 pt-4 text-white transition-colors duration-300">
         <div>
           <p className="text-[9px] font-extrabold tracking-[0.26em] opacity-85">CARTEIRA PROFISSIONAL</p>
-          <p className="font-toy text-xl font-extrabold leading-tight">Engenharia · Santa Rita</p>
+          <p className="font-toy text-xl font-extrabold leading-tight">Engenharia</p>
         </div>
         <span className="mb-1 h-2.5 w-11 rounded-full bg-white/30" aria-hidden="true" />
       </div>
@@ -37,7 +37,7 @@ export default function ProfessionalCard({ avatarId = 1, name, profession, gift,
       </div>
 
       <div className="flex items-center justify-between gap-3 border-t border-dashed border-[#CFC7B5] px-5 py-3 font-mono text-[11px] text-[#6A7686]">
-        <span>Reg. {name ? registrationNumber(name) : 'SR-······'}</span>
+        <span>Reg. {name ? registrationNumber(name) : 'FM-······'}</span>
         <span>Sala {roomCode || '······'}</span>
         <span>Jan–Dez</span>
       </div>

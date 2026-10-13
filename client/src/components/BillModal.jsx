@@ -18,7 +18,7 @@ const BILL_ART = { food: mercadinhoArt, utilities: utilitiesArt, transport: inte
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-// Pagamento de conta do mês pelo banco Maré: a conta aparece como um boleto,
+// Pagamento de conta do mês pelo Inabank: a conta aparece como um boleto,
 // paga com o saldo em conta e gera um comprovante.
 export default function BillModal({ type, label, onClose, onComplete }) {
   const navigate = useNavigate()
@@ -58,7 +58,7 @@ export default function BillModal({ type, label, onClose, onComplete }) {
     try {
       const { data } = await api.post(`/characters/${character.id}/bills/${turn}/pay`, { type })
       setReceipt({ amount: data.amount, cashAfter: data.cashAfter })
-      sfx.coin()
+      sfx.register()
     } catch (err) {
       setError(err.response?.data?.error || 'Não deu para pagar agora. Tente de novo.')
     } finally {
@@ -73,12 +73,12 @@ export default function BillModal({ type, label, onClose, onComplete }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && finish()}
     >
-      <div role="dialog" aria-label={`Pagar ${label} com o Maré`} className="w-full max-w-md overflow-hidden rounded-[26px] bg-[#F3F6F6] text-[#10201E] shadow-2xl animate-fade-in-up">
+      <div role="dialog" aria-label={`Pagar ${label} com o Inabank`} className="w-full max-w-md overflow-hidden rounded-[26px] bg-[#F3F6F6] text-[#10201E] shadow-2xl animate-fade-in-up">
         <div className="flex items-center justify-between gap-3 bg-[#12B5A6] px-5 py-4 text-white">
           <div className="flex items-center gap-3">
             <MareLogo size={34} />
             <div>
-              <p className="text-lg font-black leading-none">Maré</p>
+              <p className="text-lg font-black leading-none">Inabank</p>
               <p className="mt-1 text-xs opacity-90">{receipt ? 'Comprovante' : 'Pagamento de conta'}</p>
             </div>
           </div>
@@ -162,7 +162,7 @@ export default function BillModal({ type, label, onClose, onComplete }) {
               Concluir
             </button>
             <button type="button" onClick={() => navigate('/bank')} className="font-bold text-[#0A7F75] cursor-pointer">
-              Ver no extrato do Maré
+              Ver no extrato do Inabank
             </button>
           </div>
         )}

@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import socket from '../../services/socket'
+import { formatClock } from '../../components/monthClock'
 import { TOY_BUTTON, TOY_ERROR, TOY_GHOST, TOY_INPUT, TOY_LOGO } from '../../components/town/toy'
 import {
-  closeLabel, FILTERS, filterRooms, missingCount, monthName, playersLabel, ranked, roomTitle, STATUS_LABEL, TASKS,
+  closeLabel, FILTERS, filterRooms, missingCount, monthLeft, monthName, PHASE_LABEL, playersLabel, ranked, roomTitle, STATUS_LABEL, TASKS,
 } from './adminData'
 
 const CARD = 'rounded-[24px] bg-[#FFFDF7] text-[#24331F] shadow-[0_6px_0_#E2D6BE]'
@@ -54,6 +55,8 @@ export default function Admin() {
   const [progress, setProgress] = useState(null) // { room, players }
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
+  const [newMinutes, setNewMinutes] = useState({ month: 10, dilemma: 5 })
+  const [now, setNow] = useState(() => Date.now())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
@@ -85,7 +88,7 @@ export default function Admin() {
   const loadProgress = useCallback((id) => {
     if (!id) return Promise.resolve()
     return api.get(`/rooms/${id}/progress`)
-      .then(({ data }) => setProgress(data))
+      .then(({ data }) => setProgress({ ...data, loadedAt: Date.now() }))
       .catch((err) => {
         // sala apagada ou de outro administrador: some da tela
         if ([403, 404].includes(err.response?.status)) setProgress(null)
@@ -117,7 +120,15 @@ export default function Admin() {
     return () => socket.disconnect()
   }, [currentId])
 
+  // relógio do mês na tela, segundo a segundo
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
   const shown = progress?.room?.id === currentId ? progress : null
+  const clock = shown?.clock ?? null
+  const clockOffset = clock?.serverNow && progress?.loadedAt ? clock.serverNow - progress.loadedAt : 0
   const room = shown?.room ?? current
   const players = shown?.players ?? []
   const missing = missingCount(players)
@@ -130,7 +141,7 @@ export default function Admin() {
     setBusy(true)
     setError('')
     try {
-      const { data } = await api.post('/rooms', { name: newName, maxTurns: 12 })
+      const { data } = await api.post('/rooms', { name: newName, maxTurns: 12, monthMinutes: newMinutes.month, dilemmaMinutes: newMinutes.dilemma })
       setNewName('')
       setCreating(false)
       await loadRooms()
@@ -162,13 +173,27 @@ export default function Admin() {
     setError('')
     setConfirm(null)
     try {
+      // o servidor vira o mês e avisa a turma
       const { data } = await api.post(`/rooms/${room.id}/next-turn`)
-      socket.emit('turn:broadcast', { roomId: room.id, result: data })
       setLastResult(data)
       await refresh()
       say(data.isFinished ? 'Ano fechado! A turma já vê o resultado.' : `${monthName(data.turn - 1)} fechado. ${monthName(data.turn)} começou.`)
     } catch (err) {
       setError(err.response?.data?.error || 'Não deu para fechar o mês.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const togglePause = async () => {
+    setBusy(true)
+    setError('')
+    try {
+      await api.post(`/rooms/${room.id}/pause`, { paused: !clock?.paused })
+      await refresh()
+      say(clock?.paused ? 'Relógio de volta. O tempo voltou a correr.' : 'Relógio pausado. Ninguém perde tempo enquanto isso.')
+    } catch (err) {
+      setError(err.response?.data?.error || 'Não deu para pausar o relógio.')
     } finally {
       setBusy(false)
     }
@@ -279,6 +304,16 @@ export default function Admin() {
                 Nome da turma
                 <input id="new-room-name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Ex.: 3º ano B · manhã" maxLength={40} autoFocus className={TOY_INPUT} />
               </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="grid gap-1 text-[13px] font-extrabold text-[#6B7A62]">
+                  Minutos por mês
+                  <input type="number" min={1} max={60} value={newMinutes.month} onChange={(e) => setNewMinutes({ ...newMinutes, month: Number(e.target.value) })} className={TOY_INPUT} />
+                </label>
+                <label className="grid gap-1 text-[13px] font-extrabold text-[#6B7A62]">
+                  Minutos do dilema
+                  <input type="number" min={1} max={60} value={newMinutes.dilemma} onChange={(e) => setNewMinutes({ ...newMinutes, dilemma: Number(e.target.value) })} className={TOY_INPUT} />
+                </label>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <button type="submit" disabled={busy || !newName.trim()} className="rounded-[14px] bg-[#3DBE5A] px-4 py-2 font-toy text-[15px] font-extrabold text-white shadow-[0_4px_0_#2B8C41] disabled:opacity-50 cursor-pointer">Criar sala</button>
                 <button type="button" onClick={() => setCreating(false)} className="rounded-[14px] px-3 py-2 text-sm font-extrabold text-[#6B7A62] cursor-pointer">Cancelar</button>
@@ -393,7 +428,20 @@ export default function Admin() {
                       <div>
                         <p className={EYEBROW}>Mês {room.currentTurn} de {room.maxTurns}</p>
                         <p className="font-toy text-[28px] font-extrabold">{monthName(room.currentTurn)}</p>
+                        {clock?.monthEndsAt && (
+                          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm font-bold text-[#6B7A62]">
+                            <span className={`rounded-full px-2.5 py-0.5 font-toy text-[16px] font-extrabold tabular-nums ${clock.paused ? 'bg-[#EFE6D3]' : 'bg-[#FFF3C4] text-[#7A5200]'}`}>
+                              ⏱ {formatClock(monthLeft(clock, now, clockOffset))}
+                            </span>
+                            {clock.paused ? 'relógio pausado' : monthLeft(clock, now, clockOffset) > 0 ? 'para o mês fechar sozinho' : 'mês fechado: a turma responde o dilema'}
+                          </p>
+                        )}
                       </div>
+                      {clock?.monthEndsAt && (
+                        <button type="button" onClick={togglePause} disabled={busy} className="rounded-[14px] border-2 border-[#E2D6BE] bg-white px-4 py-2 font-toy text-[15px] font-extrabold text-[#24331F] cursor-pointer">
+                          {clock.paused ? '▶ Retomar relógio' : '⏸ Pausar relógio'}
+                        </button>
+                      )}
                       <button type="button" onClick={() => (missing ? setConfirm('close') : closeMonth())} disabled={busy || players.length === 0}
                         className={missing ? AMBER_BUTTON : `${TOY_BUTTON} !w-auto`}>
                         {busy ? 'Fechando…' : closeLabel(room)}
@@ -401,7 +449,7 @@ export default function Admin() {
                     </div>
                     <div className="grid gap-1.5">
                       <div className="flex justify-between text-sm font-extrabold">
-                        <span>{players.length - missing} de {players.length} prontos</span>
+                        <span>{players.length - missing} de {players.length} terminaram</span>
                         <span className="text-[#6B7A62]">{missing ? `faltam ${missing}` : 'todo mundo pronto'}</span>
                       </div>
                       <div className="h-3.5 overflow-hidden rounded-full bg-[#EFE6D3]">
@@ -419,7 +467,7 @@ export default function Admin() {
                       </div>
                     )}
                     {!missing && players.length > 0 && confirm !== 'close' && (
-                      <p className="rounded-2xl bg-[#E2F4E5] px-4 py-2.5 text-sm font-bold text-[#2B8C41]">Todo mundo terminou. Pode fechar o mês.</p>
+                      <p className="rounded-2xl bg-[#E2F4E5] px-4 py-2.5 text-sm font-bold text-[#2B8C41]">{clock?.monthEndsAt ? 'Todo mundo terminou. O mês vira sozinho em instantes.' : 'Todo mundo terminou. Pode fechar o mês.'}</p>
                     )}
                   </>
                 )}
@@ -480,7 +528,7 @@ export default function Admin() {
                             )}
                             {room.status === 'active' && (
                               <td className="px-2.5 py-2.5">
-                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold ${p.ready ? PILL.active : PILL.waiting}`}>{p.ready ? 'Pronto' : 'Jogando'}</span>
+                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold ${(p.phase ? p.phase === 'done' : p.ready) ? PILL.active : PILL.waiting}`}>{p.phase ? PHASE_LABEL[p.phase] : p.ready ? 'Pronto' : 'Jogando'}</span>
                               </td>
                             )}
                             <td className="px-2.5 py-2.5 text-right font-extrabold tabular-nums">{room.status === 'waiting' ? '—' : brl(p.netWorth)}</td>

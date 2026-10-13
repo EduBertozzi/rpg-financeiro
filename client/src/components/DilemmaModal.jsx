@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { sfx } from '../services/sound'
+import { formatClock, isUrgent } from './monthClock'
 import api from '../services/api'
 import useGameStore from '../store/gameStore'
 import { TOY_CARD, TOY_ERROR } from './town/toy'
@@ -27,9 +29,11 @@ function Letter() {
   )
 }
 
-// Dilema do mês: chega no começo do mês e precisa de resposta para fechar o
-// mês. As consequências não aparecem aqui — elas chegam nos meses seguintes.
-export default function DilemmaModal({ onClose, onComplete }) {
+// Dilema do mês: abre quando o mês é encerrado (pelo jogador ou pelo fim do
+// tempo) e tem o próprio relógio. Dá para olhar o banco antes de decidir.
+// As consequências não aparecem aqui — elas chegam nos meses seguintes.
+// timeLeft: ms para responder (null sem relógio); onBank: abre o banco.
+export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft = null, onBank }) {
   const { character, room } = useGameStore()
   const turn = room?.currentTurn ?? 0
   const [dilemma, setDilemma] = useState(null)
@@ -66,6 +70,7 @@ export default function DilemmaModal({ onClose, onComplete }) {
     try {
       const { data } = await api.post(`/characters/${character.id}/dilemma/${turn}/choose`, { optionIndex })
       setResult({ ...data, choice: dilemma.options[optionIndex].text })
+      onAnswered?.()
       sfx.pop()
     } catch (err) {
       setError(err.response?.data?.error || 'Não deu para registrar sua escolha. Tente de novo.')
@@ -75,14 +80,21 @@ export default function DilemmaModal({ onClose, onComplete }) {
   }
 
   const handleClose = () => (result && !wasAlreadyAnswered ? onComplete(result) : onClose())
+  // sem resposta, o dilema não fecha: ou responde, ou vai ao banco e volta
+  const canDismiss = Boolean(result) || !dilemma
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && handleClose()}
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm"
+      onClick={(e) => e.target === e.currentTarget && canDismiss && handleClose()}
     >
       <div role="dialog" aria-label="Dilema do mês" className={`w-full max-w-xl ${TOY_CARD} px-6 pb-7 pt-3 sm:px-8 animate-fade-in-up`}>
         <Letter />
+        {!result && timeLeft != null && (
+          <p role="timer" className={`mx-auto -mt-1 mb-2 w-fit rounded-full px-3 py-1 text-sm font-extrabold tabular-nums ${isUrgent(timeLeft) ? 'animate-pulse bg-[#C4283D] text-white' : 'bg-[#FFF3C4] text-[#7A5200]'}`}>
+            ⏱ {formatClock(timeLeft)} para decidir · sem resposta, vale a opção de quem não fez nada
+          </p>
+        )}
 
         {loading ? (
           <p className="py-10 text-center text-[#6B7A62]">Abrindo a correspondência…</p>
@@ -130,7 +142,11 @@ export default function DilemmaModal({ onClose, onComplete }) {
                   ))}
                 </div>
                 {error && <p className={TOY_ERROR}>{error}</p>}
-                <button type="button" onClick={handleClose} className="justify-self-center text-sm font-bold text-[#8A9680] hover:text-[#24331F] cursor-pointer">Decidir depois</button>
+                {onBank && (
+                  <button type="button" onClick={onBank} className="justify-self-center rounded-full border-2 border-[#CFE3E0] bg-[#EAF6F4] px-4 py-1.5 text-sm font-extrabold text-[#0A7F75] hover:bg-[#DDF1EE] cursor-pointer">
+                    Olhar o banco antes de decidir
+                  </button>
+                )}
               </>
             ) : (
               <div className="grid justify-items-center gap-4 text-center">
@@ -142,16 +158,17 @@ export default function DilemmaModal({ onClose, onComplete }) {
                   </p>
                 )}
                 {!wasAlreadyAnswered && (
-                  <p className="rounded-full bg-[#EEE7FE] px-4 py-1.5 text-sm font-extrabold text-[#6538C9]">+1 ponto de habilidade para a Universidade</p>
+                  <p className="rounded-full bg-[#EEE7FE] px-4 py-1.5 text-sm font-extrabold text-[#6538C9]">+1 ponto para a Árvore de habilidades</p>
                 )}
                 <button type="button" onClick={handleClose} className={`rounded-[16px] px-8 py-2.5 font-toy text-[18px] font-extrabold text-[#5A3D00] cursor-pointer ${AMBER}`}>
-                  {wasAlreadyAnswered ? 'Fechar' : 'Seguir o mês'}
+                  {wasAlreadyAnswered ? 'Fechar' : 'Fechar o mês'}
                 </button>
               </div>
             )}
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

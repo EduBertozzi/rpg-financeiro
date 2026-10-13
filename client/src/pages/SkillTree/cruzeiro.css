@@ -43,3 +43,21 @@
   .cz-intro .cz-ln, .cz-intro .cz-nd, .cz-intro .cz-lbl, .cz-intro .cz-vc, .cz-drawnow, .cz-quick * { animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; }
   .cz-shock { display: none; }
 }
+
+/* Fundo de dia da árvore: nuvens e folhas caindo */
+.ts-cloud { left: -20%; animation: ts-cloud linear infinite; }
+.ts-leaf { animation: ts-leaf ease-in-out infinite; }
+@keyframes ts-cloud { to { transform: translateX(140vw); } }
+@keyframes ts-leaf {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: .9; }
+  50% { transform: translate(40px, 50vh) rotate(200deg); }
+  90% { opacity: .9; }
+  100% { transform: translate(-10px, 104vh) rotate(420deg); opacity: 0; }
+}
+.cz-sway { animation: cz-sway 6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes cz-sway { 50% { transform: rotate(.6deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .ts-cloud, .ts-leaf, .cz-sway { animation: none !important; }
+  .ts-leaf { display: none; }
+}

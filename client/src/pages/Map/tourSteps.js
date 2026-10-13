@@ -4,7 +4,7 @@ export const TOUR_STEPS = [
   {
     target: null,
     title: 'Janeiro é o mês de aprender',
-    text: 'Você tem um ano em Santa Rita. Vence quem terminar dezembro com o maior patrimônio: tudo o que você tem menos tudo o que deve. Vamos dar uma volta rápida.',
+    text: 'Você tem um ano pela frente. O objetivo é terminar dezembro com o maior patrimônio que conseguir: tudo o que você tem menos tudo o que deve. Vamos dar uma volta rápida.',
   },
   {
     target: 'saldo',
@@ -14,22 +14,27 @@ export const TOUR_STEPS = [
   {
     target: 'checklist',
     title: 'O que fazer no mês',
-    text: 'Todo mês: responder o dilema, escolher um lazer e pagar as três contas. Clique num item para ir direto, ou clique nos prédios do mapa.',
+    text: 'Cada mês tem um relógio. Antes de ele acabar, escolha um lazer e pague as três contas. Clique num item para ir direto, ou nos prédios do mapa.',
   },
   {
-    target: 'lugares',
-    title: 'Banco e Universidade',
-    text: 'No Banco Maré você guarda e investe o que sobrar. Na Universidade você troca pontos por vantagens: cada dilema respondido vale 1 ponto.',
+    target: 'banco',
+    title: 'Inabank',
+    text: 'No banco você guarda o que sobrar em caixinhas: dinheiro investido rende. Ele fica aberto o mês todo, até depois de encerrar. Fuja do cheque especial: 8% ao mês.',
+  },
+  {
+    target: 'arvore',
+    title: 'Árvore de habilidades',
+    text: 'Cada dilema respondido vale 1 ponto. Na árvore você troca pontos por vantagens: salário maior, contas mais baratas, juros menores.',
   },
   {
     target: 'encerrar',
     title: 'Encerre o mês',
-    text: 'Quando terminar tudo, encerre o mês. O administrador fecha para a turma inteira e o mês seguinte começa com o resumo da virada.',
+    text: 'Terminou? Encerre o mês: a cidade fecha e chega a carta com o dilema, que tem o próprio relógio. Quando a turma toda terminar, o mês vira sozinho.',
   },
   {
     target: 'caderninho',
     title: 'Ficou com dúvida?',
-    text: 'O ? vermelho mostra como jogar em 5 passos. Do lado, o caderninho explica CDB, Selic, inflação e outros termos. Agora, a carta do seu primeiro dilema.',
+    text: 'O ponto de interrogação vermelho mostra como jogar, passo a passo. Do lado, o caderninho explica CDB, Selic, juros e outros termos.',
   },
 ]
 

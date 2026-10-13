@@ -6,9 +6,9 @@ import { HOW_TO_PLAY, TOUR_EVENT } from './howToPlaySteps'
 import leisureArt from '../assets/buildings/leisure.png'
 import mercadinhoArt from '../assets/buildings/mercadinho.png'
 import bankArt from '../assets/buildings/bank.png'
-import universityArt from '../assets/buildings/university.png'
+import treeArt from '../assets/buildings/tree.png'
 
-const ART = { leisure: leisureArt, mercadinho: mercadinhoArt, bank: bankArt, university: universityArt }
+const ART = { leisure: leisureArt, mercadinho: mercadinhoArt, bank: bankArt, tree: treeArt }
 
 // A carta do dilema, desenhada (o mesmo envelope do começo do mês).
 function Letter() {
@@ -20,7 +20,21 @@ function Letter() {
   )
 }
 
-// "Como jogar": cinco cartões curtos, um para cada coisa do mês.
+// O relógio do mês, desenhado.
+function Clock() {
+  return (
+    <span className="relative grid h-[112px] w-[112px] rotate-3 place-items-center rounded-full border-[7px] border-[#24331F] bg-[#FFFDF5] shadow-[0_6px_0_#E2D6BE]">
+      <span className="absolute -top-4 h-4 w-8 rounded-t-lg bg-[#24331F]" />
+      <svg viewBox="0 0 100 100" className="h-full w-full" aria-hidden="true">
+        <path d="M50 50 L50 14 A36 36 0 0 1 84 58 Z" fill="#FFD45C" />
+        <path d="M50 50 L50 22 M50 50 L68 60" stroke="#24331F" strokeWidth="7" strokeLinecap="round" />
+        <circle cx="50" cy="50" r="6" fill="#E5484D" />
+      </svg>
+    </span>
+  )
+}
+
+// "Como jogar": cartões curtos, um para cada coisa do mês, na ordem do mês.
 export default function HowToPlay({ onClose }) {
   const [i, setI] = useState(0)
   const navigate = useNavigate()
@@ -56,7 +70,7 @@ export default function HowToPlay({ onClose }) {
           className="absolute -right-3.5 -top-3.5 grid h-10 w-10 place-items-center rounded-full bg-[#FFFDF5] text-xl font-extrabold shadow-[0_4px_0_#E2D6BE] cursor-pointer">×</button>
 
         <div key={i} className="grid h-[150px] place-items-center rounded-[22px] bg-[color-mix(in_srgb,var(--theme-secondary)_22%,white)] turn-pop">
-          {step.art === 'letter' ? <Letter /> : <img src={ART[step.art]} alt="" className="h-[130px] object-contain" />}
+          {step.art === 'letter' ? <Letter /> : step.art === 'clock' ? <Clock /> : <img src={ART[step.art]} alt="" className="h-[130px] object-contain" />}
         </div>
 
         <div className="grid gap-1">

@@ -113,4 +113,23 @@ export const sfx = {
     tone(c, 2093, t + 0.02, 0.6, { vol: 0.025 })
   }),
   win: play((c, t) => [523, 659, 784, 1047].forEach((f, i) => tone(c, f, t + i * 0.09, 0.3, { type: 'triangle', vol: 0.1 }))),
+  // caixa registradora: a gaveta bate, o sininho toca e as moedas chacoalham
+  register: play((c, t) => {
+    noise(c, t, 0.09, { vol: 0.32, from: 500, to: 160, type: 'lowpass', q: 0.8 })
+    tone(c, 2637, t + 0.06, 0.55, { vol: 0.07 })
+    tone(c, 3951, t + 0.06, 0.35, { vol: 0.03 })
+    tone(c, 3136, t + 0.16, 0.7, { vol: 0.07 })
+    tone(c, 4699, t + 0.16, 0.4, { vol: 0.025 })
+    for (let i = 0; i < 5; i++) noise(c, t + 0.22 + i * 0.045, 0.04, { vol: 0.12, from: 7000, to: 5000, type: 'highpass' })
+  }),
+  // caderninho: abre com um "tum" de capa e as folhas correndo no dedo
+  book: play((c, t) => {
+    tone(c, 140, t, 0.12, { vol: 0.16, to: 90 })
+    for (let i = 0; i < 6; i++) noise(c, t + 0.06 + i * 0.035, 0.05, { vol: 0.09 - i * 0.008, from: 2600 - i * 150, to: 1400, q: 1.5 })
+  }),
+  // uma folha do caderninho virando: macia, de papel
+  leaf: play((c, t) => {
+    noise(c, t, 0.22, { vol: 0.11, from: 1400, to: 3200, q: 0.9 })
+    noise(c, t + 0.16, 0.08, { vol: 0.07, from: 900, to: 500, type: 'lowpass' })
+  }),
 }

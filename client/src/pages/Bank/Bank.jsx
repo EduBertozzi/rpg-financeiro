@@ -8,7 +8,7 @@ import { BOX_TERM, openGuide } from '../../data/guide'
 import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
-  reserveMonths as reserveMonthsOf, shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
+  shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
   overdraftRateFor, ratePercent, overdraftInterest,
 } from './bankMath'
 
@@ -184,7 +184,6 @@ export default function Bank() {
     ...activeTypes.map((t) => ({ name: boxByType(t).short, value: boxValue(t), color: boxByType(t).color })),
     { name: 'Ações', value: stocksValue, color: '#334155' },
   ])
-  const reserveMonths = reserveMonthsOf(boxValue('POUPANCA'), character)
   const initials = (character?.name ?? '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
   return (
@@ -196,8 +195,8 @@ export default function Bank() {
             <div className="flex items-center gap-3">
               <MareLogo size={42} />
               <div>
-                <p className="text-2xl font-black leading-none tracking-tight">Maré</p>
-                <p className="mt-1 text-xs opacity-90">O seu dinheiro na onda certa.</p>
+                <p className="text-2xl font-black leading-none tracking-tight">Inabank</p>
+                <p className="mt-1 text-xs opacity-90">O seu dinheiro rendendo.</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -391,8 +390,8 @@ export default function Bank() {
               </div>
             </section>
 
-            {/* extrato + dica */}
-            <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
+            {/* extrato */}
+            <div className="grid gap-4">
               <section id="extrato" className="rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
                 <h3 className="mb-2 font-extrabold">Extrato</h3>
                 {extrato.length === 0 && <p className="text-sm text-[#627673]">Nenhuma movimentação ainda.</p>}
@@ -415,15 +414,6 @@ export default function Bank() {
                     </div>
                   )
                 })}
-              </section>
-              <section className="grid content-start gap-2 rounded-[20px] bg-[#063F3A] p-5 text-[#DDF5F1] sm:p-6">
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] opacity-80">Dica da Maré</p>
-                <p className="text-lg font-black text-white">Reserva de emergência primeiro</p>
-                <p className="text-sm">
-                  {reserveMonths >= 3
-                    ? `Sua reserva já cobre ${reserveMonths.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} meses de contas. Agora vale buscar mais rendimento no Tesouro, numa LCI ou na debênture.`
-                    : `Sua reserva cobre ${reserveMonths.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mês de contas. O ideal é chegar a 3 meses (${brl(reserveGoal)}) antes de arriscar.`}
-                </p>
               </section>
             </div>
           </div>

@@ -13,16 +13,18 @@ import Tour from '../../components/Tour'
 import { tourKey } from './tourSteps'
 import { TASK_EVENT } from '../../components/sidebarData'
 import { TOUR_EVENT } from '../../components/howToPlaySteps'
-import { refreshStanding } from '../../components/hudHooks'
+import { refreshStanding, useMonthClock } from '../../components/hudHooks'
+import { formatClock, isUrgent } from '../../components/monthClock'
+import { FinishMonthModal, MonthClosedCard } from '../../components/MonthEnd'
 import WalkLock from '../../components/WalkLock'
-import { loadWalkLock, saveWalkLock } from '../../components/walkTimer'
+import { loadWalkLock, saveWalkLock, savePendingWalk, takePendingWalk } from '../../components/walkTimer'
 import BillModal from '../../components/BillModal'
 import CityScene from './CityScene'
 import CouponModal from '../../components/CouponModal'
 import { weatherFor } from './weather'
 import bankArt from '../../assets/buildings/bank.png'
 import leisureArt from '../../assets/buildings/leisure.png'
-import universityArt from '../../assets/buildings/university.png'
+import treeArt from '../../assets/buildings/tree.png'
 import mercadinhoArt from '../../assets/buildings/mercadinho.png'
 import utilitiesArt from '../../assets/buildings/utilities.png'
 import internetArt from '../../assets/buildings/internet.png'
@@ -39,7 +41,7 @@ const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Jul
 const BUILDINGS = [
   {
     id: 'bank',
-    name: 'Banco Maré',
+    name: 'Inabank',
     desc: 'Renda Fixa, Ações e Empresas',
     company: 'bank',
     art: bankArt,
@@ -88,10 +90,10 @@ const BUILDINGS = [
   },
   {
     id: 'university',
-    name: 'Universidade',
-    desc: 'Constelação de habilidades',
+    name: 'Árvore de habilidades',
+    desc: 'Pontos viram vantagens',
     company: 'university',
-    art: universityArt,
+    art: treeArt,
     glow: 'rgba(168,85,247,0.55)',
     route: '/skills',
   },
@@ -140,6 +142,11 @@ export default function Map() {
   const [dilemmaInfo, setDilemmaInfo] = useState(null) // { turn, exists }
   const [walkUntil, setWalkUntil] = useState(null)
   const [activeBill, setActiveBill] = useState(null)
+  // foi olhar o banco no meio do dilema (volta ao abrir o mapa de novo)
+  const [dilemmaAway, setDilemmaAway] = useState(false)
+  // respondeu: o cartão do resultado fica aberto até o jogador fechar
+  const [dilemmaHold, setDilemmaHold] = useState(false)
+  const phaseRef = useRef('month')
   const mapScrollRef = useRef(null)
 
   // no celular o mapa rola na horizontal; começa centralizado na cidade
@@ -215,10 +222,13 @@ export default function Map() {
 
     socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
     socket.on('room:finished', () => navigate('/finished'))
+    // alguém encerrou, respondeu ou o professor pausou: relê o relógio
+    socket.on('room:clock', () => refreshStanding())
 
     return () => {
       socket.off('connect')
       socket.off('turn:result')
+      socket.off('room:clock')
       socket.off('room:finished')
       socket.off('connect_error')
       socket.disconnect()
@@ -229,30 +239,31 @@ export default function Map() {
   const isActionDone = (prefix) =>
     character?.eventLog?.some((log) => log.turn === room?.currentTurn && log.description.startsWith(prefix))
 
-  const handleFinishMonth = async () => {
-    if (room?.currentTurn > 0) {
-      const missing = checklist.filter((b) => !b.done)
-
-      if (missing.length > 0) {
-        alert(`Você precisa completar antes de finalizar o mês: ${missing.map((b) => b.name).join(', ')}`)
-        return
-      }
-    }
-
+  // Encerrar o mês: primeiro o pop-up (o que falta e o que vem depois)
+  const [finishing, setFinishing] = useState(false)
+  const [finishBusy, setFinishBusy] = useState(false)
+  const confirmFinish = async () => {
+    setFinishBusy(true)
     try {
-      await api.patch(`/characters/${character.id}/ready`)
-      setCharacter({ ...character, turnReady: true })
+      const { data } = await api.patch(`/characters/${character.id}/ready`)
+      setCharacter({ ...character, turnReady: true, readyAt: data.readyAt })
+      setFinishing(false)
+      sfx.bell()
       refreshStanding()
     } catch (err) {
       console.error(err)
-      alert(err.response?.data?.error || 'Erro ao finalizar mês!')
+      setNotice(err.response?.data?.error || 'Não deu para encerrar o mês. Tente de novo.')
+    } finally {
+      setFinishBusy(false)
     }
   }
 
   const handleDilemmaComplete = async (result) => {
     setShowDilemmaModal(false)
-    // ir a pé em agosto: a tela fica parada por alguns segundos
-    if (result?.lockSeconds > 0) setWalkUntil(saveWalkLock(character.id, room.currentTurn, result.lockSeconds))
+    setDilemmaHold(false)
+    // ir a pé em agosto: chega atrasado e perde o começo do mês seguinte
+    if (result?.lockSeconds > 0) savePendingWalk(character.id, room.currentTurn + 1, result.lockSeconds)
+    refreshStanding()
 
     try {
       const { data } = await api.get(`/characters/${character.id}`)
@@ -262,13 +273,17 @@ export default function Map() {
     }
   }
 
-  // Começo do mês: primeiro o resumo da virada (o imprevisto, as consequências,
-  // o que ficou em aberto), depois o dilema, se ainda não foi respondido.
+  // Começo do mês: primeiro a cena e o resumo da virada (o imprevisto, as
+  // consequências, o que ficou em aberto), em janeiro o tour, e então a
+  // caminhada de quem foi a pé no mês passado. O dilema vem no fim do mês.
   const [turnSummary, setTurnSummary] = useState(null)
   const [showSummary, setShowSummary] = useState(false)
   const [showScene, setShowScene] = useState(false)
-  const [dilemmaPending, setDilemmaPending] = useState(false)
   const [showTour, setShowTour] = useState(false)
+  const startPendingWalk = (characterId, turn) => {
+    const seconds = takePendingWalk(characterId, turn)
+    if (seconds > 0) setWalkUntil(saveWalkLock(characterId, turn, seconds))
+  }
   useEffect(() => {
     if (!character?.id || !room?.currentTurn || room?.status !== 'active') return
     const turn = room.currentTurn
@@ -281,17 +296,13 @@ export default function Map() {
         setTurnSummary(summary)
         // quem deu F5 no meio da caminhada continua andando
         const until = loadWalkLock(character.id, turn)
-        if (until) return setWalkUntil(until)
-        const pending = Boolean(data.dilemma && !data.alreadyAnswered)
+        if (until) setWalkUntil(until)
         if (summary && !summarySeen(character.id, turn)) {
-          setDilemmaPending(pending)
           // de fevereiro em diante a virada abre com a cena; depois vem o resumo
           if (turn > 1) setShowScene(true)
           else setShowSummary(true)
-        } else if (turn === 1 && !tourSeen(character.id)) {
-          setDilemmaPending(pending)
-          setShowTour(true)
-        } else if (pending) setShowDilemmaModal(true)
+        } else if (turn === 1 && !tourSeen(character.id)) setShowTour(true)
+        else if (!until) startPendingWalk(character.id, turn)
       })
       .catch(() => setDilemmaInfo(null))
   }, [character?.id, room?.currentTurn, room?.status])
@@ -299,22 +310,24 @@ export default function Map() {
   const closeTour = () => {
     setShowTour(false)
     markTourSeen(character.id)
-    if (dilemmaPending) {
-      setDilemmaPending(false)
-      setShowDilemmaModal(true)
-    }
+    startPendingWalk(character.id, room.currentTurn)
   }
 
   const closeSummary = () => {
     setShowSummary(false)
     markSummarySeen(character.id, room.currentTurn)
-    // janeiro: o tour do mês de aprender vem antes do primeiro dilema
+    // janeiro: o tour do mês de aprender
     if (room.currentTurn === 1 && !tourSeen(character.id)) return setShowTour(true)
-    if (dilemmaPending) {
-      setDilemmaPending(false)
-      setShowDilemmaModal(true)
-    }
+    startPendingWalk(character.id, room.currentTurn)
   }
+
+  // aviso curto no mapa (cidade fechada, erro ao encerrar)
+  const [notice, setNotice] = useState('')
+  useEffect(() => {
+    if (!notice) return
+    const id = setTimeout(() => setNotice(''), 3200)
+    return () => clearTimeout(id)
+  }, [notice])
 
   // cupom escondido do mês (o servidor só diz se tem e onde, nunca o prêmio)
   const [couponState, setCoupon] = useState(null) // { turn, id, spot }
@@ -357,8 +370,15 @@ export default function Map() {
 
   const handleBuilding = (b) => {
     sfx.click()
-    if (b.route === 'modal_dilemma') setShowDilemmaModal(true)
-    else if (b.route === 'modal_leisure') setShowLeisure(true)
+    const closed = phaseRef.current !== 'month'
+    if (b.route === 'modal_dilemma') {
+      if (closed) setDilemmaAway(false)
+      else setFinishing(true)
+      return
+    }
+    // mês encerrado: a cidade fechou (o banco e a árvore continuam abertos)
+    if (closed && b.route.startsWith('modal_')) return setNotice('A cidade fechou: este mês já foi encerrado.')
+    if (b.route === 'modal_leisure') setShowLeisure(true)
     else if (b.route.startsWith('modal_bill_')) setActiveBill(b.route.replace('modal_bill_', ''))
     else navigate(b.route)
   }
@@ -369,7 +389,11 @@ export default function Map() {
     const onTask = (e) => {
       const route = ROUTES[e.detail?.id]
       if (!route || roomRef.current?.status !== 'active') return
-      if (route === 'modal_dilemma') setShowDilemmaModal(true)
+      const closed = phaseRef.current !== 'month'
+      if (route === 'modal_dilemma') {
+        if (closed) setDilemmaAway(false)
+        else setFinishing(true)
+      } else if (closed) setNotice('A cidade fechou: este mês já foi encerrado.')
       else if (route === 'modal_leisure') setShowLeisure(true)
       else setActiveBill(route.replace('modal_bill_', ''))
     }
@@ -398,15 +422,34 @@ export default function Map() {
     done: !!b.requiredPrefix && isActionDone(b.requiredPrefix),
   }))
   const hasDilemma = dilemmaInfo?.turn === currentTurn && dilemmaInfo.exists
-  const dilemmaItem = { id: 'dilemma', name: 'Dilema do mês', route: 'modal_dilemma', required: true, done: isActionDone('Dilema') }
-  const checklist = [...(hasDilemma ? [dilemmaItem] : []), ...sceneBuildings.filter((b) => b.required)]
+  const answered = Boolean(isActionDone('Dilema'))
+  const dilemmaItem = { id: 'dilemma', name: 'Dilema (chega ao encerrar)', route: 'modal_dilemma', required: true, done: answered }
+  const tasks = sceneBuildings.filter((b) => b.required)
+  const checklist = [...tasks, ...(hasDilemma ? [dilemmaItem] : [])]
   const doneCount = checklist.filter((b) => b.done).length
+  const missing = tasks.filter((b) => !b.done).map((b) => (b.id === 'leisure' ? 'Lazer' : b.name))
+
+  // Fase do mês: aberto → dilema (cidade fechada) → esperando a turma
+  const playing = room?.status === 'active' && currentTurn > 0
+  const clock = useMonthClock(room?.id, playing, answered)
+  const phase = playing ? clock?.phase ?? (character?.turnReady ? (hasDilemma && !answered ? 'dilemma' : 'done') : 'month') : 'month'
+  const locked = playing && phase !== 'month'
+  const busyIntro = showScene || showSummary || showTour || Boolean(walkUntil)
+  const dilemmaOpen = locked && phase === 'dilemma' && hasDilemma && !answered && !dilemmaAway && !busyIntro
+  useEffect(() => {
+    phaseRef.current = phase
+  }, [phase])
+  const goBank = () => {
+    sfx.click()
+    setDilemmaAway(true)
+    navigate('/bank')
+  }
 
   return (
     <GameLayout>
       {/* A cidade é o fundo da tela; os painéis flutuam por cima dela. */}
       <div ref={mapScrollRef} className="fixed inset-y-0 left-20 right-0 z-0 overflow-x-auto overflow-y-hidden">
-        <div inert={isWaiting} className={`h-full min-w-[760px] transition-[filter,opacity] duration-500 ${isWaiting ? 'pointer-events-none opacity-60 blur-[3px]' : ''}`}>
+        <div inert={isWaiting || locked} className={`h-full min-w-[760px] transition-[filter,opacity] duration-500 ${isWaiting ? 'pointer-events-none opacity-60 blur-[3px]' : locked ? 'pointer-events-none opacity-75 blur-[2px] saturate-50' : ''}`}>
           <CityScene buildings={sceneBuildings} onSelect={handleBuilding} interactive={!isWaiting} month={sceneMonth} coupon={coupon} onCoupon={handleCoupon} />
         </div>
       </div>
@@ -416,7 +459,7 @@ export default function Map() {
           <div className="flex w-full max-w-xs flex-col gap-3">
             <div className={`pointer-events-auto ${PANEL} px-5 py-4`}>
               <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">Mapa</p>
-              <h2 className="font-toy text-[26px] font-extrabold leading-tight text-[#2457C5]">Cidade de Santa Rita</h2>
+              <h2 className="font-toy text-[26px] font-extrabold leading-tight text-[#2457C5]">A cidade</h2>
               <p className="mt-0.5 hidden text-xs text-[#6B7A62] sm:block">Passe o mouse pela cidade e clique num prédio para entrar.</p>
             </div>
 
@@ -465,21 +508,34 @@ export default function Map() {
                 </div>
               </div>
 
+              {phase === 'month' && clock?.monthLeft != null && (
+                <p role="timer" className={`rounded-full px-3 py-1 font-toy text-[20px] font-extrabold tabular-nums ${clock.paused ? 'bg-[#EFE6D3] text-[#6B7A62]' : isUrgent(clock.monthLeft) ? 'animate-pulse bg-[#C4283D] text-white' : 'bg-[#FFF3C4] text-[#7A5200]'}`} title="Tempo para encerrar o mês">
+                  ⏱ {formatClock(clock.monthLeft)}{clock.paused ? ' · pausado' : ''}
+                </p>
+              )}
               <button
                 type="button"
-                onClick={handleFinishMonth}
+                onClick={() => { sfx.click(); setFinishing(true) }}
                 data-tour="encerrar"
-                disabled={character?.turnReady}
-                className={`rounded-[16px] px-5 py-2 font-toy text-[17px] font-extrabold transition-transform cursor-pointer disabled:cursor-not-allowed ${character?.turnReady
+                disabled={locked}
+                className={`rounded-[16px] px-5 py-2 font-toy text-[17px] font-extrabold transition-transform cursor-pointer disabled:cursor-not-allowed ${locked
                     ? 'bg-[#E2F4E5] text-[#2B8C41]'
                     : 'bg-[#3DBE5A] text-white shadow-[0_5px_0_#2B8C41] hover:-translate-y-0.5 active:translate-y-1 active:shadow-[0_1px_0_#2B8C41]'
                   }`}
               >
-                {character?.turnReady ? 'Mês finalizado' : 'Encerrar mês'}
+                {locked ? 'Mês encerrado' : 'Encerrar mês'}
               </button>
             </div>
           )}
         </div>
+
+        {locked && !dilemmaOpen && !busyIntro && (
+          <MonthClosedCard turn={currentTurn} clock={clock} onDilemma={() => setDilemmaAway(false)} onBank={goBank} />
+        )}
+
+        {notice && (
+          <p role="status" className="pointer-events-none fixed left-1/2 top-6 z-[65] -translate-x-1/2 rounded-full bg-[#24331F] px-5 py-2 text-sm font-extrabold text-white shadow-lg animate-fade-in-up">{notice}</p>
+        )}
 
         {isWaiting && (
           <div className={`pointer-events-auto mx-auto max-w-md ${PANEL} p-8 text-center animate-fade-in-up`}>
@@ -527,10 +583,25 @@ export default function Map() {
         </div>
       </div>
 
-      {showDilemmaModal && (
+      {(dilemmaOpen || dilemmaHold || showDilemmaModal) && (
         <DilemmaModal
           onClose={() => setShowDilemmaModal(false)}
           onComplete={handleDilemmaComplete}
+          onAnswered={() => setDilemmaHold(true)}
+          timeLeft={clock?.dilemmaLeft ?? null}
+          onBank={goBank}
+        />
+      )}
+
+      {finishing && !locked && (
+        <FinishMonthModal
+          turn={currentTurn}
+          missing={missing}
+          hasDilemma={hasDilemma}
+          timeLeft={clock?.monthLeft ?? null}
+          busy={finishBusy}
+          onConfirm={confirmFinish}
+          onCancel={() => setFinishing(false)}
         />
       )}
 
@@ -559,7 +630,7 @@ export default function Map() {
         />
       )}
 
-      {walkUntil && <WalkLock until={walkUntil} onDone={clearWalk} />}
+      {walkUntil && <WalkLock until={walkUntil} total={120} onDone={clearWalk} />}
 
       {couponReward && <CouponModal reward={couponReward} onClose={() => setCouponReward(null)} />}
 

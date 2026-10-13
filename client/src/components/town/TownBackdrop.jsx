@@ -4,7 +4,7 @@ import leisureArt from '../../assets/buildings/leisure.png'
 import mercadinhoArt from '../../assets/buildings/mercadinho.png'
 import utilitiesArt from '../../assets/buildings/utilities.png'
 import internetArt from '../../assets/buildings/internet.png'
-import universityArt from '../../assets/buildings/university.png'
+import treeArt from '../../assets/buildings/tree.png'
 
 // A própria cidade do mapa, viva e desfocada, como fundo das telas de entrada.
 const BUILDINGS = [
@@ -13,7 +13,7 @@ const BUILDINGS = [
   { id: 'mercadinho', name: 'Mercadinho', art: mercadinhoArt, glow: 'rgba(34,197,94,0.55)' },
   { id: 'utilities', name: 'Água e Luz', art: utilitiesArt, glow: 'rgba(234,179,8,0.55)' },
   { id: 'internet', name: 'Internet e Celular', art: internetArt, glow: 'rgba(34,211,238,0.55)' },
-  { id: 'university', name: 'Universidade', art: universityArt, glow: 'rgba(168,85,247,0.55)' },
+  { id: 'university', name: 'Árvore de habilidades', art: treeArt, glow: 'rgba(168,85,247,0.55)' },
 ]
 
 export default function TownBackdrop() {

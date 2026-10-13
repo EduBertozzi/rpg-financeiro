@@ -8,7 +8,7 @@ export const ACHIEVEMENTS = [
     const tasks = monthTasks(c.eventLog, turn)
     return tasks.length > 0 && tasks.every((t) => t.done)
   } },
-  { id: 'first_box', title: 'Primeira caixinha no Banco Maré', test: (c) => (c.fixedInvestments ?? []).length > 0 },
+  { id: 'first_box', title: 'Primeira caixinha no Inabank', test: (c) => (c.fixedInvestments ?? []).length > 0 },
   { id: 'first_stock', title: 'Primeira ação na carteira', test: (c) => (c.positions ?? []).some((p) => Number(p.quantity) > 0) },
   { id: 'first_skill', title: 'Primeira habilidade desbloqueada', test: (c) => (c.unlockedSkills ?? []).length > 0 },
   { id: 'out_of_red', title: 'Saiu do vermelho', test: (c, _turn, prev) => Number(prev?.cash) < 0 && Number(c.cash) >= 0 },

@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import GameLayout from '../../components/GameLayout'
-import StarSky from './StarSky'
+import TreeSky from './TreeSky'
 import { getAvatarById } from '../../data/avatarTheme'
 import { CORE, PATHS, PATH_ORDER, SPOTS, STATUS_TEXT, perkOf, skillCost, skillStatus } from './skillData'
 import './cruzeiro.css'
 
-const PANEL = 'rounded-3xl border border-white/10 bg-[rgba(14,28,47,0.78)] shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-md'
+const PANEL = 'rounded-[28px] bg-[#FFFDF7]/95 text-[#24331F] shadow-[0_10px_0_#E2D6BE,0_24px_50px_rgba(36,51,31,0.2)] backdrop-blur'
 
-// A entrada completa toca uma vez por sessão; depois a constelação só aparece.
+// A entrada completa toca uma vez por sessão; depois a árvore só aparece.
 const readIntro = () => {
   try {
     if (sessionStorage.getItem('cruzeiro:intro')) return false
@@ -77,23 +77,23 @@ export default function SkillTree() {
 
   return (
     <GameLayout>
-      <div className="fixed inset-y-0 left-20 right-0 z-0 overflow-hidden bg-[#040914] text-white">
-        <StarSky />
+      <div className="fixed inset-y-0 left-20 right-0 z-0 overflow-hidden bg-[#E3F5FC] text-[#24331F]">
+        <TreeSky />
 
         <div className="relative z-10 flex h-full flex-col gap-4 overflow-y-auto p-4 sm:p-6 lg:flex-row lg:overflow-hidden">
-          {/* céu com a constelação */}
-          <section className="relative flex min-h-[420px] min-w-0 flex-1 flex-col" aria-label="Constelação Cruzeiro">
+          {/* a árvore */}
+          <section className="relative flex min-h-[420px] min-w-0 flex-1 flex-col" aria-label="Árvore de habilidades">
             <div className="pointer-events-none flex flex-wrap items-start justify-between gap-3">
               <div key={`brand-${introKey}`} className={`cz-brand ${intro ? 'cz-intro-brand' : ''}`}>
-                <h1 className="font-['Cinzel',Georgia,serif] text-[clamp(26px,4vw,46px)] font-extrabold tracking-[0.32em] text-[#F6E7C1] [text-shadow:0_0_24px_rgba(255,200,87,0.45)]">
-                  CRUZEIRO
+                <h1 className="font-toy text-[clamp(28px,4vw,46px)] font-extrabold leading-none text-[#2B8C41] [text-shadow:0_3px_0_#FFFDF7]">
+                  Árvore de habilidades
                 </h1>
-                <p className="mt-1 text-xs font-bold uppercase tracking-[0.3em] text-[#8EA0B8]">Constelação de habilidades</p>
+                <p className="mt-1 text-sm font-bold text-[#4A5A42]">Cada dilema respondido vale 1 ponto. Cada ponto vira um fruto: uma vantagem para o ano todo.</p>
               </div>
               <Points free={free} used={mine.usedPoints} max={mine.maxPoints} />
             </div>
 
-            <Constellation
+            <Tree
               key={introKey}
               skills={skills}
               statusOf={statusOf}
@@ -108,7 +108,7 @@ export default function SkillTree() {
             <button
               type="button"
               onClick={replay}
-              className="self-start rounded-xl border border-white/10 bg-[rgba(5,11,22,0.55)] px-3 py-2 text-xs font-bold text-[#8EA0B8] backdrop-blur hover:text-white cursor-pointer"
+              className="self-start rounded-xl bg-[#FFFDF7]/90 px-3 py-2 text-xs font-bold text-[#4A5A42] shadow-[0_3px_0_#E2D6BE] hover:text-[#24331F] cursor-pointer"
             >
               ↻ Ver a entrada de novo
             </button>
@@ -134,14 +134,14 @@ export default function SkillTree() {
 
 function Points({ free, used, max }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[rgba(5,11,22,0.55)] px-4 py-2.5 backdrop-blur">
-      <b className="text-lg tabular-nums text-[#FFC857]">{free}</b>
-      <span className="text-xs font-bold text-[#8EA0B8]">{free === 1 ? 'ponto' : 'pontos'}</span>
+    <div className="flex items-center gap-3 rounded-2xl bg-[#FFFDF7]/95 px-4 py-2.5 shadow-[0_4px_0_#E2D6BE]">
+      <b className="font-toy text-xl tabular-nums text-[#C98A12]">{free}</b>
+      <span className="text-xs font-bold text-[#6B7A62]">{free === 1 ? 'ponto' : 'pontos'}</span>
       <div className="flex gap-1" aria-label={`${used} de ${max} pontos usados`}>
         {Array.from({ length: max }, (_, i) => (
           <span
             key={i}
-            className={`h-1.5 w-3.5 rounded-full transition-colors ${i < used ? 'bg-[#FFC857] shadow-[0_0_8px_rgba(255,200,87,0.6)]' : i < used + free ? 'bg-[#FFC857]/25 ring-1 ring-inset ring-[#FFC857]' : 'bg-white/10'}`}
+            className={`h-2 w-3.5 rounded-full transition-colors ${i < used ? 'bg-[#F2B53A]' : i < used + free ? 'bg-[#F2B53A]/25 ring-1 ring-inset ring-[#F2B53A]' : 'bg-[#EFE6D3]'}`}
           />
         ))}
       </div>
@@ -149,15 +149,21 @@ function Points({ free, used, max }) {
   )
 }
 
-// Estrela de 4 pontas centrada em (x, y).
-const starPath = (x, y, R) => {
-  const r = R * 0.3
-  return Array.from({ length: 8 }, (_, i) => {
-    const a = (i * Math.PI) / 4 - Math.PI / 2
-    const d = i % 2 ? r : R
-    return `${i ? 'L' : 'M'}${(x + Math.cos(a) * d).toFixed(1)} ${(y + Math.sin(a) * d).toFixed(1)}`
-  }).join(' ') + 'Z'
+// Folha apontando para cima, com a base em (x, y).
+const leafPath = (x, y, s) => `M${x} ${y} C${x - s * 0.9} ${y - s * 0.4} ${x - s * 0.6} ${y - s * 1.3} ${x} ${y - s * 1.6} C${x + s * 0.6} ${y - s * 1.3} ${x + s * 0.9} ${y - s * 0.4} ${x} ${y}Z`
+
+// Galho curvo de (x1, y1) até (x2, y2), puxado um pouco para fora.
+const branchPath = ([x1, y1], [x2, y2]) => {
+  const mx = (x1 + x2) / 2 + (x2 - x1) * 0.12
+  const my = (y1 + y2) / 2 + Math.abs(x2 - x1) * 0.18
+  return `M${x1} ${y1} Q${mx.toFixed(1)} ${my.toFixed(1)} ${x2} ${y2}`
 }
+
+// copa: bolotas de folhas atrás dos galhos (x, y, raio)
+const CANOPY = [
+  [500, 300, 210], [300, 360, 170], [700, 360, 170], [200, 280, 120], [800, 280, 120],
+  [400, 230, 150], [600, 230, 150], [500, 190, 130], [380, 470, 130], [620, 470, 130],
+]
 
 // Nomes longos quebram em duas linhas, no espaço mais perto do meio.
 const splitName = (name) => {
@@ -175,78 +181,83 @@ const labelPos = (path, x, y, R) => {
   return { x: x + R + 12, y: y + 5, anchor: 'start' }
 }
 
-function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, avatar, onPick }) {
+function Tree({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, avatar, onPick }) {
   if (!skills.length) return <div className="flex-1" />
   const [cx, cy] = CORE
   const isOn = (s) => unlockedIds.includes(s.id)
   const fresh = skills.find((s) => s.id === justUnlocked)
+  const halo = { paintOrder: 'stroke', stroke: '#FFFDF7', strokeWidth: 5, strokeLinejoin: 'round' }
 
   return (
     <svg
-      viewBox="0 130 1000 640"
+      viewBox="0 100 1000 680"
       preserveAspectRatio="xMidYMid meet"
       className={`min-h-0 w-full flex-1 ${intro ? 'cz-intro' : 'cz-quick'}`}
       role="group"
       aria-label="Habilidades por caminho"
     >
       <defs>
+        <radialGradient id="tr-leaf" cx=".35" cy=".3" r=".75"><stop offset="0" stopColor="#B9EE7E" /><stop offset=".5" stopColor="#6CC64A" /><stop offset="1" stopColor="#3F9A3E" /></radialGradient>
+        <linearGradient id="tr-trunk" x1="0" x2="1"><stop offset="0" stopColor="#7A4C2B" /><stop offset=".45" stopColor="#B07A4A" /><stop offset="1" stopColor="#6E4426" /></linearGradient>
         <radialGradient id="cz-gcore"><stop offset="0" stopColor="#FFF4D6" /><stop offset=".55" stopColor="#FFC857" /><stop offset="1" stopColor="#E08A00" /></radialGradient>
         {PATH_ORDER.map((p) => (
           <g key={p}>
-            <radialGradient id={`cz-g-${p}`}><stop offset="0" stopColor="#fff" /><stop offset=".45" stopColor="#fff" /><stop offset="1" stopColor={PATHS[p].hex} /></radialGradient>
-            <radialGradient id={`cz-glow-${p}`}><stop offset="0" stopColor={PATHS[p].hex} stopOpacity=".6" /><stop offset="1" stopColor={PATHS[p].hex} stopOpacity="0" /></radialGradient>
+            <radialGradient id={`cz-g-${p}`} cx=".35" cy=".3" r=".75"><stop offset="0" stopColor="#fff" /><stop offset=".3" stopColor={PATHS[p].hex} stopOpacity=".7" /><stop offset="1" stopColor={PATHS[p].hex} /></radialGradient>
+            <radialGradient id={`cz-glow-${p}`}><stop offset="0" stopColor="#FFE68A" stopOpacity=".8" /><stop offset="1" stopColor="#FFE68A" stopOpacity="0" /></radialGradient>
           </g>
         ))}
         <clipPath id="cz-avatar-clip"><circle cx={cx} cy={cy} r="35" /></clipPath>
-        <filter id="cz-soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" /></filter>
+        <filter id="cz-soft" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#24331F" floodOpacity=".22" /></filter>
       </defs>
 
-      {/* linhas */}
+      {/* copa e tronco */}
+      <g className="cz-sway">
+        <g opacity=".6">
+          {CANOPY.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill="url(#tr-leaf)" />)}
+        </g>
+        <path d={`M${cx - 46} 780 C${cx - 34} 740 ${cx - 30} 700 ${cx - 26} ${cy} L${cx + 26} ${cy} C${cx + 30} 700 ${cx + 34} 740 ${cx + 46} 780 Z`} fill="url(#tr-trunk)" />
+      </g>
+
+      {/* galhos */}
       {PATH_ORDER.map((path, pi) => {
         const list = skills.filter((s) => s.path === path).sort((a, b) => a.level - b.level)
         return list.map((s, li) => {
           const from = li === 0 ? CORE : SPOTS[path][li - 1]
-          const [x, y] = SPOTS[path][s.level - 1] ?? CORE
-          const len = Math.ceil(Math.hypot(x - from[0], y - from[1]))
+          const to = SPOTS[path][s.level - 1] ?? CORE
+          const len = Math.ceil(Math.hypot(to[0] - from[0], to[1] - from[1]) * 1.1)
           const style = { '--len': len, '--d': `${(0.9 + li * 0.32 + pi * 0.08).toFixed(2)}s` }
           const on = isOn(s)
-          const hex = PATHS[path].hex
+          const w = 22 - li * 4
           return (
             <g key={`l-${s.id}`}>
-              <line
+              <path
                 className={`cz-ln ${s.id === justUnlocked ? 'cz-drawnow' : ''}`}
                 style={style}
-                x1={from[0]} y1={from[1]} x2={x} y2={y}
-                stroke={on ? hex : 'rgba(200,215,240,.16)'}
-                strokeWidth={on ? 2.6 : 1.2}
-                strokeDasharray={on ? undefined : '2 8'}
+                d={branchPath(from, to)}
+                fill="none"
+                stroke={on ? '#8A5A34' : '#A7865F'}
+                strokeOpacity={on ? 1 : 0.55}
+                strokeWidth={w}
                 strokeLinecap="round"
                 filter={on ? 'url(#cz-soft)' : undefined}
               />
-              {on && (
-                <>
-                  <line className="cz-ln" style={style} x1={from[0]} y1={from[1]} x2={x} y2={y} stroke={hex} strokeWidth="1.4" strokeLinecap="round" />
-                  <line className="cz-flow" x1={from[0]} y1={from[1]} x2={x} y2={y} stroke="#fff" strokeWidth="2" strokeLinecap="round" opacity=".8" />
-                </>
-              )}
+              {on && <path className="cz-ln" style={style} d={branchPath(from, to)} fill="none" stroke="#C79058" strokeWidth={Math.max(3, w * 0.28)} strokeLinecap="round" transform="translate(-2 -2)" />}
             </g>
           )
         })
       })}
 
-      {/* você, no centro */}
-      <circle className="cz-shock" cx={cx} cy={cy} r="30" fill="none" stroke="#FFC857" strokeWidth="2" />
+      {/* você, na base do tronco */}
+      <circle className="cz-shock" cx={cx} cy={cy} r="30" fill="none" stroke="#F2B53A" strokeWidth="3" />
       <g className="cz-vc">
-        <circle cx={cx} cy={cy} r="74" fill="url(#cz-glow-technical)" opacity=".0" />
-        <circle cx={cx} cy={cy} r="64" fill="#FFC857" opacity=".1" />
-        <circle className="cz-orbit" cx={cx} cy={cy} r="52" fill="none" stroke="#FFC857" strokeOpacity=".55" strokeWidth="1.5" strokeDasharray="2 9" strokeLinecap="round" />
-        <circle cx={cx} cy={cy} r="40" fill="url(#cz-gcore)" />
-        <circle cx={cx} cy={cy} r="35" fill="#1B2B47" />
+        <circle className="cz-orbit" cx={cx} cy={cy} r="50" fill="none" stroke="#F2B53A" strokeOpacity=".8" strokeWidth="2" strokeDasharray="2 9" strokeLinecap="round" />
+        <circle cx={cx} cy={cy} r="42" fill="#8A5A34" />
+        <circle cx={cx} cy={cy} r="35" fill="#DDE6F5" />
         {avatar && <image href={avatar} x={cx - 44} y={cy - 40} width="88" height="88" clipPath="url(#cz-avatar-clip)" preserveAspectRatio="xMidYMin slice" />}
-        <circle cx={cx} cy={cy} r="35" fill="none" stroke="#FFF4D6" strokeWidth="2" />
+        <circle cx={cx} cy={cy} r="35" fill="none" stroke="#FFFDF7" strokeWidth="3" />
       </g>
 
-      {/* estrelas */}
+      {/* frutos (as habilidades) */}
       {PATH_ORDER.map((path, pi) =>
         skills.filter((s) => s.path === path).map((s) => {
           const [x, y] = SPOTS[path][s.level - 1] ?? CORE
@@ -255,7 +266,7 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
           const on = st === 'on'
           const sel = s.id === selectedId
           const hex = PATHS[path].hex
-          const R = (on ? 17 : st === 'locked' ? 9 : 14) + s.level * 2
+          const R = (on ? 20 : st === 'locked' ? 11 : 15) + s.level * 2
           const d = { '--d': `${(1.15 + li * 0.32 + pi * 0.08).toFixed(2)}s` }
           const lp = labelPos(path, x, y, Math.max(R * 0.6, 12))
           const pick = () => onPick(s.id)
@@ -272,29 +283,28 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
             >
               <g className="cz-nd" style={d}>
                 <circle cx={x} cy={y} r={R + 12} fill="transparent" />
-                {on && <circle className="cz-halo" cx={x} cy={y} r={R * 2.4} fill={`url(#cz-glow-${path})`} />}
-                {st === 'ready' && <circle className="cz-ready" cx={x} cy={y} r={R * 0.75} fill="none" stroke="#FFC857" strokeWidth="2" />}
-                {sel && <circle className="cz-orbit" cx={x} cy={y} r={R + 8} fill="none" stroke="#FFC857" strokeWidth="1.6" strokeDasharray="3 5" />}
-                <circle className="cz-focus" cx={x} cy={y} r={R + 13} fill="none" stroke="#FFC857" strokeWidth="2" strokeDasharray="4 4" />
-                <g className="cz-core">
-                  {on && (
-                    <g stroke={hex} strokeLinecap="round" opacity=".7">
-                      <line x1={x - R * 2} y1={y} x2={x + R * 2} y2={y} strokeWidth="1" />
-                      <line x1={x} y1={y - R * 2} x2={x} y2={y + R * 2} strokeWidth="1" />
-                    </g>
+                {on && <circle className="cz-halo" cx={x} cy={y} r={R * 2.2} fill={`url(#cz-glow-${path})`} />}
+                {st === 'ready' && <circle className="cz-ready" cx={x} cy={y} r={R * 0.9} fill="none" stroke="#F2B53A" strokeWidth="3" />}
+                {sel && <circle className="cz-orbit" cx={x} cy={y} r={R + 9} fill="none" stroke="#24331F" strokeWidth="2" strokeDasharray="3 5" />}
+                <circle className="cz-focus" cx={x} cy={y} r={R + 13} fill="none" stroke="#24331F" strokeWidth="2" strokeDasharray="4 4" />
+                <g className="cz-core" filter="url(#cz-soft)">
+                  {on ? (
+                    <>
+                      <circle cx={x} cy={y} r={R} fill={`url(#cz-g-${path})`} stroke="#FFFDF7" strokeWidth="2.5" />
+                      <path d={`M${x} ${y - R + 2} q2 -7 6 -9`} stroke="#6E4426" strokeWidth="3" strokeLinecap="round" fill="none" />
+                      <path d={leafPath(x + 6, y - R - 4, 9)} transform={`rotate(40 ${x + 6} ${y - R - 4})`} fill="#6CC64A" />
+                      <circle cx={x - R * 0.35} cy={y - R * 0.35} r={R * 0.2} fill="#fff" opacity=".85" />
+                    </>
+                  ) : (
+                    <>
+                      <path d={leafPath(x, y + R * 0.7, R * 1.05)} fill={st === 'locked' ? '#A9C99A' : st === 'ready' ? '#6CC64A' : '#8DBF74'} stroke={st === 'ready' ? hex : 'none'} strokeWidth="2.5" />
+                      <path d={`M${x} ${y + R * 0.6} L${x} ${y - R * 0.6}`} stroke="#FFFDF7" strokeOpacity=".7" strokeWidth="1.6" strokeLinecap="round" />
+                    </>
                   )}
-                  <path
-                    d={starPath(x, y, R)}
-                    fill={on ? `url(#cz-g-${path})` : st === 'locked' ? 'rgba(200,215,240,.32)' : st === 'ready' ? hex : 'rgba(9,18,34,.9)'}
-                    stroke={on ? '#fff' : st === 'locked' ? 'none' : hex}
-                    strokeWidth={on ? 1 : 1.6}
-                    strokeLinejoin="round"
-                  />
-                  {on && <circle cx={x} cy={y} r={R * 0.22} fill="#fff" />}
                 </g>
               </g>
-              <text className="cz-lbl" style={d} x={lp.x} y={lp.y} textAnchor={lp.anchor} fontSize="13" fontWeight={on || sel ? 700 : 500} fill={on ? '#fff' : sel ? '#F6E7C1' : st === 'locked' ? '#6E7F96' : '#A9B8CC'}>
-                {splitName(s.name).map((line, i) => <tspan key={i} x={lp.x} dy={i ? 15 : 0}>{line}</tspan>)}
+              <text className="cz-lbl" style={{ ...d, ...halo }} x={lp.x} y={lp.y} textAnchor={lp.anchor} fontSize="14" fontWeight={on || sel ? 800 : 600} fill={on ? '#1B2A16' : st === 'locked' ? '#5E6B55' : '#2F3D28'}>
+                {splitName(s.name).map((line, i) => <tspan key={i} x={lp.x} dy={i ? 16 : 0}>{line}</tspan>)}
               </text>
             </g>
           )
@@ -307,13 +317,13 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
         const d = { '--d': `${(2 + pi * 0.1).toFixed(2)}s` }
         return (
           <g key={`t-${path}`}>
-            <text className="cz-lbl" style={d} x={lx} y={ly - 50} textAnchor="middle" fontSize="12" fontWeight="800" letterSpacing="3" fill={PATHS[path].hex}>{PATHS[path].short.toUpperCase()}</text>
-            <text className="cz-lbl" style={d} x={lx} y={ly - 34} textAnchor="middle" fontSize="11" fill="#8EA0B8">{PATHS[path].theme}</text>
+            <text className="cz-lbl" style={{ ...d, ...halo }} x={lx} y={ly - 52} textAnchor="middle" fontSize="13" fontWeight="800" letterSpacing="3" fill={PATHS[path].hex}>{PATHS[path].short.toUpperCase()}</text>
+            <text className="cz-lbl" style={{ ...d, ...halo }} x={lx} y={ly - 35} textAnchor="middle" fontSize="12" fontWeight="600" fill="#4A5A42">{PATHS[path].theme}</text>
           </g>
         )
       })}
 
-      {/* explosão ao desbloquear */}
+      {/* folhas e brilho ao desbloquear */}
       {fresh && (() => {
         const [x, y] = SPOTS[fresh.path][fresh.level - 1]
         const hex = PATHS[fresh.path].hex
@@ -322,7 +332,7 @@ function Constellation({ skills, statusOf, unlockedIds, selectedId, justUnlocked
             {Array.from({ length: 18 }, (_, i) => {
               const a = (i / 18) * 6.283
               const dist = 40 + (i % 3) * 18
-              return <circle key={i} cx={x} cy={y} r={2 + (i % 2)} fill={i % 3 ? hex : '#FFC857'} style={{ '--dx': `${(Math.cos(a) * dist).toFixed(1)}px`, '--dy': `${(Math.sin(a) * dist).toFixed(1)}px` }} />
+              return <circle key={i} cx={x} cy={y} r={2.5 + (i % 2)} fill={i % 3 === 0 ? '#F2B53A' : i % 3 === 1 ? '#6CC64A' : hex} style={{ '--dx': `${(Math.cos(a) * dist).toFixed(1)}px`, '--dy': `${(Math.sin(a) * dist).toFixed(1)}px` }} />
             })}
           </g>
         )
@@ -340,28 +350,28 @@ function Detail({ skill, status, cost, unlocked, tips, busy, error, onUnlock }) 
         {path?.short} · nível {skill.level} · {cost} {cost > 1 ? 'pontos' : 'ponto'}
       </p>
       <h2 className="text-2xl font-extrabold [text-wrap:balance]">{skill.name}</h2>
-      <p className="leading-relaxed text-[#8EA0B8]">{perk.desc}</p>
-      <div className="rounded-2xl border border-[#FFC857]/30 bg-[#FFC857]/[0.07] px-4 py-3">
-        <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#FFC857]">Vantagem</p>
+      <p className="leading-relaxed text-[#4A5A42]">{perk.desc}</p>
+      <div className="rounded-2xl border-2 border-[#F2D27A] bg-[#FFF3C4] px-4 py-3">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#B07A0C]">Vantagem</p>
         <p className="mt-1 text-[17px] font-bold">{perk.perk}</p>
-        {perk.note && <p className="mt-1 text-[13px] text-[#8EA0B8]">{perk.note}</p>}
+        {perk.note && <p className="mt-1 text-[13px] text-[#6B5A2E]">{perk.note}</p>}
       </div>
-      <p className="text-[13px] font-bold" style={{ color: status === 'on' ? path?.hex : status === 'ready' ? '#FFC857' : '#8EA0B8' }}>
+      <p className="text-[13px] font-bold" style={{ color: status === 'on' ? path?.hex : status === 'ready' ? '#B07A0C' : '#6B7A62' }}>
         {STATUS_TEXT[status]}
       </p>
-      {error && <p className="rounded-xl bg-red-500/15 px-3 py-2 text-sm text-red-300">{error}</p>}
+      {error && <p className="rounded-xl bg-[#FDE2E5] px-3 py-2 text-sm font-semibold text-[#9F1D2F]">{error}</p>}
       <button
         type="button"
         onClick={onUnlock}
         disabled={status !== 'ready' || busy}
-        className="rounded-2xl bg-gradient-to-b from-[#FFD777] to-[#F2B53A] px-4 py-3.5 font-extrabold text-[#2A1C00] shadow-[0_6px_24px_rgba(255,200,87,0.25)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:bg-none disabled:bg-white/[0.07] disabled:text-[#8EA0B8] disabled:shadow-none cursor-pointer"
+        className="rounded-[18px] bg-[#3DBE5A] px-4 py-3.5 font-toy text-[18px] font-extrabold text-white shadow-[0_6px_0_#2B8C41] transition hover:brightness-105 active:translate-y-1 active:shadow-[0_2px_0_#2B8C41] disabled:cursor-not-allowed disabled:bg-[#EFE6D3] disabled:text-[#8A9680] disabled:shadow-none cursor-pointer"
       >
         {status === 'on' ? 'Desbloqueada' : busy ? 'Desbloqueando…' : `Desbloquear por ${cost} ${cost > 1 ? 'pontos' : 'ponto'}`}
       </button>
 
       {Array.isArray(tips) && tips.length > 0 && (
-        <div className="rounded-2xl border border-[#B884FF]/30 bg-[#B884FF]/[0.08] px-4 py-3">
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#B884FF]">Dica do jornal</p>
+        <div className="rounded-2xl border-2 border-[#D9CBFB] bg-[#F1ECFE] px-4 py-3">
+          <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#6538C9]">Dica do jornal</p>
           <ul className="mt-1 grid gap-1 text-sm">
             {tips.map((t, i) => <li key={t.ticker ?? i}>{t.text ?? `${t.ticker}: ${t.direction === 'down' ? 'deve cair' : 'deve subir'} no mês que vem`}</li>)}
           </ul>
@@ -369,14 +379,14 @@ function Detail({ skill, status, cost, unlocked, tips, busy, error, onUnlock }) 
       )}
 
       <div>
-        <p className="mb-2 mt-2 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8EA0B8]">Suas vantagens ativas</p>
+        <p className="mb-2 mt-2 text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#8A9680]">Suas vantagens ativas</p>
         <ul className="grid gap-1.5 text-[13px]">
           {unlocked.length ? unlocked.map((s) => (
             <li key={s.id} className="flex items-baseline gap-2">
               <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: PATHS[s.path]?.hex }} />
               {perkOf(s).perk}
             </li>
-          )) : <li className="text-[#8EA0B8]">Nenhuma ainda. Cada dilema respondido dá 1 ponto.</li>}
+          )) : <li className="text-[#6B7A62]">Nenhuma ainda. Cada dilema respondido dá 1 ponto.</li>}
         </ul>
       </div>
     </aside>

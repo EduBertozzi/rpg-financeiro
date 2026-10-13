@@ -1,5 +1,7 @@
-// Trava de "ir a pé" (dilema de agosto): a tela fica parada por alguns
-// segundos. O fim da trava fica guardado no navegador para sobreviver a um F5.
+// Trava de "ir a pé" (dilema de agosto): quem vai a pé chega atrasado e perde
+// o começo do mês seguinte (o dilema é a última coisa do mês). A trava fica
+// marcada para o mês seguinte e, quando ele começa, vira um horário de fim
+// guardado no navegador para sobreviver a um F5.
 
 export const walkLockKey = (characterId, turn) => `walk:${characterId}:${turn}`
 
@@ -22,5 +24,28 @@ export function loadWalkLock(characterId, turn, now = Date.now()) {
     return until > now ? until : null
   } catch {
     return null
+  }
+}
+
+// marca a caminhada para o começo do mês `turn`
+export const pendingWalkKey = (characterId, turn) => `walk-next:${characterId}:${turn}`
+
+export function savePendingWalk(characterId, turn, seconds) {
+  try {
+    localStorage.setItem(pendingWalkKey(characterId, turn), String(seconds))
+  } catch {
+    // sem storage: não tem como lembrar no mês seguinte
+  }
+}
+
+// segundos de caminhada marcados para o mês `turn` (e apaga a marca)
+export function takePendingWalk(characterId, turn) {
+  try {
+    const key = pendingWalkKey(characterId, turn)
+    const seconds = Number(localStorage.getItem(key)) || 0
+    localStorage.removeItem(key)
+    return seconds
+  } catch {
+    return 0
   }
 }

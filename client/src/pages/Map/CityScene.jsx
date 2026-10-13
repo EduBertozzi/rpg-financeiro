@@ -112,6 +112,47 @@ function Pedestrian({ from, to, color, duration, delay, still }) {
   )
 }
 
+// Um cachorro passeando ao lado do dono: vai, vira e volta, abanando o rabo.
+function Dog({ from, to, duration, delay, still }) {
+  const [x0, y0] = iso(...from)
+  const [x1, y1] = iso(...to)
+  const walk = { duration: duration * 2, delay, repeat: Infinity, ease: 'linear', times: [0, 0.48, 0.5, 0.98, 1] }
+  return (
+    <motion.g
+      initial={{ x: x0, y: y0 }}
+      animate={still ? undefined : { x: [x0, x1, x1, x0, x0], y: [y0, y1, y1, y0, y0] }}
+      transition={walk}
+    >
+      <ellipse cx="0" cy="1" rx="8" ry="3" fill="rgba(0,0,0,0.22)" />
+      {/* vira para o lado em que está andando (o desenho olha para a direita) */}
+      <motion.g
+        initial={{ scaleX: x1 >= x0 ? 1 : -1 }}
+        animate={still ? undefined : { scaleX: x1 >= x0 ? [1, 1, -1, -1, 1] : [-1, -1, 1, 1, -1] }}
+        transition={walk}
+      >
+        <motion.g animate={still ? undefined : { y: [0, -1.5, 0] }} transition={{ duration: 0.3, repeat: Infinity }}>
+          <rect x="-6" y="-4" width="2.5" height="5" rx="1" fill="#8A5A34" />
+          <rect x="3" y="-4" width="2.5" height="5" rx="1" fill="#8A5A34" />
+          <ellipse cx="0" cy="-6" rx="8" ry="4.5" fill="#C9874B" />
+          <ellipse cx="-1" cy="-7.5" rx="4" ry="1.6" fill="#E3A96A" />
+          <circle cx="8" cy="-10" r="4" fill="#C9874B" />
+          <ellipse cx="11.2" cy="-9" rx="2" ry="1.4" fill="#E3A96A" />
+          <circle cx="12.6" cy="-9.4" r="0.9" fill="#24331F" />
+          <circle cx="8.6" cy="-11" r="0.8" fill="#24331F" />
+          <path d="M6 -13 q-1 4 1 5" fill="#8A5A34" />
+          <motion.path
+            d="M-7.5 -7 q-4 -3 -3 -7"
+            stroke="#C9874B" strokeWidth="2.2" strokeLinecap="round" fill="none"
+            style={{ originX: '-7.5px', originY: '-7px' }}
+            animate={still ? undefined : { rotate: [-18, 18, -18] }}
+            transition={{ duration: 0.35, repeat: Infinity }}
+          />
+        </motion.g>
+      </motion.g>
+    </motion.g>
+  )
+}
+
 function Lamp({ u, v, lit }) {
   const [x, y] = iso(u, v)
   return (
@@ -552,6 +593,7 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
             <Car key={idx} {...c} color={CAR_COLORS[idx % CAR_COLORS.length]} still={reduced} />
           ))}
           <Pedestrian from={[plotStart(0) + 8, roads[0] - 6]} to={[plotStart(0) + PLOT - 8, roads[0] - 6]} color="#A855F7" duration={9} delay={0} still={reduced} />
+          <Dog from={[plotStart(1) + 10, plotStart(2) + PLOT - 22]} to={[plotStart(1) + PLOT - 18, plotStart(2) + PLOT - 22]} duration={9} delay={0.6} still={reduced} />
           <Pedestrian from={[roads[1] + ROAD + 6, plotStart(1) + 10]} to={[roads[1] + ROAD + 6, plotStart(1) + PLOT - 10]} color="#F97316" duration={8} delay={2} still={reduced} />
           <Pedestrian from={[plotStart(1) + 14, plotStart(2) + PLOT - 12]} to={[plotStart(1) + PLOT - 14, plotStart(2) + PLOT - 12]} color="#0EA5E9" duration={10} delay={1} still={reduced} />
         </g>

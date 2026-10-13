@@ -28,7 +28,7 @@ const CHAPTERS = [
       () => (
         <>
           <Chapter n={1} />
-          <H2>Bem-vindo a Santa Rita</H2>
+          <H2>Bem-vindo à cidade</H2>
           <p>Você acabou de se formar e começou a trabalhar. Tem <b>R$ 7.000</b> de salário e um ano inteiro pela frente.</p>
           <Hand>O objetivo: terminar dezembro com o maior patrimônio da sala.</Hand>
           <H3>O que conta</H3>
@@ -81,7 +81,7 @@ const CHAPTERS = [
           <H3>Esqueceu alguma coisa?</H3>
           <p>O mês fecha mesmo assim. Conta não paga vira <b>conta atrasada</b>, com 2% de multa e 1% de juros. O lazer é cobrado, e o dilema sem resposta é decidido por você não ter decidido.</p>
           <H3>Pontos de habilidade</H3>
-          <p>Cada dilema respondido dá <b>1 ponto</b> para gastar na Universidade.</p>
+          <p>Cada dilema respondido dá <b>1 ponto</b> para gastar na Árvore de habilidades.</p>
         </>
       ),
     ],
@@ -144,7 +144,7 @@ function TermPage({ term, onBack }) {
           ))}
         </dl>
       )}
-      <p className="mt-2 border-t-2 border-dashed border-[#D8E6F2] pt-2 text-sm text-[#6B7A62]"><b>No jogo:</b> {g.ingame}</p>
+      {g.ingame && <p className="mt-2 border-t-2 border-dashed border-[#D8E6F2] pt-2 text-sm text-[#6B7A62]"><b>No jogo:</b> {g.ingame}</p>}
       {onBack && <button type="button" onClick={onBack} className={`${TERM_LINK} justify-self-start text-sm`}>← voltar para a lista</button>}
     </div>
   )
@@ -161,7 +161,7 @@ function TermList({ term, query, setQuery, onPick, inputId }) {
         id={inputId}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Procurar: CDB, inflação…"
+        placeholder="Procurar: CDB, Selic…"
         className="mb-2 w-full rounded-[14px] border-2 border-[#D8E6F2] bg-[#FFFDF5] px-3 py-2 text-[15px] outline-none focus:border-[#2457C5]"
       />
       <div className="grid gap-0.5">
@@ -196,7 +196,7 @@ export default function Notebook() {
   const [origin, setOrigin] = useState({ x: 0, y: 0 })
 
   const openBook = () => {
-    sfx.page()
+    sfx.book()
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const r = openerRef.current?.getBoundingClientRect()
     setOrigin(r ? { x: r.left + r.width / 2 - window.innerWidth / 2, y: r.top + r.height / 2 - window.innerHeight / 2 } : { x: 0, y: 0 })
@@ -207,7 +207,7 @@ export default function Notebook() {
   const landed = () => setPhase((p) => (p === 'flying' ? (wide() ? 'opening' : 'open') : p))
 
   const turn = (fn) => {
-    sfx.page()
+    sfx.leaf()
     fn()
     setFlipKey((k) => k + 1)
   }
@@ -256,7 +256,7 @@ export default function Notebook() {
     if (target === chapter || leaf) return
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     if (!wide() || reduced) return turn(() => setChapter(target))
-    sfx.page()
+    sfx.leaf()
     setLeaf({ dir: target > chapter ? 1 : -1, from: chapter, to: target })
   }
   const leafDone = () => {
@@ -358,7 +358,7 @@ export default function Notebook() {
                 <div className="absolute inset-0 grid place-items-center rounded-r-[18px] bg-[linear-gradient(90deg,#173A8A_0_22px,#2457C5_22px)] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)] [backface-visibility:hidden]">
                   <div className="grid justify-items-center gap-2 rounded-2xl bg-[#FFFDF5] px-10 py-6 text-center">
                     <span className="font-hand text-[44px] font-bold leading-none text-[#2457C5]">Caderninho</span>
-                    <span className="font-toy text-lg font-extrabold text-[#6B7A62]">de Santa Rita</span>
+                    <span className="font-toy text-lg font-extrabold text-[#6B7A62]">do Fecha o Mês</span>
                   </div>
                   <span className="absolute bottom-0 right-10 h-16 w-5 bg-[#EC4899] [clip-path:polygon(0_0,100%_0,100%_100%,50%_78%,0_100%)]" />
                 </div>

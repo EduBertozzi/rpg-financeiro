@@ -1,4 +1,4 @@
-// Logo do banco Maré: duas ondas sobre um quadrado arredondado.
+// Logo do Inabank: duas ondas sobre um quadrado arredondado.
 export default function MareLogo({ size = 40 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true">

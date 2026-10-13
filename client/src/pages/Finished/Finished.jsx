@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import GameLayout from '../../components/GameLayout'
 import TownBackdrop from '../../components/town/TownBackdrop'
 import { TOY_BUTTON, TOY_CARD, TOY_GHOST } from '../../components/town/toy'
-import { getAvatarById } from '../../data/avatarTheme'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
 import { consequenceNote, endOfMonthSeries, linePoints, niceMax, yearGain } from './yearChart'
@@ -19,11 +18,6 @@ const BADGE_LOOK = {
   investor: ['#2457C5', '$'],
   bills_on_time: ['#EC4899', '✉'],
 }
-const PODIUM = [
-  { place: 2, height: 120, color: '#C0C7D0' },
-  { place: 1, height: 160, color: '#F2B53A' },
-  { place: 3, height: 96, color: '#D98B4A' },
-]
 
 export default function Finished() {
   const navigate = useNavigate()
@@ -50,9 +44,9 @@ export default function Finished() {
       <div className="relative mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {summary && <Confetti />}
         <header className="grid justify-items-center gap-1 text-center">
-          <p className="rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold tracking-[0.18em] text-[#6B7A62]">FIM DO ANO EM SANTA RITA</p>
+          <p className="rounded-full bg-white/90 px-3 py-1 text-xs font-extrabold tracking-[0.18em] text-[#6B7A62]">FIM DO ANO</p>
           <h1 className="font-toy text-[clamp(38px,6vw,58px)] font-extrabold leading-none text-[#2457C5] [text-shadow:0_4px_0_#BFD3FF]">Fechou o ano!</h1>
-          <p className="text-[#4A5A42]">12 meses depois, quem cuidou melhor do dinheiro?</p>
+          <p className="text-[#4A5A42]">12 meses depois, veja como você cuidou do seu dinheiro.</p>
         </header>
 
         {error && <p className={`${TOY_CARD} mx-auto mt-8 max-w-md p-6 text-center text-[#9F1D2F]`}>{error}</p>}
@@ -60,21 +54,11 @@ export default function Finished() {
 
         {summary && (
           <>
-            <Podium players={summary.players} />
             <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
               <MyYear summary={summary} />
               <div className="grid content-start gap-5">
                 <Badges badges={summary.badges} />
                 <section className={`${TOY_CARD} grid gap-3 p-5`}>
-                  <h2 className="font-toy text-xl font-extrabold">Ranking da sala</h2>
-                  <ol className="grid">
-                    {summary.players.map((p, i) => (
-                      <li key={p.characterId} className={`flex items-center justify-between gap-3 border-t border-[#EFE6D3] px-2 py-2 text-sm ${p.isSelf ? 'rounded-lg bg-[#E2F4E5] font-extrabold' : ''}`}>
-                        <span>{i + 1}º · {p.name}{p.isSelf ? ' (você)' : ''}</span>
-                        <b className="tabular-nums">{brl0(p.netWorth)}</b>
-                      </li>
-                    ))}
-                  </ol>
                   <div className="flex flex-wrap gap-3">
                     <button type="button" onClick={() => navigate('/bank')} className={`${TOY_BUTTON} w-auto flex-1`}>Ver o extrato do ano</button>
                     <button type="button" onClick={newGame} className={TOY_GHOST}>Nova partida</button>
@@ -90,31 +74,8 @@ export default function Finished() {
   )
 }
 
-function Podium({ players }) {
-  return (
-    <div className="mt-6 flex flex-wrap items-end justify-center gap-4">
-      {PODIUM.map(({ place, height, color }) => {
-        const p = players[place - 1]
-        if (!p) return null
-        return (
-          <div key={place} className="grid w-[150px] justify-items-center gap-1.5">
-            <span className="grid h-20 w-20 place-items-end overflow-hidden rounded-full border-4 border-white bg-[#DDE6F5] shadow-[0_4px_0_#E2D6BE]">
-              <img src={getAvatarById(p.avatarId ?? 1).image} alt="" className="w-[118%] max-w-none" />
-            </span>
-            <b className="font-toy text-lg leading-none">{p.name}{p.isSelf ? ' (você)' : ''}</b>
-            <small className="text-[13px] font-extrabold tabular-nums text-[#6B7A62]">{brl0(p.netWorth)}</small>
-            <div className="grid w-full place-items-center rounded-[18px_18px_8px_8px] font-toy text-4xl font-extrabold text-white shadow-[0_6px_0_rgba(0,0,0,0.15)]" style={{ height, background: color }}>
-              {place}º
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 function MyYear({ summary }) {
-  const { breakdown, rank, players } = summary
+  const { breakdown } = summary
   const months = endOfMonthSeries(summary.months)
   const roomAverage = endOfMonthSeries(summary.roomAverage)
   const X0 = 56, X1 = 600, Y0 = 200, Y1 = 16
@@ -140,7 +101,7 @@ function MyYear({ summary }) {
           <p className="font-toy text-[42px] font-extrabold leading-none tabular-nums text-[#2B8C41]">{brl0(breakdown.netWorth)}</p>
         </div>
         <span className="rounded-full bg-[#E2F4E5] px-3 py-1 text-xs font-extrabold text-[#2B8C41]">
-          {rank}º de {players.length} · {gain >= 0 ? '+' : ''}{brl0(gain)} no ano
+          {gain >= 0 ? '+' : ''}{brl0(gain)} no ano
         </span>
       </div>
 

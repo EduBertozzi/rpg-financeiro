@@ -4,7 +4,7 @@ import { TASKS, monthTasks, worthSeries, worthNow, sparkPoints, pointsLeft } fro
 
 const log = (turn, description) => ({ turn, description })
 
-test('monthTasks: as 5 tarefas, marcando o que já foi feito no mês', () => {
+test('monthTasks: as 5 tarefas, o dilema por último, marcando o que já foi feito no mês', () => {
   const logs = [
     log(4, 'Dilema "Dor de dente" — Opção A: ...'),
     log(4, 'Conta: Mercadinho (-R$ 1000.00)'),
@@ -12,7 +12,7 @@ test('monthTasks: as 5 tarefas, marcando o que já foi feito no mês', () => {
   ]
   const tasks = monthTasks(logs, 4)
   assert.deepEqual(tasks.map((t) => t.id), TASKS.map((t) => t.id))
-  assert.deepEqual(tasks.map((t) => t.done), [true, false, true, false, false])
+  assert.deepEqual(tasks.map((t) => t.done), [false, true, false, false, true])
 })
 
 test('monthTasks: dezembro não tem dilema', () => {
@@ -26,7 +26,7 @@ test('monthTasks: sala esperando (mês 0) não tem tarefa', () => {
 
 test('monthTasks: dilema sem resposta (inércia) também conta como feito', () => {
   const t = monthTasks([log(2, 'Dilema "Chave perdida" — Sem resposta: ...')], 2)
-  assert.equal(t[0].done, true)
+  assert.equal(t.find((x) => x.id === 'dilemma').done, true)
 })
 
 test('worthSeries: retrato da virada vira o mês que fechou, em ordem, Decimal em número', () => {
