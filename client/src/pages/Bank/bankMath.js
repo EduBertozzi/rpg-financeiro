@@ -14,6 +14,22 @@ export function parseAmount(text) {
 export const fixedBoxValue = (investments, type) =>
   investments.filter((f) => f.type === type).reduce((sum, f) => sum + Number(f.amount), 0)
 
+// Carência da LCI (6 meses) e da LCA (8 meses), contada de cada aplicação.
+// Igual ao servidor (server/src/utils/finance.js).
+export const LOCK_MONTHS = { LCI: 6, LCA: 8 }
+export const unlocksAt = (type, investedAt) => Number(investedAt) + (LOCK_MONTHS[type] ?? 0)
+const isFree = (f, turn) => turn >= unlocksAt(f.type, f.investedAt)
+
+// Quanto da caixinha já pode ser resgatado agora.
+export const freeBoxValue = (investments, type, turn) =>
+  investments.filter((f) => f.type === type && isFree(f, turn)).reduce((sum, f) => sum + Number(f.amount), 0)
+
+// Mês em que solta a próxima aplicação presa (null se nada está preso).
+export const nextUnlock = (investments, type, turn) => {
+  const held = investments.filter((f) => f.type === type && !isFree(f, turn)).map((f) => unlocksAt(type, f.investedAt))
+  return held.length ? Math.min(...held) : null
+}
+
 // Quanto a caixinha deve render até o fim do mês.
 export const fixedBoxYield = (investments, type) =>
   investments.filter((f) => f.type === type).reduce((sum, f) => sum + Number(f.amount) * Number(f.monthlyRate), 0)

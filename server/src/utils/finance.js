@@ -52,13 +52,25 @@ function redemptionOf(investment, currentTurn) {
   return { gross: cents(gross), incomeTax, net: cents(gross - incomeTax) }
 }
 
+// Carência: cada aplicação de LCI fica presa 6 meses e de LCA 8 meses, contados
+// do mês em que entrou (é o preço de não pagar IR). Depois, resgate livre.
+const LOCK_MONTHS = { LCI: 6, LCA: 8 }
+const unlocksAt = (type, investedAt) => Number(investedAt) + (LOCK_MONTHS[type] ?? 0)
+const isLocked = (type, investedAt, currentTurn) => currentTurn < unlocksAt(type, investedAt)
+
 // Plano de resgate parcial de uma caixinha: tira o valor dos investimentos do
 // mais antigo para o mais novo, e o IR incide só sobre a parte do rendimento.
 // Retorna { error, available } quando a caixinha não tem o valor pedido.
+// Na LCI e na LCA só entram as aplicações que já passaram da carência; o resto
+// volta em `locked` (quanto está preso) e `nextUnlock` (mês em que solta o próximo).
 function planWithdrawal(investments, type, amount, currentTurn) {
-  const sorted = [...investments].sort((a, b) => a.investedAt - b.investedAt)
+  const all = [...investments].sort((a, b) => a.investedAt - b.investedAt)
+  const sorted = all.filter((inv) => !isLocked(type, inv.investedAt, currentTurn))
+  const held = all.filter((inv) => isLocked(type, inv.investedAt, currentTurn))
+  const locked = cents(held.reduce((sum, inv) => sum + Number(inv.amount), 0))
+  const nextUnlock = held.length ? unlocksAt(type, held[0].investedAt) : null
   const available = sorted.reduce((sum, inv) => sum + Number(inv.amount), 0)
-  if (amount > available + 0.005) return { error: 'insufficient', available: cents(available) }
+  if (amount > available + 0.005) return { error: 'insufficient', available: cents(available), locked, nextUnlock }
 
   let remaining = amount
   let incomeTax = 0
@@ -75,7 +87,7 @@ function planWithdrawal(investments, type, amount, currentTurn) {
   }
 
   incomeTax = cents(incomeTax)
-  return { available: cents(available), steps, incomeTax, gross: cents(amount), net: cents(amount - incomeTax) }
+  return { available: cents(available), locked, nextUnlock, steps, incomeTax, gross: cents(amount), net: cents(amount - incomeTax) }
 }
 
 // Debênture: liquidez de 10 meses, limitada ao fim da partida.
@@ -149,6 +161,9 @@ module.exports = {
   principalOf,
   redemptionOf,
   planWithdrawal,
+  LOCK_MONTHS,
+  unlocksAt,
+  isLocked,
   debentureMaturity,
   debentureReturn,
   overdraftInterest,

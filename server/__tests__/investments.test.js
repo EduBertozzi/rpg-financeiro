@@ -153,6 +153,19 @@ describe('DELETE /api/v1/investments/fixed/:id/:investmentId', () => {
     expect(res.body).toHaveProperty('redeemedValue')
   })
 
+  it('LCA na carência não resgata (fica presa até o 8º mês)', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
+    prismaMock.fixedIncomeInvestment.findUnique.mockResolvedValue({
+      id: 'fi-1', characterId: 'char-1', type: 'LCA', amount: 1000, redeemedAt: null, monthlyRate: 0.01, investedAt: 2,
+    })
+
+    const res = await request(app).delete('/api/v1/investments/fixed/char-1/fi-1').set(authHeader(TOKEN))
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('LCA fica presa até Outubro')
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+  })
+
   it('resgata o valor atual sem contar os juros duas vezes', async () => {
     // amount já inclui os rendimentos mensais aplicados pelo turnEngine
     prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
@@ -279,6 +292,45 @@ describe('POST /api/v1/investments/fixed/:id/withdraw', () => {
     const res = await withdraw({ type: 'POUPANCA', amount: 500 })
 
     expect(res.body).toMatchObject({ incomeTax: 0, net: 500 })
+  })
+
+  it('LCI na carência: 422 dizendo quanto está liberado e quando solta', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 7, maxTurns: 12 } }))
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([
+      { id: 'old', type: 'LCI', amount: 1000, monthlyRate: 0.01, investedAt: 1 },
+      { id: 'new', type: 'LCI', amount: 1000, monthlyRate: 0.01, investedAt: 4 },
+    ])
+
+    const res = await withdraw({ type: 'LCI', amount: 1500 })
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('Só R$ 1000.00 já pode ser resgatado. LCI fica presa 6 meses depois de aplicar: o próximo valor solta em Outubro.')
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+  })
+
+  it('LCA toda presa: não fala em valor liberado', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 3, maxTurns: 12 } }))
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([
+      { id: 'a', type: 'LCA', amount: 1000, monthlyRate: 0.01, investedAt: 3 },
+    ])
+
+    const res = await withdraw({ type: 'LCA', amount: 100 })
+
+    expect(res.status).toBe(422)
+    expect(res.body.error).toBe('LCA fica presa 8 meses depois de aplicar: o próximo valor solta em Novembro.')
+  })
+
+  it('LCI que já passou da carência resgata normal, sem IR', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 7, maxTurns: 12 } }))
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([
+      { id: 'old', type: 'LCI', amount: 1000, monthlyRate: 0.01, investedAt: 1 },
+    ])
+    prismaMock.$transaction.mockResolvedValue([])
+
+    const res = await withdraw({ type: 'LCI', amount: 1000 })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ incomeTax: 0, net: 1000 })
   })
 
   it('retorna 422 quando a caixinha não tem o valor pedido', async () => {

@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   activeDebentures, debentureValue, debentureYield, fixedBoxValue, fixedBoxYield, monthlyBills,
-  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, stocksValue,
+  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, stocksValue, freeBoxValue, nextUnlock, unlocksAt,
 } from './bankMath.js'
 
 const close = (actual, expected, digits = 2) =>
@@ -198,4 +198,31 @@ describe('extrato por mês', () => {
     assert.equal(feb.total, -1600)
   })
   it('sem movimentação: lista vazia', () => assert.deepEqual(statementByMonth(), []))
+})
+
+describe('carência da LCI e da LCA', () => {
+  const inv = [
+    { type: 'LCI', amount: 1000, investedAt: 1 },
+    { type: 'LCI', amount: 500, investedAt: 3 },
+    { type: 'LCA', amount: 2000, investedAt: 1 },
+    { type: 'CDB', amount: 300, investedAt: 5 },
+  ]
+  it('LCI solta 6 meses depois, LCA 8, o resto na hora', () => {
+    assert.equal(unlocksAt('LCI', 3), 9)
+    assert.equal(unlocksAt('LCA', 1), 9)
+    assert.equal(unlocksAt('CDB', 5), 5)
+  })
+  it('só conta o que já passou da carência', () => {
+    assert.equal(freeBoxValue(inv, 'LCI', 6), 0)
+    assert.equal(freeBoxValue(inv, 'LCI', 7), 1000)
+    assert.equal(freeBoxValue(inv, 'LCI', 9), 1500)
+    assert.equal(freeBoxValue(inv, 'LCA', 8), 0)
+    assert.equal(freeBoxValue(inv, 'CDB', 5), 300)
+  })
+  it('mês em que solta a próxima', () => {
+    assert.equal(nextUnlock(inv, 'LCI', 2), 7)
+    assert.equal(nextUnlock(inv, 'LCI', 7), 9)
+    assert.equal(nextUnlock(inv, 'LCI', 9), null)
+    assert.equal(nextUnlock(inv, 'CDB', 5), null)
+  })
 })

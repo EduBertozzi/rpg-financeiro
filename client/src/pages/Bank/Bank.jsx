@@ -9,7 +9,7 @@ import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
   shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
-  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth,
+  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, freeBoxValue, nextUnlock, LOCK_MONTHS, unlocksAt,
 } from './bankMath'
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -443,6 +443,7 @@ export default function Bank() {
                   activeTypes={activeTypes}
                   cash={cash}
                   value={boxValue(sheet.type)}
+                  fixed={fixed}
                   turn={turn}
                   activeDebentures={activeDebentures}
                   companyName={company?.name}
@@ -474,10 +475,14 @@ function BoxFacts({ box }) {
   )
 }
 
-function MoveSheet({ sheet, setSheet, activeTypes, cash, value, turn, activeDebentures, companyName, busy, onConfirm }) {
+function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn, activeDebentures, companyName, busy, onConfirm }) {
   const box = boxByType(sheet.type)
   const isDebenture = box.type === 'DEBENTURE'
-  const max = sheet.mode === 'guardar' ? cash : value
+  const lockMonths = LOCK_MONTHS[box.type]
+  const free = lockMonths ? freeBoxValue(fixed, box.type, turn) : value
+  const max = sheet.mode === 'guardar' ? cash : free
+  const unlock = lockMonths ? nextUnlock(fixed, box.type, turn) : null
+  const freeFrom = lockMonths ? unlocksAt(box.type, turn) : null
   const withdrawBlocked = sheet.mode === 'resgatar' && isDebenture
   const earlyTesouro = sheet.mode === 'resgatar' && box.earlyTaxMonths && turn > 0
   const title = `${sheet.mode === 'guardar' ? 'Guardar em' : 'Resgatar de'} ${isDebenture && companyName ? `Debênture ${companyName}` : box.name}`
@@ -548,7 +553,18 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, turn, activeDebe
 
       <p className="text-sm text-[#627673]">
         {box.rate} · {sheet.mode === 'guardar' ? `${brl(cash)} disponível na conta` : `${brl(value)} na caixinha`}
+        {sheet.mode === 'resgatar' && lockMonths && value > 0 && ` · ${brl(free)} liberado`}
       </p>
+      {lockMonths && sheet.mode === 'guardar' && (
+        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
+          Cada valor guardado aqui fica preso {lockMonths} meses: o que entrar agora só sai a partir de {MONTHS[freeFrom - 1] ?? 'depois do fim do ano (conta no patrimônio final)'}.
+        </p>
+      )}
+      {lockMonths && sheet.mode === 'resgatar' && unlock && (
+        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
+          {brl(value - free)} ainda está na carência de {lockMonths} meses. O próximo valor solta em {MONTHS[unlock - 1] ?? 'depois do fim do ano'}.
+        </p>
+      )}
       <BoxFacts box={box} />
       {sheet.mode === 'guardar' && isDebenture && (
         <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">O dinheiro guardado aqui fica preso por 10 meses (ou até o fim da partida) e pode dar calote.</p>

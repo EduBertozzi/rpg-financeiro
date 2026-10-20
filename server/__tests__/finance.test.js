@@ -1,7 +1,7 @@
 // __tests__/finance.test.js — matemática financeira pura (sem banco)
 const {
   ANNUAL_RATES, SELIC_ANNUAL, cents, monthlyFromAnnual, getMonthlyRate, incomeTaxRate,
-  monthlyReturn, principalOf, redemptionOf, planWithdrawal, debentureMaturity,
+  monthlyReturn, principalOf, redemptionOf, planWithdrawal, debentureMaturity, LOCK_MONTHS, unlocksAt, isLocked,
   debentureReturn, averagePrice, nextStockPrice,
   OVERDRAFT_MONTHLY_RATE, SALARY, overdraftInterest, closeMonth, balanceSheet,
 } = require('../src/utils/finance')
@@ -140,6 +140,44 @@ describe('redemptionOf', () => {
 })
 
 // ─── resgate parcial de caixinha ──────────────────────────────────────────────
+
+describe('carência da LCI e da LCA', () => {
+  const lot = (id, type, amount, investedAt) => ({ id, type, amount, monthlyRate: 0.01, investedAt })
+
+  it('LCI 6 meses, LCA 8; os outros sem carência', () => {
+    expect(LOCK_MONTHS).toEqual({ LCI: 6, LCA: 8 })
+    expect(unlocksAt('LCI', 3)).toBe(9)
+    expect(unlocksAt('LCA', 3)).toBe(11)
+    expect(isLocked('CDB', 3, 3)).toBe(false)
+    expect(isLocked('LCI', 3, 8)).toBe(true)
+    expect(isLocked('LCI', 3, 9)).toBe(false)
+    expect(isLocked('LCA', 1, 8)).toBe(true)
+    expect(isLocked('LCA', 1, 9)).toBe(false)
+  })
+
+  it('recusa resgatar LCI presa e diz quando solta', () => {
+    const plan = planWithdrawal([lot('a', 'LCI', 1000, 3)], 'LCI', 100, 5)
+    expect(plan).toMatchObject({ error: 'insufficient', available: 0, locked: 1000, nextUnlock: 9 })
+  })
+
+  it('cada aplicação tem a sua carência: só sai o que já soltou', () => {
+    const lots = [lot('old', 'LCI', 1000, 1), lot('new', 'LCI', 1000, 4)]
+    const plan = planWithdrawal(lots, 'LCI', 1000, 7)
+    expect(plan.error).toBeUndefined()
+    expect(plan.steps).toEqual([expect.objectContaining({ id: 'old', closes: true })])
+    expect(plan).toMatchObject({ locked: 1000, nextUnlock: 10, incomeTax: 0, net: 1000 })
+    expect(planWithdrawal(lots, 'LCI', 1500, 7)).toMatchObject({ error: 'insufficient', available: 1000, locked: 1000 })
+  })
+
+  it('LCA solta no 8º mês, isenta de IR', () => {
+    const plan = planWithdrawal([lot('a', 'LCA', 1100, 2)], 'LCA', 1100, 10)
+    expect(plan).toMatchObject({ locked: 0, nextUnlock: null, incomeTax: 0, net: 1100 })
+  })
+
+  it('CDB continua com resgate na hora', () => {
+    expect(planWithdrawal([lot('a', 'CDB', 1000, 5)], 'CDB', 500, 5).error).toBeUndefined()
+  })
+})
 
 describe('planWithdrawal', () => {
   const rate = getMonthlyRate('CDB')

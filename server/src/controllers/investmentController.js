@@ -1,7 +1,7 @@
 const prisma = require('../lib/prisma')
 
 const {
-  cents, getMonthlyRate, redemptionOf, planWithdrawal, debentureMaturity, averagePrice,
+  cents, getMonthlyRate, redemptionOf, planWithdrawal, isLocked, unlocksAt, debentureMaturity, averagePrice,
 } = require('../utils/finance')
 
 // Nome de cada tipo como caixinha no banco (tabela oficial de investimentos).
@@ -13,6 +13,11 @@ const TYPE_LABELS = {
   LCI: 'LCI',
   LCA: 'LCA',
 }
+
+const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
+// o mês 13 é o fim da partida (depois de dezembro)
+const monthName = (turn) => MONTHS[turn - 1] ?? 'o fim do ano'
+const LOCK_LABEL = { LCI: '6 meses', LCA: '8 meses' }
 
 // ── RENDA FIXA ────────────────────────────────────────────────────────────────
 
@@ -91,6 +96,8 @@ exports.redeemFixed = async (req, res) => {
       return res.status(404).json({ error: 'Investimento não encontrado' })
     if (investment.redeemedAt !== null)
       return res.status(400).json({ error: 'Investimento já resgatado' })
+    if (isLocked(investment.type, investment.investedAt, character.room.currentTurn))
+      return res.status(400).json({ error: `${TYPE_LABELS[investment.type]} fica presa até ${monthName(unlocksAt(investment.type, investment.investedAt))}` })
 
     // `amount` já inclui os rendimentos mensais aplicados pelo turnEngine
     const { gross, incomeTax, net: rounded } = redemptionOf(investment, character.room.currentTurn)
@@ -135,6 +142,10 @@ exports.withdrawFixed = async (req, res) => {
     })
     const plan = planWithdrawal(investments, type, amount, turn)
     if (plan.error) {
+      if (plan.locked > 0) {
+        const free = plan.available > 0 ? `Só R$ ${plan.available.toFixed(2)} já pode ser resgatado. ` : ''
+        return res.status(422).json({ error: `${free}${TYPE_LABELS[type]} fica presa ${LOCK_LABEL[type]} depois de aplicar: o próximo valor solta em ${monthName(plan.nextUnlock)}.` })
+      }
       return res.status(422).json({ error: `A caixinha tem R$ ${plan.available.toFixed(2)} para resgatar` })
     }
 
