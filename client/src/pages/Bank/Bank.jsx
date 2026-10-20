@@ -9,7 +9,7 @@ import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
   shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
-  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, freeBoxValue, nextUnlock, LOCK_MONTHS, unlocksAt,
+  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, freeBoxValue, lockedLots, nextUnlock, LOCK_MONTHS, unlocksAt,
 } from './bankMath'
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -237,12 +237,12 @@ export default function Bank() {
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-3">
                   {[
-                    { label: 'Guardar', icon: Icon.in, onClick: () => openMove('POUPANCA', 'guardar') },
-                    { label: 'Resgatar', icon: Icon.out, onClick: () => openMove('POUPANCA', 'resgatar') },
+                    { label: 'Guardar', icon: Icon.in, hover: 'group-hover:bg-[#0B8A50] group-hover:text-white', onClick: () => openMove('POUPANCA', 'guardar') },
+                    { label: 'Resgatar', icon: Icon.out, hover: 'group-hover:bg-[#C4283D] group-hover:text-white', onClick: () => openMove('POUPANCA', 'resgatar') },
                     { label: 'Extrato', icon: Icon.list, onClick: () => document.getElementById('extrato')?.scrollIntoView({ behavior: 'smooth' }) },
                   ].map((a) => (
                     <button key={a.label} type="button" onClick={a.onClick} className="group grid w-[76px] justify-items-center gap-2 text-xs font-bold cursor-pointer">
-                      <span className="grid h-14 w-14 place-items-center rounded-full bg-[#E2F6F3] text-[#063F3A] transition-colors group-hover:bg-[#CBEFE9]">
+                      <span className={`grid h-14 w-14 place-items-center rounded-full bg-[#E2F6F3] text-[#063F3A] transition-colors ${a.hover ?? 'group-hover:bg-[#CBEFE9]'}`}>
                         <Svg d={a.icon} className="h-6 w-6" />
                       </span>
                       <span className="text-center leading-tight">{a.label}</span>
@@ -452,6 +452,12 @@ function BoxFacts({ box }) {
   )
 }
 
+// Guardar é verde e resgatar é vermelho (aba, hover e botão de confirmar).
+const MODE_LOOK = {
+  guardar: { on: 'bg-[#0B8A50] text-white', off: 'text-[#0B8A50] hover:bg-[#DDF3E6]', confirm: 'bg-[#0B8A50] hover:bg-[#08703F]' },
+  resgatar: { on: 'bg-[#C4283D] text-white', off: 'text-[#C4283D] hover:bg-[#FBE3E6]', confirm: 'bg-[#C4283D] hover:bg-[#A11F31]' },
+}
+
 function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn, activeDebentures, companyName, busy, onConfirm }) {
   const box = boxByType(sheet.type)
   const isDebenture = box.type === 'DEBENTURE'
@@ -460,7 +466,10 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
   const max = sheet.mode === 'guardar' ? cash : free
   const unlock = lockMonths ? nextUnlock(fixed, box.type, turn) : null
   const freeFrom = lockMonths ? unlocksAt(box.type, turn) : null
-  const withdrawBlocked = sheet.mode === 'resgatar' && isDebenture
+  // LCI e LCA sem nada fora da carência ficam travadas, igual à debênture
+  const lockBlocked = sheet.mode === 'resgatar' && lockMonths && free <= 0.005
+  const withdrawBlocked = (sheet.mode === 'resgatar' && isDebenture) || lockBlocked
+  const held = lockMonths ? lockedLots(fixed, box.type, turn) : []
   const earlyTesouro = sheet.mode === 'resgatar' && box.earlyTaxMonths && turn > 0
   const title = `${sheet.mode === 'guardar' ? 'Guardar em' : 'Resgatar de'} ${isDebenture && companyName ? `Debênture ${companyName}` : box.name}`
 
@@ -487,14 +496,23 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
             type="button"
             aria-pressed={m === sheet.mode}
             onClick={() => setSheet({ ...sheet, mode: m, error: '' })}
-            className={`flex-1 rounded-[9px] py-2 text-sm font-extrabold capitalize cursor-pointer ${m === sheet.mode ? 'bg-[#12B5A6] text-white' : ''}`}
+            className={`flex-1 rounded-[9px] py-2 text-sm font-extrabold capitalize transition-colors cursor-pointer ${MODE_LOOK[m][m === sheet.mode ? 'on' : 'off']}`}
           >
             {m}
           </button>
         ))}
       </div>
 
-      {withdrawBlocked ? (
+      {lockBlocked ? (
+        <p className="flex gap-2 rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
+          <Svg d={Icon.lock} className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {held.length === 0
+              ? `Nada guardado na ${box.name} ainda.`
+              : <>A {box.name} fica presa {lockMonths} meses depois de cada aplicação. Solta {held.map((h) => `${brl(h.amount)} em ${MONTHS[h.month - 1] ?? 'depois do fim do ano'}`).join(', ')}.</>}
+          </span>
+        </p>
+      ) : withdrawBlocked ? (
         <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
           A debênture tem liquidez de 10 meses: o dinheiro volta sozinho para a conta no vencimento
           {activeDebentures.length > 0 && ` (${activeDebentures.map((d) => MONTHS[d.maturesAt - 1] ?? `mês ${d.maturesAt}`).join(', ')})`}.
@@ -537,7 +555,7 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
           Cada valor guardado aqui fica preso {lockMonths} meses: o que entrar agora só sai a partir de {MONTHS[freeFrom - 1] ?? 'depois do fim do ano (conta no patrimônio final)'}.
         </p>
       )}
-      {lockMonths && sheet.mode === 'resgatar' && unlock && (
+      {lockMonths && sheet.mode === 'resgatar' && unlock && !lockBlocked && (
         <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
           {brl(value - free)} ainda está na carência de {lockMonths} meses. O próximo valor solta em {MONTHS[unlock - 1] ?? 'depois do fim do ano'}.
         </p>
@@ -551,7 +569,7 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
       )}
       {sheet.error && <p className="text-sm text-[#C4283D]">{sheet.error}</p>}
       {!withdrawBlocked && (
-        <button type="button" disabled={busy} onClick={onConfirm} className="rounded-[14px] bg-[#12B5A6] py-3.5 font-extrabold text-white transition-colors hover:bg-[#0A7F75] disabled:opacity-60 cursor-pointer">
+        <button type="button" disabled={busy} onClick={onConfirm} className={`rounded-[14px] py-3.5 font-extrabold text-white transition-colors disabled:opacity-60 cursor-pointer ${MODE_LOOK[sheet.mode].confirm}`}>
           {busy ? 'Aguarde…' : 'Confirmar'}
         </button>
       )}

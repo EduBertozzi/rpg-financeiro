@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   activeDebentures, debentureValue, debentureYield, fixedBoxValue, fixedBoxYield, monthlyBills,
-  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, stocksValue, freeBoxValue, nextUnlock, unlocksAt,
+  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, stocksValue, freeBoxValue, lockedLots, nextUnlock, unlocksAt,
 } from './bankMath.js'
 
 const close = (actual, expected, digits = 2) =>
@@ -219,6 +219,13 @@ describe('carência da LCI e da LCA', () => {
     assert.equal(freeBoxValue(inv, 'LCA', 8), 0)
     assert.equal(freeBoxValue(inv, 'CDB', 5), 300)
   })
+  it('o que está preso, somado por mês em que solta', () => {
+    const lots = [...inv, { type: 'LCI', amount: 250.105, investedAt: 3 }]
+    assert.deepEqual(lockedLots(lots, 'LCI', 2), [{ month: 7, amount: 1000 }, { month: 9, amount: 750.11 }])
+    assert.deepEqual(lockedLots(lots, 'LCI', 9), [])
+    assert.deepEqual(lockedLots(lots, 'CDB', 1), [])
+  })
+
   it('mês em que solta a próxima', () => {
     assert.equal(nextUnlock(inv, 'LCI', 2), 7)
     assert.equal(nextUnlock(inv, 'LCI', 7), 9)
