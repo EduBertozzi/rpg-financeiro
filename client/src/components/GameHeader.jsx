@@ -3,7 +3,7 @@ import useGameStore from '../store/gameStore'
 import { Avatar } from './Avatars'
 import { TASK_EVENT, dilemmaAnswered, monthTasks, worthSeries, worthNow, sparkPoints, pointsLeft } from './sidebarData'
 import { useRolling, useMonthClock } from './hudHooks'
-import { clockText, formatClock, isUrgent } from './monthClock'
+import ClockBadge from './ClockBadge'
 import { sfx, setSoundOn, useSoundOn } from '../services/sound'
 
 const brl = (value = 0) => `R$ ${Math.round(Number(value)).toLocaleString('pt-BR')}`
@@ -293,21 +293,6 @@ function MonthCard({ turn, tasks, clock }) {
   )
 }
 
-function ClockChip({ clock, onDilemma }) {
-  const text = clockText(clock)
-  if (!text) return null
-  const urgent = isUrgent(text.time)
-  // no dilema, o relógio leva de volta para a carta (no mapa)
-  const Tag = clock?.phase === 'dilemma' ? 'button' : 'span'
-  return (
-    <Tag type={Tag === 'button' ? 'button' : undefined} onClick={Tag === 'button' ? onDilemma : undefined} className={`mt-2 inline-flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-2.5 text-[12px] font-extrabold ${urgent ? 'animate-pulse bg-[#C4283D]' : 'bg-white/20'} ${Tag === 'button' ? 'cursor-pointer hover:bg-white/30' : ''}`} role="timer" aria-live="off">
-      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M9 2h6" /></svg>
-      {text.time != null && <b className="font-toy text-[15px] tabular-nums">{formatClock(text.time)}</b>}
-      {text.label}
-    </Tag>
-  )
-}
-
 export default function GameHeader() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -356,141 +341,139 @@ export default function GameHeader() {
   }
 
   return (
-    <aside
-      onMouseEnter={() => setSidebarExpanded(true)}
-      onMouseLeave={() => setSidebarExpanded(false)}
-      className={[
-        'fixed left-0 top-0 z-40 h-screen bg-[#FFFDF7] text-[#24331F]',
-        'shadow-[6px_0_0_#E2D6BE,12px_0_40px_rgba(36,51,31,0.18)] transition-[width] duration-300 ease-out',
-        sidebarExpanded ? 'w-80' : 'w-20',
-      ].join(' ')}
-    >
-      <div className="relative flex h-full flex-col overflow-hidden">
-        {sidebarExpanded ? (
-          <div className="relative shrink-0 bg-[linear-gradient(135deg,var(--theme-primary),color-mix(in_srgb,var(--theme-primary)_65%,var(--theme-secondary)))] px-4 pb-6 pt-4 text-white">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <Avatar id={character.avatarId} size={58} selected />
-                <div className="min-w-0">
-                  <h2 className="truncate font-toy text-[22px] font-extrabold leading-tight">{character.name}</h2>
-                  <p className="truncate text-xs font-medium text-white/85">{character.course}</p>
+    <>
+      {/* o relógio do mês fica fixo no canto de cima, em todas as telas */}
+      {user?.role !== 'admin' && <ClockBadge clock={clock} onDilemma={() => openTask('dilemma')} />}
+      <aside
+        onMouseEnter={() => setSidebarExpanded(true)}
+        onMouseLeave={() => setSidebarExpanded(false)}
+        className={[
+          'fixed left-0 top-0 z-40 h-screen bg-[#FFFDF7] text-[#24331F]',
+          'shadow-[6px_0_0_#E2D6BE,12px_0_40px_rgba(36,51,31,0.18)] transition-[width] duration-300 ease-out',
+          sidebarExpanded ? 'w-80' : 'w-20',
+        ].join(' ')}
+      >
+        <div className="relative flex h-full flex-col overflow-hidden">
+          {sidebarExpanded ? (
+            <div className="relative shrink-0 bg-[linear-gradient(135deg,var(--theme-primary),color-mix(in_srgb,var(--theme-primary)_65%,var(--theme-secondary)))] px-4 pb-6 pt-4 text-white">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Avatar id={character.avatarId} size={58} selected />
+                  <div className="min-w-0">
+                    <h2 className="truncate font-toy text-[22px] font-extrabold leading-tight">{character.name}</h2>
+                    <p className="truncate text-xs font-medium text-white/85">{character.course}</p>
+                  </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setSidebarExpanded(false)}
+                  aria-label="Recolher menu"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white/20 text-white transition-colors hover:bg-white/30 cursor-pointer"
+                >
+                  <Icon name="close" className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setSidebarExpanded(false)}
-                aria-label="Recolher menu"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white/20 text-white transition-colors hover:bg-white/30 cursor-pointer"
-              >
-                <Icon name="close" className="h-5 w-5" />
+              <span className="absolute inset-x-0 -bottom-px h-3.5 rounded-t-[14px] bg-[#FFFDF7]" />
+            </div>
+          ) : (
+            <div className="shrink-0 border-b-2 border-dashed border-[#EFE6D3] p-4">
+              <button type="button" onClick={() => setSidebarExpanded(true)} title="Expandir" className="relative mx-auto flex justify-center cursor-pointer">
+                <Avatar id={character.avatarId} size={48} selected />
               </button>
             </div>
-            <ClockChip clock={clock} onDilemma={() => openTask('dilemma')} />
-            <span className="absolute inset-x-0 -bottom-px h-3.5 rounded-t-[14px] bg-[#FFFDF7]" />
-          </div>
-        ) : (
-          <div className="shrink-0 border-b-2 border-dashed border-[#EFE6D3] p-4">
-            <button type="button" onClick={() => setSidebarExpanded(true)} title="Expandir" className="relative mx-auto flex justify-center cursor-pointer">
-              <Avatar id={character.avatarId} size={48} selected />
-            </button>
-          </div>
-        )}
+          )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="space-y-4 pb-3">
-            {sidebarExpanded ? (
-              <>
-                <WorthCard character={character} />
-                {turn > 0 && <MonthCard turn={turn} tasks={tasks} clock={clock} />}
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-3">
-                <div data-tour="saldo" className="flex flex-col items-center gap-0.5" style={{ color: negative ? '#C4283D' : '#2B8C41' }}>
-                  <Icon name="wallet" className="h-4 w-4" />
-                  <CompactCash value={character.cash} />
-                </div>
-                {turn > 0 && (
-                  <div data-tour="mes" className="flex flex-col items-center gap-1" title={`${MONTHS[turn - 1]}: ${doneCount} de ${tasks.length} tarefas`}>
-                    <TaskRing done={doneCount} total={tasks.length} />
-                    <span className="font-toy text-[12px] font-extrabold leading-none text-[#6B7A62]">{turn}/12</span>
-                    {clockText(clock)?.time != null && (
-                      <span className={`mt-0.5 rounded-full px-1.5 font-toy text-[12px] font-extrabold tabular-nums ${isUrgent(clockText(clock).time) ? 'animate-pulse bg-[#C4283D] text-white' : 'bg-[#F1EBDD] text-[#24331F]'}`} title={clockText(clock).label}>
-                        {formatClock(clockText(clock).time)}
-                      </span>
-                    )}
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="space-y-4 pb-3">
+              {sidebarExpanded ? (
+                <>
+                  <WorthCard character={character} />
+                  {turn > 0 && <MonthCard turn={turn} tasks={tasks} clock={clock} />}
+                </>
+              ) : (
+                <div className="flex flex-col items-center gap-3">
+                  <div data-tour="saldo" className="flex flex-col items-center gap-0.5" style={{ color: negative ? '#C4283D' : '#2B8C41' }}>
+                    <Icon name="wallet" className="h-4 w-4" />
+                    <CompactCash value={character.cash} />
                   </div>
-                )}
-              </div>
-            )}
+                  {turn > 0 && (
+                    <div data-tour="mes" className="flex flex-col items-center gap-1" title={`${MONTHS[turn - 1]}: ${doneCount} de ${tasks.length} tarefas`}>
+                      <TaskRing done={doneCount} total={tasks.length} />
+                      <span className="font-toy text-[12px] font-extrabold leading-none text-[#6B7A62]">{turn}/12</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-            <nav aria-label="Lugares" data-tour="lugares">
-              {sidebarExpanded && <p className={`mb-2 ${LABEL}`}>Lugares</p>}
-              <div className={sidebarExpanded ? 'space-y-1.5' : 'flex flex-col items-center gap-3'}>
-                {navItems.map((item) => (
-                  <div key={item.path} data-tour={item.tour}>
+              <nav aria-label="Lugares" data-tour="lugares">
+                {sidebarExpanded && <p className={`mb-2 ${LABEL}`}>Lugares</p>}
+                <div className={sidebarExpanded ? 'space-y-1.5' : 'flex flex-col items-center gap-3'}>
+                  {navItems.map((item) => (
+                    <div key={item.path} data-tour={item.tour}>
+                      <MenuItem
+                        icon={item.icon}
+                        label={item.label}
+                        description={item.description}
+                        badge={item.badge}
+                        active={path === item.path}
+                        expanded={sidebarExpanded}
+                        onClick={() => go(item.path)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </nav>
+
+              {user?.role === 'admin' && (
+                <div>
+                  {sidebarExpanded && <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#C98A12]">Admin</p>}
+                  <div className={sidebarExpanded ? '' : 'flex justify-center'}>
                     <MenuItem
-                      icon={item.icon}
-                      label={item.label}
-                      description={item.description}
-                      badge={item.badge}
-                      active={path === item.path}
+                      icon="admin"
+                      label="Painel Admin"
+                      description="Gerenciar salas e jogo"
+                      active={path === '/admin'}
                       expanded={sidebarExpanded}
-                      onClick={() => go(item.path)}
+                      onClick={() => go('/admin')}
                     />
                   </div>
-                ))}
-              </div>
-            </nav>
-
-            {user?.role === 'admin' && (
-              <div>
-                {sidebarExpanded && <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#C98A12]">Admin</p>}
-                <div className={sidebarExpanded ? '' : 'flex justify-center'}>
-                  <MenuItem
-                    icon="admin"
-                    label="Painel Admin"
-                    description="Gerenciar salas e jogo"
-                    active={path === '/admin'}
-                    expanded={sidebarExpanded}
-                    onClick={() => go('/admin')}
-                  />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
+          </div>
+
+          <div className={`flex shrink-0 gap-2 border-t-2 border-dashed border-[#EFE6D3] p-4 ${sidebarExpanded ? '' : 'flex-col items-center'}`}>
+            <button
+              type="button"
+              onClick={toggleSound}
+              aria-pressed={soundOn}
+              title={soundOn ? 'Desligar o som' : 'Ligar o som'}
+              aria-label={soundOn ? 'Desligar o som' : 'Ligar o som'}
+              className={[
+                'flex items-center justify-center gap-2 rounded-2xl border-2 border-[#EFE6D3] bg-white font-toy font-extrabold text-[#6B7A62] transition-transform hover:-translate-y-0.5 cursor-pointer',
+                sidebarExpanded ? 'flex-1 px-3 py-2 text-[15px]' : 'h-12 w-12',
+              ].join(' ')}
+            >
+              <Icon name={soundOn ? 'soundOn' : 'soundOff'} className="h-5 w-5" />
+              {sidebarExpanded && (soundOn ? 'Som ligado' : 'Som desligado')}
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Sair"
+              aria-label="Sair"
+              className={[
+                'flex items-center justify-center gap-2 rounded-2xl bg-[#FDE2E5] font-toy font-extrabold text-[#9F1D2F] shadow-[0_4px_0_#F5B8C0] transition-transform hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer',
+                sidebarExpanded ? 'px-4 py-2 text-[15px]' : 'h-12 w-12',
+              ].join(' ')}
+            >
+              <Icon name="logout" className="h-5 w-5" />
+              {sidebarExpanded && 'Sair'}
+            </button>
           </div>
         </div>
-
-        <div className={`flex shrink-0 gap-2 border-t-2 border-dashed border-[#EFE6D3] p-4 ${sidebarExpanded ? '' : 'flex-col items-center'}`}>
-          <button
-            type="button"
-            onClick={toggleSound}
-            aria-pressed={soundOn}
-            title={soundOn ? 'Desligar o som' : 'Ligar o som'}
-            aria-label={soundOn ? 'Desligar o som' : 'Ligar o som'}
-            className={[
-              'flex items-center justify-center gap-2 rounded-2xl border-2 border-[#EFE6D3] bg-white font-toy font-extrabold text-[#6B7A62] transition-transform hover:-translate-y-0.5 cursor-pointer',
-              sidebarExpanded ? 'flex-1 px-3 py-2 text-[15px]' : 'h-12 w-12',
-            ].join(' ')}
-          >
-            <Icon name={soundOn ? 'soundOn' : 'soundOff'} className="h-5 w-5" />
-            {sidebarExpanded && (soundOn ? 'Som ligado' : 'Som desligado')}
-          </button>
-          <button
-            type="button"
-            onClick={handleLogout}
-            title="Sair"
-            aria-label="Sair"
-            className={[
-              'flex items-center justify-center gap-2 rounded-2xl bg-[#FDE2E5] font-toy font-extrabold text-[#9F1D2F] shadow-[0_4px_0_#F5B8C0] transition-transform hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer',
-              sidebarExpanded ? 'px-4 py-2 text-[15px]' : 'h-12 w-12',
-            ].join(' ')}
-          >
-            <Icon name="logout" className="h-5 w-5" />
-            {sidebarExpanded && 'Sair'}
-          </button>
-        </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   )
 }
 

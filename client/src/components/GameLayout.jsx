@@ -6,6 +6,9 @@ import Celebrations from './Celebrations'
 // `light`: fundo claro de manhã, para telas claras como o Inabank.
 export default function GameLayout({ children, light = false }) {
   const sidebarExpanded = useGameStore((s) => s.sidebarExpanded)
+  // o relógio do mês fica fixo no canto de cima: telas que rolam (o banco)
+  // descem um pouco para ele não cobrir os botões do topo
+  const clockOn = useGameStore((s) => s.room?.status === 'active' && s.user?.role !== 'admin')
 
   return (
     <div className={`relative min-h-screen overflow-hidden ${light ? 'bg-gradient-to-b from-[#DCEFF7] to-[#EEF5E9] text-[#24331F]' : 'bg-[var(--theme-bg)] text-white'}`}>
@@ -23,7 +26,7 @@ export default function GameLayout({ children, light = false }) {
 
       <GameHeader />
 
-      <main className={`relative z-10 transition-[padding] duration-300 ${sidebarExpanded ? 'pl-80' : 'pl-20'}`}>
+      <main className={`relative z-10 transition-[padding] duration-300 ${sidebarExpanded ? 'pl-80' : 'pl-20'} ${light && clockOn ? 'pt-12 sm:pt-10' : ''}`}>
         {children}
       </main>
 

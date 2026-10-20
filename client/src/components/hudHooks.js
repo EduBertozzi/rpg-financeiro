@@ -79,11 +79,10 @@ export function useRolling(value, ms = 1100) {
   useEffect(() => {
     const start = from.current
     if (start === target) return
-    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const t0 = performance.now()
     let raf
     const step = (now) => {
-      const k = reduced ? 1 : Math.min(1, (now - t0) / ms)
+      const k = Math.min(1, (now - t0) / ms)
       const v = start + (target - start) * (1 - Math.pow(1 - k, 3))
       from.current = v
       setShown(v)

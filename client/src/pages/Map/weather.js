@@ -11,7 +11,7 @@ const SPRING = { main: ['#3CB55A', '#7BDB7F'], muted: ['#7DB97F', '#9BCD98'] }
 
 export const WEATHER = [
   { month: 1, season: 'Verão', label: 'Chuva de verão', icon: '🌧', fx: 'rain', tint: 'rgba(60,90,140,0.16)', trees: GREEN },
-  { month: 2, season: 'Verão', label: 'Tempestade', icon: '⛈', fx: 'storm', tint: 'rgba(30,40,80,0.3)', trees: GREEN },
+  { month: 2, season: 'Verão', label: 'Chuva forte', icon: '🌧', fx: 'storm', tint: 'rgba(30,40,80,0.3)', trees: GREEN },
   { month: 3, season: 'Verão', label: 'Sol e confete', icon: '🎉', fx: 'confetti', tint: null, trees: GREEN },
   { month: 4, season: 'Outono', label: 'Folhas caindo', icon: '🍂', fx: 'leaves', tint: 'rgba(240,150,60,0.1)', trees: AUTUMN },
   { month: 5, season: 'Outono', label: 'Céu limpo e vento', icon: '🍁', fx: 'leaves', tint: 'rgba(230,130,50,0.12)', trees: LATE_AUTUMN },

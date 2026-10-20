@@ -262,7 +262,6 @@ function Badges({ badges }) {
 function Confetti() {
   const ref = useRef(null)
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
     const canvas = ref.current
     const ctx = canvas.getContext('2d')
     const r = canvas.getBoundingClientRect()

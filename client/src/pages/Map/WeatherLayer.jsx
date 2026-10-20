@@ -7,14 +7,12 @@ const rnd = (a, b) => a + Math.random() * (b - a)
 // Chuva, neve, folhas, pétalas, confete e neblina por cima da cidade, em canvas.
 export default function WeatherLayer({ fx }) {
   const canvasRef = useRef(null)
-  const flashRef = useRef(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !fx) return undefined
     const ctx = canvas.getContext('2d')
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    let W = 0, H = 0, parts = [], frame = 0, nextBolt = performance.now() + 3000
+    let W = 0, H = 0, parts = [], frame = 0
 
     const resize = () => {
       const r = canvas.getBoundingClientRect()
@@ -62,10 +60,6 @@ export default function WeatherLayer({ fx }) {
         if (p.y > H + 20) { p.y = -20; p.x = rnd(-40, W) }
         if (p.x > W + 40) p.x = -30
       }
-      if (fx === 'storm' && now > nextBolt && flashRef.current) {
-        nextBolt = now + rnd(3000, 7000)
-        flashRef.current.animate([{ opacity: 0 }, { opacity: 0.7 }, { opacity: 0.1 }, { opacity: 0.5 }, { opacity: 0 }], { duration: 600 })
-      }
     }
 
     const loop = (now) => {
@@ -74,16 +68,10 @@ export default function WeatherLayer({ fx }) {
     }
     resize()
     window.addEventListener('resize', resize)
-    if (reduce) draw(performance.now())
-    else frame = requestAnimationFrame(loop)
+    frame = requestAnimationFrame(loop)
     return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', resize) }
   }, [fx])
 
   if (!fx) return null
-  return (
-    <>
-      <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
-      <div ref={flashRef} aria-hidden="true" className="pointer-events-none absolute inset-0 bg-white opacity-0" />
-    </>
-  )
+  return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
 }
