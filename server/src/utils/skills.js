@@ -10,7 +10,7 @@ const REDUCED_OVERDRAFT_RATE = 0.04 // cheque especial com Planejamento e Produt
 // em 03/10/2026 com os robôs de teste para os três caminhos valerem o mesmo.
 const PERKS = {
   technical: {
-    1: { name: 'Fundamentos e Lógica', perk: '+R$ 200 por mês (freela)', income: { label: 'Freela', amount: 200 } },
+    1: { name: 'Fundamentos e Lógica', perk: '+R$ 200 por mês (trabalhos extras nos finais de semana)', income: { label: 'Freela', amount: 200 } },
     2: { name: 'Resolução de Problemas', perk: 'Imprevistos de casa custam metade', repairDiscount: 0.5 },
     3: { name: 'Pensamento Analítico Avançado', perk: 'Salário +R$ 400', salaryBonus: 400 },
     4: { name: 'Inovação e Otimização', perk: '+R$ 400 por mês (projeto paralelo)', income: { label: 'Projeto paralelo', amount: 400 } },

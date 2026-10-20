@@ -11,29 +11,31 @@ const { cents } = require('../utils/finance')
 const { perksOf, billAmount } = require('../utils/skills')
 const { startingSkillPoints } = require('../utils/gifts')
 const {
-  planCoupons, seededRandom, seedFrom, rewardInfo, foodCouponDiscount, CASHBACK_AMOUNT,
+  planForCharacter, rewardInfo, foodCouponDiscount, CASHBACK_AMOUNT,
 } = require('../utils/coupons')
 
 const FOOD_BILL = 'Conta: Mercadinho' // linha do extrato da conta paga (billController)
 
-// Cria o plano de cupons de um personagem novo (sorteio normal).
-async function createCouponPlan(characterId, random = Math.random) {
+// Plano do personagem: semente com o id dele (cada jogador tem o seu).
+const planOf = (characterId) => planForCharacter(characterId, process.env.JWT_SECRET ?? '')
+
+// Cria o plano de cupons de um personagem novo.
+async function createCouponPlan(characterId) {
   return prisma.characterCoupon.createMany({
-    data: planCoupons(random).map((c) => ({ characterId, ...c })),
+    data: planOf(characterId).map((c) => ({ characterId, ...c })),
   })
 }
 
 // Garante que o personagem tem o plano de cupons (personagens criados antes dos
-// cupons ganham o plano aqui, na primeira consulta). O sorteio usa uma semente
-// fixa por personagem e o upsert não sobrescreve nada, então chamar de novo — ou
-// duas vezes ao mesmo tempo — não cria cupons a mais nem muda o plano.
+// cupons ganham o plano aqui, na primeira consulta). É o mesmo plano que a
+// criação do personagem faria, e o upsert não sobrescreve nada, então chamar de
+// novo — ou duas vezes ao mesmo tempo — não cria cupons a mais nem muda o plano.
 async function ensureCouponPlan(characterId) {
   const existing = (await prisma.characterCoupon.findMany({ where: { characterId }, orderBy: { turn: 'asc' } })) ?? []
   if (existing.length > 0) return existing
 
-  const random = seededRandom(seedFrom(`${characterId}:${process.env.JWT_SECRET ?? ''}`))
   try {
-    await prisma.$transaction(planCoupons(random).map((c) =>
+    await prisma.$transaction(planOf(characterId).map((c) =>
       prisma.characterCoupon.upsert({
         where: { characterId_turn: { characterId, turn: c.turn } },
         update: {},

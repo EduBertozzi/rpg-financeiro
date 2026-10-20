@@ -104,6 +104,12 @@ describe('Técnico (renda garantida)', () => {
     expect(p.salaryBonus).toBe(0)
   })
 
+  it('L1 fala em trabalhos extras nos finais de semana (não em freela)', () => {
+    const { perkOf } = require('../src/utils/skills')
+    expect(perkOf('technical', 1).perk).toBe('+R$ 200 por mês (trabalhos extras nos finais de semana)')
+    expect(perkOf('technical', 1).income).toEqual({ label: 'Freela', amount: 200 })
+  })
+
   it('L2 Resolução de Problemas: imprevistos de casa pela metade', () => {
     const p = only('technical', 2)
     expect(p.repairDiscount).toBe(0.5)
