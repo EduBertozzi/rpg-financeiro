@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import useGameStore from '../../store/gameStore'
 import api from '../../services/api'
 import socket from '../../services/socket'
+import { leaveDeletedRoom } from '../../services/roomGone'
 import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
 import LeisureModal from '../../components/LeisureModal'
@@ -222,6 +223,7 @@ export default function Map() {
 
     socket.on('connect_error', (err) => console.log('Erro socket:', err.message))
     socket.on('room:finished', () => navigate('/finished'))
+    socket.on('room:deleted', () => leaveDeletedRoom(useGameStore))
     // alguém encerrou, respondeu ou o professor pausou: relê o relógio
     socket.on('room:clock', () => refreshStanding())
 
@@ -230,6 +232,7 @@ export default function Map() {
       socket.off('turn:result')
       socket.off('room:clock')
       socket.off('room:finished')
+      socket.off('room:deleted')
       socket.off('connect_error')
       socket.disconnect()
     }

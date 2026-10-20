@@ -237,6 +237,18 @@ describe('DELETE /api/v1/rooms/:id', () => {
     expect(order(prismaMock.character.deleteMany)).toBeLessThan(order(prismaMock.room.delete))
   })
 
+  it('avisa quem está na sala (eles voltam para criar personagem)', async () => {
+    const realtime = require('../src/realtime')
+    const sent = []
+    realtime.setIo({ to: (roomId) => ({ emit: (event, payload) => sent.push([roomId, event, payload]) }) })
+    try {
+      await request(app).delete('/api/v1/rooms/room-1').set(authHeader(ADMIN))
+    } finally {
+      realtime.setIo(null)
+    }
+    expect(sent).toEqual([['room-1', 'room:deleted', { roomId: 'room-1' }]])
+  })
+
   it('tudo numa transação só', async () => {
     await request(app).delete('/api/v1/rooms/room-1').set(authHeader(ADMIN))
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)

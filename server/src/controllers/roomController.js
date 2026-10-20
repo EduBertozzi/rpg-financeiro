@@ -231,6 +231,8 @@ exports.deleteRoom = async (req, res) => {
       await tx.assetPrice.deleteMany({ where: { roomId: room.id } })
       await tx.room.delete({ where: { id: room.id } })
     })
+    // quem está jogando volta para a tela de criar personagem
+    emit(room.id, 'room:deleted', { roomId: room.id })
 
     res.json({ deleted: room.id, players: ids.length })
   } catch (err) {

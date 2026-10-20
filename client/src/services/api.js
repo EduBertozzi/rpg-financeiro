@@ -1,5 +1,7 @@
 import axios from 'axios'
 import { requestEnded, requestStarted } from './loading'
+import useGameStore from '../store/gameStore'
+import { isRoomGone, leaveDeletedRoom } from './roomGone'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'
@@ -26,6 +28,8 @@ api.interceptors.response.use(
   },
   (error) => {
     requestEnded()
+    const { status, data } = error.response ?? {}
+    if (isRoomGone(status, error.config?.url, data?.error)) leaveDeletedRoom(useGameStore)
     if (error.response?.status === 401) {
       localStorage.removeItem('rpg-storage')
       window.location.href = '/login'

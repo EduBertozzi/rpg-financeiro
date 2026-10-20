@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import { AVATARS, applyAvatarTheme } from '../../data/avatarTheme'
@@ -19,6 +19,7 @@ export default function CharacterCreation() {
   const [form, setForm] = useState({ name: '', avatarId: 1, course: PROFESSIONS[0], gift: '', roomCode: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const roomDeleted = useSearchParams()[0].get('sala') === 'apagada'
 
   const set = (patch) => setForm((current) => ({ ...current, ...patch }))
 
@@ -72,7 +73,7 @@ export default function CharacterCreation() {
       <section className={`${TOY_CARD} relative z-10 mx-auto w-full max-w-5xl p-6 sm:p-8 animate-fade-in-up`}>
         <header className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-extrabold tracking-[0.22em] text-[#6B7A62]">FECHA O MÊS · NOVO MORADOR DE SANTA RITA</p>
+            <p className="text-xs font-extrabold tracking-[0.22em] text-[#6B7A62]">FECHA O MÊS · NOVO MORADOR</p>
             <h1 className="font-toy text-4xl font-extrabold leading-tight text-[#24331F]">Criar personagem</h1>
           </div>
           <ol className="flex flex-wrap gap-2" aria-label="Passos">
@@ -88,6 +89,12 @@ export default function CharacterCreation() {
             })}
           </ol>
         </header>
+
+        {roomDeleted && (
+          <p role="status" className="mt-5 rounded-[18px] border-2 border-[#F2B53A] bg-[#FFF3C4] px-4 py-3 text-[15px] text-[#5A3D00]">
+            <b>A sua sala foi encerrada pelo professor.</b> Crie um personagem novo e entre com o código da sala nova.
+          </p>
+        )}
 
         <div className="mt-7">
           {step === 1 && (
