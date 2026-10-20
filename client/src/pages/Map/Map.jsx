@@ -6,6 +6,7 @@ import socket from '../../services/socket'
 import { leaveDeletedRoom } from '../../services/roomGone'
 import GameLayout from '../../components/GameLayout'
 import DilemmaModal from '../../components/DilemmaModal'
+import Bank from '../Bank/Bank'
 import LeisureModal from '../../components/LeisureModal'
 import TurnSummaryModal from '../../components/TurnSummaryModal'
 import TurnScene from '../../components/TurnScene'
@@ -144,6 +145,7 @@ export default function Map() {
   const [activeBill, setActiveBill] = useState(null)
   // foi olhar o banco no meio do dilema (volta ao abrir o mapa de novo)
   const [dilemmaAway, setDilemmaAway] = useState(false)
+  const [bankSide, setBankSide] = useState(false) // banco aberto ao lado da carta do dilema
   // respondeu: o cartão do resultado fica aberto até o jogador fechar
   const [dilemmaHold, setDilemmaHold] = useState(false)
   const phaseRef = useRef('month')
@@ -441,10 +443,10 @@ export default function Map() {
   useEffect(() => {
     phaseRef.current = phase
   }, [phase])
-  const goBank = () => {
+  // "Acessar o banco" na carta: a tela se divide (banco à esquerda, dilema à direita)
+  const toggleBankSide = () => {
     sfx.click()
-    setDilemmaAway(true)
-    navigate('/bank')
+    setBankSide((open) => !open)
   }
 
   return (
@@ -586,7 +588,8 @@ export default function Map() {
           onComplete={handleDilemmaComplete}
           onAnswered={() => setDilemmaHold(true)}
           timeLeft={clock?.dilemmaLeft ?? null}
-          onBank={goBank}
+          onBank={toggleBankSide}
+          side={bankSide && !dilemmaHold ? <Bank embedded /> : null}
         />
       )}
 

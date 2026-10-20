@@ -31,8 +31,9 @@ function Letter() {
 // Dilema do mês: abre quando o mês é encerrado (pelo jogador ou pelo fim do
 // tempo) e tem o próprio relógio. Dá para olhar o banco antes de decidir.
 // As consequências não aparecem aqui — elas chegam nos meses seguintes.
-// timeLeft: ms para responder (null sem relógio); onBank: abre o banco.
-export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft = null, onBank }) {
+// timeLeft: ms para responder (null sem relógio); onBank: abre/fecha o banco;
+// side: o banco aberto ao lado (a tela se divide: banco à esquerda, carta à direita).
+export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft = null, onBank, side = null }) {
   const { character, room } = useGameStore()
   const turn = room?.currentTurn ?? 0
   const [dilemma, setDilemma] = useState(null)
@@ -79,10 +80,14 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm"
+      className={side
+        ? 'fixed inset-0 z-[70] grid content-start gap-4 overflow-y-auto bg-[#24331F]/55 p-4 backdrop-blur-sm lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:content-stretch lg:overflow-hidden'
+        : 'fixed inset-0 z-[70] flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm'}
       onClick={(e) => e.target === e.currentTarget && canDismiss && handleClose()}
     >
-      <div role="dialog" aria-label="Dilema do mês" className={`w-full max-w-xl ${TOY_CARD} px-6 pb-7 pt-3 sm:px-8 animate-fade-in-up`}>
+      {side && <div className="order-2 min-w-0 lg:order-1 lg:h-full lg:overflow-y-auto lg:rounded-[28px]">{side}</div>}
+      <div className={side ? 'order-1 min-w-0 lg:order-2 lg:h-full lg:overflow-y-auto' : 'contents'}>
+      <div role="dialog" aria-label="Dilema do mês" className={`w-full max-w-xl ${side ? 'mx-auto lg:my-auto' : ''} ${TOY_CARD} px-6 pb-7 pt-3 sm:px-8 animate-fade-in-up`}>
         <Letter />
         {!result && timeLeft != null && (
           <p role="timer" className={`mx-auto -mt-1 mb-2 w-fit rounded-full px-3 py-1 text-sm font-extrabold tabular-nums ${isUrgent(timeLeft) ? 'animate-pulse bg-[#C4283D] text-white' : 'bg-[#FFF3C4] text-[#7A5200]'}`}>
@@ -128,7 +133,7 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
                 {error && <p className={TOY_ERROR}>{error}</p>}
                 {onBank && (
                   <button type="button" onClick={onBank} className="justify-self-center rounded-full border-2 border-[#CFE3E0] bg-[#EAF6F4] px-4 py-1.5 text-sm font-extrabold text-[#0A7F75] hover:bg-[#DDF1EE] cursor-pointer">
-                    Acessar o banco
+                    {side ? 'Fechar o banco' : 'Acessar o banco'}
                   </button>
                 )}
               </>
@@ -151,6 +156,7 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
             )}
           </div>
         )}
+      </div>
       </div>
     </div>,
     document.body,
