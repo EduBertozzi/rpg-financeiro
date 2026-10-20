@@ -9,7 +9,7 @@ import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
   shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
-  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, freeBoxValue, lockedLots, nextUnlock, LOCK_MONTHS, unlocksAt,
+  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, freeBoxValue, nextUnlock, LOCK_MONTHS, unlocksAt,
 } from './bankMath'
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -469,7 +469,6 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
   // LCI e LCA sem nada fora da carência ficam travadas, igual à debênture
   const lockBlocked = sheet.mode === 'resgatar' && lockMonths && free <= 0.005
   const withdrawBlocked = (sheet.mode === 'resgatar' && isDebenture) || lockBlocked
-  const held = lockMonths ? lockedLots(fixed, box.type, turn) : []
   const earlyTesouro = sheet.mode === 'resgatar' && box.earlyTaxMonths && turn > 0
   const title = `${sheet.mode === 'guardar' ? 'Guardar em' : 'Resgatar de'} ${isDebenture && companyName ? `Debênture ${companyName}` : box.name}`
 
@@ -503,16 +502,7 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
         ))}
       </div>
 
-      {lockBlocked ? (
-        <p className="flex gap-2 rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
-          <Svg d={Icon.lock} className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            {held.length === 0
-              ? `Nada guardado na ${box.name} ainda.`
-              : <>A {box.name} fica presa {lockMonths} meses depois de cada aplicação. Solta {held.map((h) => `${brl(h.amount)} em ${MONTHS[h.month - 1] ?? 'depois do fim do ano'}`).join(', ')}.</>}
-          </span>
-        </p>
-      ) : withdrawBlocked ? (
+      {lockBlocked ? null : withdrawBlocked ? (
         <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
           A debênture tem liquidez de 10 meses: o dinheiro volta sozinho para a conta no vencimento
           {activeDebentures.length > 0 && ` (${activeDebentures.map((d) => MONTHS[d.maturesAt - 1] ?? `mês ${d.maturesAt}`).join(', ')})`}.

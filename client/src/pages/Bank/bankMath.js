@@ -30,18 +30,6 @@ export const nextUnlock = (investments, type, turn) => {
   return held.length ? Math.min(...held) : null
 }
 
-// O que ainda está preso, somado por mês em que solta: [{ month, amount }].
-export const lockedLots = (investments, type, turn) => {
-  if (!LOCK_MONTHS[type]) return []
-  const byMonth = new Map()
-  for (const f of investments) {
-    if (f.type !== type || isFree(f, turn)) continue
-    const month = unlocksAt(type, f.investedAt)
-    byMonth.set(month, (byMonth.get(month) ?? 0) + Number(f.amount))
-  }
-  return [...byMonth].sort((a, b) => a[0] - b[0]).map(([month, amount]) => ({ month, amount: Math.round(amount * 100) / 100 }))
-}
-
 // Quanto a caixinha deve render até o fim do mês.
 export const fixedBoxYield = (investments, type) =>
   investments.filter((f) => f.type === type).reduce((sum, f) => sum + Number(f.amount) * Number(f.monthlyRate), 0)
