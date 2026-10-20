@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   activeDebentures, debentureValue, debentureYield, fixedBoxValue, fixedBoxYield, monthlyBills,
-  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, stocksValue,
+  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, stocksValue,
 } from './bankMath.js'
 
 const close = (actual, expected, digits = 2) =>
@@ -173,4 +173,29 @@ describe('taxa do cheque especial do personagem', () => {
     assert.equal(ratePercent(0.08), '8%')
     assert.equal(ratePercent(0.04), '4%')
   })
+})
+
+describe('extrato por mês', () => {
+  const log = [
+    { id: 1, turn: 1, cashImpact: 7000, description: 'Salário', loggedAt: '2026-01-01T10:00:00Z' },
+    { id: 2, turn: 1, cashImpact: -2000, description: 'Caixinha: Guardado em CDB', loggedAt: '2026-01-01T10:05:00Z' },
+    { id: 3, turn: 2, cashImpact: -1500, description: 'Aluguel', loggedAt: '2026-01-01T10:10:00Z' },
+    { id: 4, turn: 2, cashImpact: 0, description: 'Aviso', loggedAt: '2026-01-01T10:11:00Z' },
+    ...Array.from({ length: 10 }, (_, i) => ({ id: 10 + i, turn: 2, cashImpact: -10, description: `Conta ${i}`, loggedAt: `2026-01-01T11:${String(i).padStart(2, '0')}:00Z` })),
+  ]
+  it('mês mais recente primeiro, linhas sem valor de fora', () => {
+    const m = statementByMonth(log)
+    assert.deepEqual(m.map((x) => x.turn), [2, 1])
+    assert.equal(m[0].entries.length, 11)
+  })
+  it('não corta: a aplicação de um mês antigo continua no extrato', () => {
+    assert.ok(statementByMonth(log)[1].entries.some((e) => e.description === 'Caixinha: Guardado em CDB'))
+  })
+  it('dentro do mês, o mais novo primeiro; total do mês em centavos', () => {
+    const [feb, jan] = statementByMonth(log)
+    assert.equal(jan.entries[0].description, 'Caixinha: Guardado em CDB')
+    assert.equal(jan.total, 5000)
+    assert.equal(feb.total, -1600)
+  })
+  it('sem movimentação: lista vazia', () => assert.deepEqual(statementByMonth(), []))
 })

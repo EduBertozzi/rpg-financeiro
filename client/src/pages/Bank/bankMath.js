@@ -80,3 +80,20 @@ export const overdraftInterest = (cash, rate = OVERDRAFT_MONTHLY_RATE) =>
 
 // "8%" / "4%" para os textos
 export const ratePercent = (rate) => `${Math.round(rate * 100)}%`
+
+// Extrato completo separado por mês (o mais recente primeiro), com o total de
+// entradas e saídas de cada mês. Linhas sem valor ficam de fora.
+export function statementByMonth(eventLog = []) {
+  const months = new Map()
+  for (const e of eventLog) {
+    const v = Number(e.cashImpact ?? 0)
+    if (!v) continue
+    const turn = Number(e.turn)
+    if (!months.has(turn)) months.set(turn, { turn, entries: [], total: 0 })
+    const m = months.get(turn)
+    m.entries.push(e)
+    m.total = Math.round((m.total + v) * 100) / 100
+  }
+  const byTime = (a, b) => new Date(b.loggedAt) - new Date(a.loggedAt)
+  return [...months.values()].sort((a, b) => b.turn - a.turn).map((m) => ({ ...m, entries: m.entries.sort(byTime) }))
+}

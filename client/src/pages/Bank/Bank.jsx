@@ -9,7 +9,7 @@ import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
   shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
-  overdraftRateFor, ratePercent, overdraftInterest,
+  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth,
 } from './bankMath'
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -65,6 +65,7 @@ export default function Bank() {
   const [sheet, setSheet] = useState(null) // { kind: 'move', type, mode, value, error } | { kind: 'new' }
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState('')
+  const [allMonths, setAllMonths] = useState(false)
 
   const turn = room?.currentTurn ?? 0
   const money = (n) => (hide ? 'R$ ••••' : brl(n))
@@ -174,10 +175,8 @@ export default function Bank() {
     }
   }
 
-  const extrato = [...(character?.eventLog ?? [])]
-    .filter((e) => Number(e.cashImpact ?? 0) !== 0)
-    .sort((a, b) => new Date(b.loggedAt) - new Date(a.loggedAt))
-    .slice(0, 8)
+  const extrato = statementByMonth(character?.eventLog ?? [])
+  const shownMonths = allMonths ? extrato : extrato.slice(0, 2)
 
   const parts = shares([
     { name: 'Conta', value: Math.max(cash, 0), color: '#9FB3B0' },
@@ -395,25 +394,37 @@ export default function Bank() {
               <section id="extrato" className="rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
                 <h3 className="mb-2 font-extrabold">Extrato</h3>
                 {extrato.length === 0 && <p className="text-sm text-[#627673]">Nenhuma movimentação ainda.</p>}
-                {extrato.map((e) => {
-                  const v = Number(e.cashImpact)
-                  return (
-                    <div key={e.id} className="flex items-center justify-between gap-3 border-t border-[#E3EAE9] py-2.5 text-sm first:border-t-0">
-                      <span className="flex min-w-0 items-center gap-3">
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E2F6F3] text-[#063F3A]">
-                          <Svg d={v >= 0 ? Icon.in : Icon.out} className="h-4 w-4" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block">{e.description}</span>
-                          <small className="text-xs text-[#627673]">{MONTHS[e.turn - 1] ?? `Mês ${e.turn}`}</small>
-                        </span>
+                {shownMonths.map((m) => (
+                  <div key={m.turn} className="mt-3 first:mt-0">
+                    <div className="flex items-baseline justify-between gap-3 rounded-lg bg-[#F3F6F6] px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider text-[#627673]">
+                      <span>{MONTHS[m.turn - 1] ?? `Mês ${m.turn}`}</span>
+                      <span className={`tabular-nums normal-case tracking-normal ${m.total >= 0 ? 'text-[#0B8A50]' : 'text-[#C4283D]'}`}>
+                        {hide ? '••••' : `${m.total >= 0 ? '+' : '−'}${brl(Math.abs(m.total))} no mês`}
                       </span>
-                      <b className={`shrink-0 tabular-nums ${v >= 0 ? 'text-[#0B8A50]' : 'text-[#C4283D]'}`}>
-                        {hide ? '••••' : `${v >= 0 ? '+' : '−'}${brl(Math.abs(v))}`}
-                      </b>
                     </div>
-                  )
-                })}
+                    {m.entries.map((e) => {
+                      const v = Number(e.cashImpact)
+                      return (
+                        <div key={e.id} className="flex items-center justify-between gap-3 border-t border-[#E3EAE9] py-2.5 text-sm first:border-t-0">
+                          <span className="flex min-w-0 items-center gap-3">
+                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E2F6F3] text-[#063F3A]">
+                              <Svg d={v >= 0 ? Icon.in : Icon.out} className="h-4 w-4" />
+                            </span>
+                            <span className="min-w-0 break-words">{e.description}</span>
+                          </span>
+                          <b className={`shrink-0 tabular-nums ${v >= 0 ? 'text-[#0B8A50]' : 'text-[#C4283D]'}`}>
+                            {hide ? '••••' : `${v >= 0 ? '+' : '−'}${brl(Math.abs(v))}`}
+                          </b>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
+                {extrato.length > 2 && (
+                  <button type="button" onClick={() => setAllMonths((v) => !v)} className="mt-3 w-full rounded-[14px] border-2 border-[#E3EAE9] py-2 text-sm font-extrabold text-[#0B6E66] hover:bg-[#F3F6F6] cursor-pointer">
+                    {allMonths ? 'Mostrar só os últimos meses' : `Ver mais (${extrato.length - 2} ${extrato.length - 2 === 1 ? 'mês' : 'meses'} antes)`}
+                  </button>
+                )}
               </section>
             </div>
           </div>
