@@ -61,8 +61,7 @@ export default function Bank() {
   const [market, setMarket] = useState([])
   const [portfolio, setPortfolio] = useState([])
   const [hide, setHide] = useState(() => readStored('bank:hide', false))
-  const [extraBoxes, setExtraBoxes] = useState(() => readStored(`bank:boxes:${character?.id}`, []))
-  const [sheet, setSheet] = useState(null) // { kind: 'move', type, mode, value, error } | { kind: 'new' }
+  const [sheet, setSheet] = useState(null) // { kind: 'move', type, mode, value, error }
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState('')
   const [allMonths, setAllMonths] = useState(false)
@@ -106,9 +105,8 @@ export default function Bank() {
   const boxValue = (type) => (type === 'DEBENTURE' ? debentureValueOf(debentures, turn) : fixedBoxValue(fixed, type))
   const boxYield = (type) => (type === 'DEBENTURE' ? debentureYieldOf(debentures, turn) : fixedBoxYield(fixed, type))
 
-  const activeTypes = BOXES
-    .filter((b) => b.initial || extraBoxes.includes(b.type) || boxValue(b.type) > 0)
-    .map((b) => b.type)
+  // todas as caixinhas ficam à vista, mesmo vazias
+  const activeTypes = BOXES.map((b) => b.type)
 
   const cash = Number(character?.cash ?? 0)
   const overdraftRate = overdraftRateFor(character?.unlockedSkills ?? [])
@@ -153,13 +151,6 @@ export default function Bank() {
     } finally {
       setBusy(false)
     }
-  }
-
-  const createBox = (type) => {
-    const next = [...extraBoxes, type]
-    setExtraBoxes(next)
-    writeStored(`bank:boxes:${character.id}`, next)
-    openMove(type)
   }
 
   const trade = async (asset, operation, quantity) => {
@@ -248,7 +239,6 @@ export default function Bank() {
                   {[
                     { label: 'Guardar', icon: Icon.in, onClick: () => openMove('POUPANCA', 'guardar') },
                     { label: 'Resgatar', icon: Icon.out, onClick: () => openMove('POUPANCA', 'resgatar') },
-                    { label: 'Nova caixinha', icon: Icon.plus, onClick: () => setSheet({ kind: 'new' }) },
                     { label: 'Extrato', icon: Icon.list, onClick: () => document.getElementById('extrato')?.scrollIntoView({ behavior: 'smooth' }) },
                   ].map((a) => (
                     <button key={a.label} type="button" onClick={a.onClick} className="group grid w-[76px] justify-items-center gap-2 text-xs font-bold cursor-pointer">
@@ -340,15 +330,6 @@ export default function Bank() {
                     </button>
                   )
                 })}
-                <button
-                  type="button"
-                  onClick={() => setSheet({ kind: 'new' })}
-                  className="grid min-h-[140px] place-items-center content-center gap-1 rounded-[18px] border-2 border-dashed border-[#E3EAE9] p-4 font-extrabold text-[#0A7F75] transition-colors hover:border-[#12B5A6] hover:bg-[#E2F6F3] cursor-pointer"
-                >
-                  <Svg d={Icon.plus} className="h-6 w-6" />
-                  Nova caixinha
-                  <span className="text-xs font-medium text-[#627673]">LCI, LCA, Tesouro Prefixado</span>
-                </button>
               </div>
             </section>
 
@@ -434,23 +415,19 @@ export default function Bank() {
               className="absolute inset-0 z-10 flex items-center justify-center bg-[#041E1C]/45 p-4"
               onClick={(e) => e.target === e.currentTarget && setSheet(null)}
             >
-              {sheet.kind === 'new' ? (
-                <NewBoxSheet available={BOXES.filter((b) => !activeTypes.includes(b.type))} onPick={createBox} onClose={() => setSheet(null)} />
-              ) : (
-                <MoveSheet
-                  sheet={sheet}
-                  setSheet={setSheet}
-                  activeTypes={activeTypes}
-                  cash={cash}
-                  value={boxValue(sheet.type)}
-                  fixed={fixed}
-                  turn={turn}
-                  activeDebentures={activeDebentures}
-                  companyName={company?.name}
-                  busy={busy}
-                  onConfirm={confirmMove}
-                />
-              )}
+              <MoveSheet
+                sheet={sheet}
+                setSheet={setSheet}
+                activeTypes={activeTypes}
+                cash={cash}
+                value={boxValue(sheet.type)}
+                fixed={fixed}
+                turn={turn}
+                activeDebentures={activeDebentures}
+                companyName={company?.name}
+                busy={busy}
+                onConfirm={confirmMove}
+              />
             </div>
           )}
 
@@ -583,20 +560,3 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
   )
 }
 
-function NewBoxSheet({ available, onPick, onClose }) {
-  return (
-    <div role="dialog" aria-label="Nova caixinha" className="grid max-h-full w-full max-w-[460px] gap-3.5 overflow-y-auto rounded-[22px] bg-white p-6 text-[#10201E] shadow-2xl">
-      <h5 className="text-lg font-black">Nova caixinha</h5>
-      <p className="text-sm text-[#627673]">Escolha onde a nova caixinha vai render.</p>
-      {available.length === 0 && <p className="text-sm text-[#627673]">Você já tem todas as caixinhas disponíveis.</p>}
-      {available.map((box) => (
-        <button key={box.type} type="button" onClick={() => onPick(box.type)} className="grid gap-1.5 rounded-[14px] border border-[#E3EAE9] p-3.5 text-left hover:border-[#12B5A6] cursor-pointer">
-          <span className="flex justify-between gap-2 font-extrabold"><span>{box.name}</span><span className="text-[#0A7F75]">{box.rate}</span></span>
-          <span className="text-sm text-[#627673]">{box.desc}</span>
-          <BoxFacts box={box} />
-        </button>
-      ))}
-      <button type="button" onClick={onClose} className="font-bold text-[#627673] cursor-pointer">Fechar</button>
-    </div>
-  )
-}
