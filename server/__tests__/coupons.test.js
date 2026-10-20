@@ -229,6 +229,24 @@ describe('planForCharacter — um plano por jogador', () => {
     expect(other.filter((k, i) => k !== key(plans[i])).length).toBeGreaterThan(0)
   })
 
+  it('na mesma sala: todo mundo tem cupom nos mesmos meses, cada um no seu lugar e com o seu prêmio', () => {
+    const room = ids.map((id) => planForCharacter(id, 'segredo', 'room-1'))
+    for (const plan of room) expect(plan.map((c) => c.turn)).toEqual(room[0].map((c) => c.turn))
+    expect(new Set(room.map((p) => p[0].spot)).size).toBeGreaterThan(1)
+    expect(new Set(room.map((p) => p[0].reward)).size).toBeGreaterThan(1)
+    for (const plan of room) expect(plan.map((c) => c.reward).sort()).toEqual(['cashback', 'food_discount', 'skill_point'])
+  })
+
+  it('trocar de sala muda só os meses: o lugar e o prêmio continuam do jogador', () => {
+    const pick = (plan) => plan.map(({ spot, reward }) => ({ spot, reward }))
+    expect(pick(planForCharacter('char-1', 'segredo', 'room-1'))).toEqual(pick(planForCharacter('char-1', 'segredo', 'room-2')))
+  })
+
+  it('salas diferentes podem ter meses diferentes', () => {
+    const months = Array.from({ length: 20 }, (_, i) => JSON.stringify(planForCharacter('char-1', 'segredo', `room-${i}`).map((c) => c.turn)))
+    expect(new Set(months).size).toBeGreaterThan(1)
+  })
+
   it('sem id do personagem não sorteia (evita um plano igual para todos)', () => {
     expect(() => planForCharacter(undefined, 'segredo')).toThrow()
     expect(() => planForCharacter('', 'segredo')).toThrow()

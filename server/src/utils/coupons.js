@@ -52,11 +52,12 @@ function shuffle(items, random) {
 }
 
 // Plano de cupons da partida: 3 { turn, spot, reward }, um por fase, em ordem
-// de mês, com os 3 prêmios sem repetir.
-function planCoupons(random = Math.random) {
+// de mês, com os 3 prêmios sem repetir. `turnRandom` sorteia os meses (a sala
+// toda usa o mesmo, para cada um ter o seu cupom ao mesmo tempo).
+function planCoupons(random = Math.random, turnRandom = random) {
   const rewards = shuffle(REWARD_KINDS, random)
   return COUPON_PHASES.map((phase, i) => ({
-    turn: randomInt(phase.from, phase.to, random),
+    turn: randomInt(phase.from, phase.to, turnRandom),
     spot: COUPON_SPOTS[randomInt(0, COUPON_SPOTS.length - 1, random)],
     reward: rewards[i],
   }))
@@ -80,12 +81,14 @@ function seededRandom(seed) {
 // plano não ser adivinhável pelo id).
 const seedFrom = (text) => crypto.createHash('sha256').update(String(text)).digest().readUInt32BE(0)
 
-// Plano de cupons de UM personagem: cada jogador tem o seu (lugar, mês e prêmio
-// próprios), sempre o mesmo para o mesmo personagem. Nada de sala ou de mês na
-// semente, senão a turma toda acharia o mesmo cupom.
-const planForCharacter = (characterId, secret = '') => {
+// Plano de cupons de UM personagem, sempre o mesmo para o mesmo personagem.
+// Os meses vêm da sala (a turma toda tem cupom nos mesmos meses, cada um o seu);
+// o lugar no mapa e o prêmio vêm do personagem. Sem sala, tudo vem do personagem.
+const planForCharacter = (characterId, secret = '', roomId = null) => {
   if (!characterId) throw new Error('Plano de cupons precisa do id do personagem')
-  return planCoupons(seededRandom(seedFrom(`${characterId}:${secret}`)))
+  const own = seededRandom(seedFrom(`${characterId}:${secret}`))
+  const months = roomId ? seededRandom(seedFrom(`room:${roomId}:${secret}`)) : own
+  return planCoupons(own, months)
 }
 
 const isRewardKind = (kind) => Object.prototype.hasOwnProperty.call(COUPON_REWARDS, kind)

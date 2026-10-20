@@ -16,13 +16,13 @@ const {
 
 const FOOD_BILL = 'Conta: Mercadinho' // linha do extrato da conta paga (billController)
 
-// Plano do personagem: semente com o id dele (cada jogador tem o seu).
-const planOf = (characterId) => planForCharacter(characterId, process.env.JWT_SECRET ?? '')
+// Plano do personagem: meses da sala, lugar e prêmio do personagem.
+const planOf = (characterId, roomId) => planForCharacter(characterId, process.env.JWT_SECRET ?? '', roomId)
 
 // Cria o plano de cupons de um personagem novo.
-async function createCouponPlan(characterId) {
+async function createCouponPlan(characterId, roomId = null) {
   return prisma.characterCoupon.createMany({
-    data: planOf(characterId).map((c) => ({ characterId, ...c })),
+    data: planOf(characterId, roomId).map((c) => ({ characterId, ...c })),
   })
 }
 
@@ -30,12 +30,12 @@ async function createCouponPlan(characterId) {
 // cupons ganham o plano aqui, na primeira consulta). É o mesmo plano que a
 // criação do personagem faria, e o upsert não sobrescreve nada, então chamar de
 // novo — ou duas vezes ao mesmo tempo — não cria cupons a mais nem muda o plano.
-async function ensureCouponPlan(characterId) {
+async function ensureCouponPlan(characterId, roomId = null) {
   const existing = (await prisma.characterCoupon.findMany({ where: { characterId }, orderBy: { turn: 'asc' } })) ?? []
   if (existing.length > 0) return existing
 
   try {
-    await prisma.$transaction(planOf(characterId).map((c) =>
+    await prisma.$transaction(planOf(characterId, roomId).map((c) =>
       prisma.characterCoupon.upsert({
         where: { characterId_turn: { characterId, turn: c.turn } },
         update: {},
@@ -70,7 +70,7 @@ exports.getCoupon = async (req, res) => {
     const character = await loadOwnCharacter(req, res)
     if (!character) return
 
-    const coupons = await ensureCouponPlan(character.id)
+    const coupons = await ensureCouponPlan(character.id, character.roomId)
     const room = character.room
     if (!isPlayable(room) || turn !== room.currentTurn) return res.json({ coupon: null })
 
@@ -95,7 +95,7 @@ exports.claimCoupon = async (req, res) => {
     }
     if (!isPlayable(room)) return res.status(400).json({ error: 'A partida já acabou' })
 
-    const coupons = await ensureCouponPlan(character.id)
+    const coupons = await ensureCouponPlan(character.id, character.roomId)
     const coupon = coupons.find((c) => c.turn === turn)
     if (!coupon) return res.status(404).json({ error: 'Nenhum cupom escondido neste mês' })
     if (coupon.claimedAt != null) return res.status(409).json({ error: 'Cupom já resgatado' })

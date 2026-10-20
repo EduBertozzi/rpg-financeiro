@@ -68,7 +68,7 @@ exports.createCharacter = async (req, res) => {
     // cupons escondidos da partida (easter egg). Se falhar, o personagem não
     // fica sem: o plano é criado na primeira consulta de cupom.
     try {
-      await createCouponPlan(character.id)
+      await createCouponPlan(character.id, roomId)
     } catch (_err) { /* ver ensureCouponPlan */ }
 
     res.status(201).json(character)
