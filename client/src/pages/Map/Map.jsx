@@ -15,7 +15,6 @@ import { tourKey } from './tourSteps'
 import { TASK_EVENT } from '../../components/sidebarData'
 import { TOUR_EVENT } from '../../components/howToPlaySteps'
 import { refreshStanding, useMonthClock } from '../../components/hudHooks'
-import { formatClock, isUrgent } from '../../components/monthClock'
 import { FinishMonthModal, MonthClosedCard } from '../../components/MonthEnd'
 import WalkLock from '../../components/WalkLock'
 import { loadWalkLock, saveWalkLock, savePendingWalk, takePendingWalk } from '../../components/walkTimer'
@@ -469,7 +468,7 @@ export default function Map() {
           </div>
 
           {!isWaiting && (
-            <div className={`pointer-events-auto flex flex-col items-end gap-3 ${PANEL} px-5 py-4`}>
+            <div className={`pointer-events-auto flex flex-col items-end gap-3 sm:mt-12 ${PANEL} px-5 py-4`}>
               <div className="text-right">
                 <p className="font-toy text-[17px] font-extrabold text-[#24331F]">
                   {monthName ?? 'Mês'} · <span className="text-[#2457C5]">{currentTurn}</span><span className="text-[#A9B19E]"> / 12</span>
@@ -511,11 +510,6 @@ export default function Map() {
                 </div>
               </div>
 
-              {phase === 'month' && clock?.monthLeft != null && (
-                <p role="timer" className={`rounded-full px-3 py-1 font-toy text-[20px] font-extrabold tabular-nums ${clock.paused ? 'bg-[#EFE6D3] text-[#6B7A62]' : isUrgent(clock.monthLeft) ? 'animate-pulse bg-[#C4283D] text-white' : 'bg-[#FFF3C4] text-[#7A5200]'}`} title="Tempo para encerrar o mês">
-                  ⏱ {formatClock(clock.monthLeft)}{clock.paused ? ' · pausado' : ''}
-                </p>
-              )}
               <button
                 type="button"
                 onClick={() => { sfx.click(); setFinishing(true) }}
@@ -533,7 +527,7 @@ export default function Map() {
         </div>
 
         {locked && !dilemmaOpen && !busyIntro && (
-          <MonthClosedCard turn={currentTurn} clock={clock} onDilemma={() => setDilemmaAway(false)} onBank={goBank} />
+          <MonthClosedCard turn={currentTurn} clock={clock} onDilemma={() => setDilemmaAway(false)} />
         )}
 
         {notice && (

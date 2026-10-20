@@ -21,7 +21,7 @@ function saveSeen(id, seen) {
 
 // Papel picado saindo dos dois cantos de baixo, nas cores do personagem.
 function confetti(canvas) {
-  if (!canvas || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  if (!canvas) return
   const g = canvas.getContext('2d')
   const W = window.innerWidth
   const H = window.innerHeight

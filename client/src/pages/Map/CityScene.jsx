@@ -3,7 +3,7 @@ import { WeatherContext } from './weatherContext'
 import { weatherFor } from './weather'
 import WeatherLayer from './WeatherLayer'
 import CouponTicket from './CouponTicket'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Balloon, Birds, Mountains, Plane, Skyline, WindTurbine } from './Scenery'
 import { BlockContent, BlockGrounds, GridRoads, IsoBox, Tree } from './CityBlocks'
 import { BLOCKS, CAR_COLORS } from './cityData'
@@ -260,7 +260,7 @@ function CloudShadow({ x0, y, duration, still }) {
   )
 }
 
-function Building({ b, hovered, setHovered, onSelect, interactive, reduced }) {
+function Building({ b, hovered, setHovered, onSelect, interactive }) {
   const [i, j] = PLOTS[b.id]
   const [x, y] = iso(...plotCenter(i, j))
   const size = artSize(b.id)
@@ -308,13 +308,13 @@ function Building({ b, hovered, setHovered, onSelect, interactive, reduced }) {
           ry={size * 0.42}
           fill="url(#aura)"
           initial={{ opacity: 0.5, scale: 1 }}
-          animate={reduced ? undefined : { opacity: [0.45, 0.85, 0.45], scale: [0.96, 1.04, 0.96] }}
+          animate={{ opacity: [0.45, 0.85, 0.45], scale: [0.96, 1.04, 0.96] }}
           transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
           pointerEvents="none"
         />
       )}
       <image href={b.art} x={x - size / 2} y={imgY} width={size} height={size} pointerEvents="none" />
-      {b.id === FEATURED && !reduced && [-70, -40, -12, 18, 46, 74, -55, 60].map((dx, k) => (
+      {b.id === FEATURED && [-70, -40, -12, 18, 46, 74, -55, 60].map((dx, k) => (
         <motion.circle
           key={k}
           cx={x + dx}
@@ -331,7 +331,7 @@ function Building({ b, hovered, setHovered, onSelect, interactive, reduced }) {
 
       {(pending || b.done) && (
         <motion.g
-          animate={pending && !reduced ? { y: [0, -10, 0] } : undefined}
+          animate={pending ? { y: [0, -10, 0] } : undefined}
           transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
         >
           <g transform={`translate(${x} ${imgY + size * 0.15})`}>
@@ -421,14 +421,12 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
   const weather = weatherFor(month)
   const phase = usePhase()
   const sky = SKIES[phase]
-  const reduced = useReducedMotion()
   const [hovered, setHovered] = useState(null)
   const [zoomTo, setZoomTo] = useState(null)
   const rootRef = useRef(null)
   const lit = phase !== 'day'
 
   const handleSelect = (b) => {
-    if (reduced) return onSelect(b)
     // o SVG usa "meet": converte o ponto da viewBox para pixels do elemento
     const { width, height } = rootRef.current.getBoundingClientRect()
     const scale = Math.min(width / VIEW.w, height / VIEW.h)
@@ -472,7 +470,7 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
     })),
     ...trees.map(([u, v, s]) => ({ depth: u + v, key: `t${u}-${v}`, el: <Tree u={u} v={v} scale={s} /> })),
     ...lamps.map(([u, v]) => ({ depth: u + v, key: `l${u}-${v}`, el: <Lamp u={u} v={v} lit={lit} /> })),
-    { depth: plotCenter(1, 2).reduce((a, b) => a + b), key: 'fountain', el: <Fountain still={reduced} /> },
+    { depth: plotCenter(1, 2).reduce((a, b) => a + b), key: 'fountain', el: <Fountain /> },
     ...buildings.filter((b) => PLOTS[b.id]).map((b) => ({
       depth: plotCenter(...PLOTS[b.id]).reduce((a, c) => a + c),
       key: b.id,
@@ -483,7 +481,6 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
           setHovered={interactive ? setHovered : () => {}}
           onSelect={handleSelect}
           interactive={interactive}
-          reduced={reduced}
         />
       ),
     })),
@@ -547,7 +544,7 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
             cy={y}
             r="2.5"
             fill="white"
-            animate={reduced ? undefined : { opacity: [0.3, 1, 0.3] }}
+            animate={{ opacity: [0.3, 1, 0.3] }}
             transition={{ duration: 2 + (i % 3), repeat: Infinity }}
           />
         ))}
@@ -558,18 +555,18 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
         <Skyline phase={phase} />
         <path d={wavePath(HORIZON - 4, 34, 180, HORIZON + 40)} fill={sky.hillFar} />
         {[[1420, 0.45], [1490, 0.4], [1560, 0.45], [140, 0.45], [70, 0.4], [-220, 0.45], [1900, 0.4]].map(([x, sc]) => (
-          <WindTurbine key={x} x={x} y={HORIZON - 8} scale={sc} still={reduced} />
+          <WindTurbine key={x} x={x} y={HORIZON - 8} scale={sc} />
         ))}
         <path d={wavePath(HORIZON + 10, 10, 140, VB_H + FAR)} fill={GRASS} />
         {/* mata distante ao longo do horizonte: esconde a emenda entre chão e céu */}
         <path d={wavePath(HORIZON + 14, 14, 34, HORIZON + 26)} fill={sky.treeline} />
 
-        <Balloon still={reduced} />
-        <Plane still={reduced} />
-        <Birds still={reduced} />
+        <Balloon />
+        <Plane />
+        <Birds />
 
         {[[200, 30, 1, 90], [760, -5, 0.8, 110], [1050, 75, 0.6, 130], [-400, 50, 0.9, 100], [1750, 10, 0.7, 120]].map(([x, y, s, d], i) => (
-          <Cloud key={i} x0={x} y={y} scale={s} duration={d} still={reduced} />
+          <Cloud key={i} x0={x} y={y} scale={s} duration={d} />
         ))}
 
         <BlockGrounds />
@@ -582,7 +579,7 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
             <polygon points={pts(plotRect(i, j, 10))} fill={i === 1 && j === 2 ? '#E7E5E4' : '#86D47A'} />
           </g>
         )))}
-        <Lake still={reduced} />
+        <Lake />
 
 
         {/* névoa de distância: o chão some suavemente perto do horizonte */}
@@ -590,18 +587,18 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
 
         <g clipPath="url(#below-horizon)">
           {cars.map((c, idx) => (
-            <Car key={idx} {...c} color={CAR_COLORS[idx % CAR_COLORS.length]} still={reduced} />
+            <Car key={idx} {...c} color={CAR_COLORS[idx % CAR_COLORS.length]} />
           ))}
-          <Pedestrian from={[plotStart(0) + 8, roads[0] - 6]} to={[plotStart(0) + PLOT - 8, roads[0] - 6]} color="#A855F7" duration={9} delay={0} still={reduced} />
-          <Dog from={[plotStart(1) + 10, plotStart(2) + PLOT - 22]} to={[plotStart(1) + PLOT - 18, plotStart(2) + PLOT - 22]} duration={9} delay={0.6} still={reduced} />
-          <Pedestrian from={[roads[1] + ROAD + 6, plotStart(1) + 10]} to={[roads[1] + ROAD + 6, plotStart(1) + PLOT - 10]} color="#F97316" duration={8} delay={2} still={reduced} />
-          <Pedestrian from={[plotStart(1) + 14, plotStart(2) + PLOT - 12]} to={[plotStart(1) + PLOT - 14, plotStart(2) + PLOT - 12]} color="#0EA5E9" duration={10} delay={1} still={reduced} />
+          <Pedestrian from={[plotStart(0) + 8, roads[0] - 6]} to={[plotStart(0) + PLOT - 8, roads[0] - 6]} color="#A855F7" duration={9} delay={0} />
+          <Dog from={[plotStart(1) + 10, plotStart(2) + PLOT - 22]} to={[plotStart(1) + PLOT - 18, plotStart(2) + PLOT - 22]} duration={9} delay={0.6} />
+          <Pedestrian from={[roads[1] + ROAD + 6, plotStart(1) + 10]} to={[roads[1] + ROAD + 6, plotStart(1) + PLOT - 10]} color="#F97316" duration={8} delay={2} />
+          <Pedestrian from={[plotStart(1) + 14, plotStart(2) + PLOT - 12]} to={[plotStart(1) + PLOT - 14, plotStart(2) + PLOT - 12]} color="#0EA5E9" duration={10} delay={1} />
         </g>
 
         {props.map((p) => <g key={p.key}>{p.el}</g>)}
 
         {phase === 'day' && [[100, 420, 120], [900, 820, 150], [-300, 650, 135]].map(([x, y, d], i) => (
-          <CloudShadow key={i} x0={x} y={y} duration={d} still={reduced} />
+          <CloudShadow key={i} x0={x} y={y} duration={d} />
         ))}
 
         {weather?.deco && <PlazaDeco kind={weather.deco} />}
@@ -615,10 +612,10 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
           .map((b) => <NameTag key={`n${b.id}`} b={b} hovered={hovered === b.id} />)}
 
         {/* o cupom fica por cima de tudo, até do clima */}
-        {coupon && interactive && <CouponTicket spot={coupon.spot} onClaim={onCoupon} still={reduced} />}
+        {coupon && interactive && <CouponTicket spot={coupon.spot} onClaim={onCoupon} />}
       </svg>
     </motion.div>
-    {!reduced && <WeatherLayer fx={weather?.fx} />}
+    <WeatherLayer fx={weather?.fx} />
     </div>
     </WeatherContext.Provider>
   )

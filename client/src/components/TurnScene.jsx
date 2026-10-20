@@ -57,10 +57,6 @@ export default function TurnScene({ turn, net = 0, onDone }) {
   }, [onDone])
 
   useEffect(() => {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      doneRef.current()
-      return
-    }
     sfx.whoosh()
     const steps = [
       [1300, () => { setStage('tear'); sfx.rip() }],

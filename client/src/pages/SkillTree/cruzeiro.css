@@ -38,12 +38,6 @@
 @keyframes cz-burst { 0% { opacity: 1; transform: translate(0, 0) scale(1) } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(.3) } }
 @keyframes cz-unlock { 0% { transform: scale(.6) } 60% { transform: scale(1.45) } 100% { transform: scale(1) } }
 
-@media (prefers-reduced-motion: reduce) {
-  .cz-flow, .cz-ready, .cz-halo, .cz-orbit, .cz-burst circle, .cz-just .cz-core, .cz-brand { animation: none !important; }
-  .cz-intro .cz-ln, .cz-intro .cz-nd, .cz-intro .cz-lbl, .cz-intro .cz-vc, .cz-drawnow, .cz-quick * { animation: none !important; opacity: 1 !important; stroke-dashoffset: 0 !important; }
-  .cz-shock { display: none; }
-}
-
 /* Fundo de dia da árvore: nuvens e folhas caindo */
 .ts-cloud { left: -20%; animation: ts-cloud linear infinite; }
 .ts-leaf { animation: ts-leaf ease-in-out infinite; }
@@ -57,7 +51,8 @@
 }
 .cz-sway { animation: cz-sway 6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
 @keyframes cz-sway { 50% { transform: rotate(.6deg); } }
+/* com "reduzir movimento" ligado no sistema a árvore continua animada (a
+   entrada, os frutos, as folhas); só a copa para de balançar */
 @media (prefers-reduced-motion: reduce) {
-  .ts-cloud, .ts-leaf, .cz-sway { animation: none !important; }
-  .ts-leaf { display: none; }
+  .cz-sway { animation: none; }
 }

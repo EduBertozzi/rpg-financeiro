@@ -75,13 +75,11 @@ body {
 .coupon-shine { animation: coupon-shine 2.6s ease-in-out infinite; }
 @keyframes coupon-spark { 0%, 78%, 100% { opacity: 0; transform: scale(.5) } 88% { opacity: 1; transform: scale(1.1) } }
 @keyframes coupon-shine { 0%, 55% { transform: translateX(-60px) skewX(-20deg) } 100% { transform: translateX(120px) skewX(-20deg) } }
-@media (prefers-reduced-motion: reduce) { .coupon-spark { animation: none; opacity: .6 } .coupon-shine { animation: none } }
 
 /* bonequinho andando na trava de "ir a pé" (dilema de agosto) */
 @keyframes walker-swing { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
 .walker-leg, .walker-arm { transform-origin: 20px 35px; animation: walker-swing 0.45s ease-in-out infinite alternate; }
 .walker-arm { transform-origin: 20px 21px; animation-direction: alternate-reverse; }
-@media (prefers-reduced-motion: reduce) { .walker-leg, .walker-arm { animation: none; } }
 
 /* caderninho: papel pautado com margem, espiral no meio, abrir e virar página */
 .notebook-page { position: relative; min-width: 0; overflow-y: auto; padding: 26px 26px 22px 44px; background-color: #FFFDF5; background-image: repeating-linear-gradient(transparent 0 27px, #D8E6F2 27px 28px); background-position: 0 14px; font-size: 15px; line-height: 28px; }
@@ -100,17 +98,14 @@ body {
 @keyframes turn-event { 0% { transform: scale(.6) rotate(-4deg); opacity: 0; } 70% { transform: scale(1.04) rotate(1deg); opacity: 1; } 100% { transform: none; } }
 .turn-pop { animation: turn-pop .35s cubic-bezier(.2,.9,.3,1.2); }
 .turn-event { animation: turn-event .6s .2s cubic-bezier(.2,.9,.3,1.3) both; }
-@media (prefers-reduced-motion: reduce) { .turn-pop, .turn-event { animation: none; } }
 
 /* tour do primeiro mês */
 @keyframes tour-card { from { transform: translateY(10px) scale(.96); opacity: 0; } to { transform: none; opacity: 1; } }
 .tour-card { animation: tour-card .25s ease-out; }
-@media (prefers-reduced-motion: reduce) { .tour-card { animation: none; } .tour-spot { transition: none; } }
 
 /* barra lateral: selo de pontos pulsando */
 @keyframes hud-badge { 50% { transform: scale(1.15); } }
 .hud-badge { animation: hud-badge 1.8s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .hud-badge { animation: none; } }
 
 /* a virada do mês como cena (TurnScene) */
 .turn-night { background: linear-gradient(#0B1640 0%, rgba(27,42,107,.86) 55%, rgba(43,35,80,.8) 100%); }
@@ -140,3 +135,24 @@ body {
 @keyframes cl-fall { 0% { transform: none; opacity: 1; } 35% { transform: rotateX(-25deg); } 100% { transform: translateY(140%) rotateX(-80deg) rotate(8deg); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .cl-fall { animation-duration: 2.4s; } }
 .cl-loop { animation-iteration-count: infinite; }
+
+/* tartaruga andando enquanto a turma termina o mês (MonthClosedCard) */
+.turtle-walk { transform-box: view-box; transform-origin: 100px 0; animation: turtle-walk 10s ease-in-out infinite; }
+@keyframes turtle-walk {
+  0% { transform: translateX(-48px) scaleX(1); }
+  46% { transform: translateX(48px) scaleX(1); }
+  50% { transform: translateX(48px) scaleX(-1); }
+  96% { transform: translateX(-48px) scaleX(-1); }
+  100% { transform: translateX(-48px) scaleX(1); }
+}
+.turtle-bob { animation: turtle-bob .45s ease-in-out infinite alternate; }
+@keyframes turtle-bob { to { transform: translateY(-1.6px); } }
+.turtle-leg { transform-box: fill-box; transform-origin: 50% 15%; animation: turtle-step .45s ease-in-out infinite alternate; }
+.turtle-leg-b { animation-delay: -.45s; }
+@keyframes turtle-step { from { transform: rotate(-18deg); } to { transform: rotate(18deg); } }
+.turtle-head { transform-box: fill-box; transform-origin: 0% 85%; animation: turtle-head .9s ease-in-out infinite alternate; }
+@keyframes turtle-head { from { transform: rotate(-5deg); } to { transform: rotate(4deg) translateX(1px); } }
+
+/* relógio do mês fixo no canto de cima, em todas as telas do jogo */
+@keyframes clock-hand { to { transform: rotate(360deg); } }
+.clock-hand { transform-box: view-box; transform-origin: 12px 14px; animation: clock-hand 60s steps(60) infinite; }
