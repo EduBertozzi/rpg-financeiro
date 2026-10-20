@@ -29,11 +29,11 @@ describe('glossário', () => {
     assert.deepEqual(terms.slice(0, -1), [...terms.slice(0, -1)].sort((a, b) => a.localeCompare(b, 'pt-BR')))
   })
 
-  it('todo termo tem explicação e onde aparece no jogo (a Poupança já tem o nome da caixinha)', () => {
+  it('todo termo tem explicação, sem as frases "no jogo"', () => {
     for (const g of GLOSSARY) {
       assert.ok(g.text.length > 20, g.term)
-      if (g.term === 'Poupança') assert.equal(g.ingame, '')
-      else assert.ok(g.ingame.length > 5, g.term)
+      assert.equal(g.ingame, undefined, g.term)
+      assert.doesNotMatch(`${g.text} ${(g.facts ?? []).flat().join(' ')}`, /no jogo/i, g.term)
     }
   })
 
@@ -52,7 +52,7 @@ describe('glossário', () => {
 
   it('o jogo não tem inflação: o caderninho também não fala dela', () => {
     assert.equal(termOf('Inflação'), null)
-    assert.ok(GLOSSARY.every((g) => !/infla/i.test(`${g.text} ${g.ingame}`)))
+    assert.ok(GLOSSARY.every((g) => !/infla/i.test(g.text)))
   })
 
   it('busca vazia mostra tudo', () => {

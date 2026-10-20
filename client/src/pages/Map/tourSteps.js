@@ -14,12 +14,12 @@ export const TOUR_STEPS = [
   {
     target: 'checklist',
     title: 'O que fazer no mês',
-    text: 'Cada mês tem um relógio. Antes de ele acabar, escolha um lazer e pague as três contas. Clique num item para ir direto, ou nos prédios do mapa.',
+    text: 'Cada mês tem um relógio. Antes de ele acabar, escolha um lazer, pague as contas e invista seu dinheiro. É só clicar nos prédios do mapa.',
   },
   {
     target: 'banco',
     title: 'Inabank',
-    text: 'No banco você guarda o que sobrar em caixinhas: dinheiro investido rende. Ele fica aberto o mês todo, até depois de encerrar. Fuja do cheque especial: 8% ao mês.',
+    text: 'No banco você investe e gerencia seu dinheiro. Ele fica aberto o mês todo, até depois de encerrar. Fuja do cheque especial: 8% ao mês.',
   },
   {
     target: 'arvore',
@@ -29,12 +29,12 @@ export const TOUR_STEPS = [
   {
     target: 'encerrar',
     title: 'Encerre o mês',
-    text: 'Terminou? Encerre o mês: a cidade fecha e chega a carta com o dilema, que tem o próprio relógio. Quando a turma toda terminar, o mês vira sozinho.',
+    text: 'Terminou? Encerre o mês. Quando a turma toda terminar, o mês vira sozinho.',
   },
   {
     target: 'caderninho',
     title: 'Ficou com dúvida?',
-    text: 'O ponto de interrogação vermelho mostra como jogar, passo a passo. Do lado, o caderninho explica CDB, Selic, juros e outros termos.',
+    text: 'O ponto de interrogação vermelho mostra como jogar e o passo a passo, e o caderninho explica conceitos fundamentais sobre o jogo.',
   },
 ]
 

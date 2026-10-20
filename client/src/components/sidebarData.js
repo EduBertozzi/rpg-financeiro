@@ -4,26 +4,25 @@
 // a barra pede para o mapa abrir uma tarefa: detail = { id }
 export const TASK_EVENT = 'fecha:task'
 
-export const LAST_DILEMMA_MONTH = 11 // dezembro não tem dilema
-
-// As tarefas do mês, na ordem em que acontecem: lazer e contas com a cidade
-// aberta; o dilema por último, depois de encerrar o mês.
+// As tarefas do mês (checklist): lazer e contas, com a cidade aberta. O dilema
+// não entra: ele chega depois de encerrar o mês.
 export const TASKS = [
   { id: 'leisure', label: 'Lazer', prefix: 'Lazer:' },
   { id: 'food', label: 'Mercadinho', prefix: 'Conta: Mercadinho' },
   { id: 'utilities', label: 'Água e Luz', prefix: 'Conta: Água e Luz' },
   { id: 'internet', label: 'Internet e Celular', prefix: 'Conta: Internet e Celular' },
-  { id: 'dilemma', label: 'Dilema do mês', prefix: 'Dilema' },
 ]
 
 // [{ ...task, done }] do mês `turn`. Fora de jogo (turn 0) não há tarefas.
 export function monthTasks(eventLog, turn) {
   if (!turn || turn < 1) return []
   const logs = (eventLog ?? []).filter((l) => Number(l.turn) === Number(turn))
-  return TASKS
-    .filter((t) => t.id !== 'dilemma' || turn <= LAST_DILEMMA_MONTH)
-    .map((t) => ({ ...t, done: logs.some((l) => String(l.description).startsWith(t.prefix)) }))
+  return TASKS.map((t) => ({ ...t, done: logs.some((l) => String(l.description).startsWith(t.prefix)) }))
 }
+
+// O dilema do mês `turn` já foi respondido (ou ficou sem resposta)?
+export const dilemmaAnswered = (eventLog, turn) =>
+  (eventLog ?? []).some((l) => Number(l.turn) === Number(turn) && String(l.description).startsWith('Dilema'))
 
 // Patrimônio no fim de cada mês já fechado, em ordem: [{ turn, value }].
 // O retrato da virada é gravado com o mês que começa (turn 2 = fim de

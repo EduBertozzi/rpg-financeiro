@@ -144,7 +144,6 @@ function TermPage({ term, onBack }) {
           ))}
         </dl>
       )}
-      {g.ingame && <p className="mt-2 border-t-2 border-dashed border-[#D8E6F2] pt-2 text-sm text-[#6B7A62]"><b>No jogo:</b> {g.ingame}</p>}
       {onBack && <button type="button" onClick={onBack} className={`${TERM_LINK} justify-self-start text-sm`}>← voltar para a lista</button>}
     </div>
   )

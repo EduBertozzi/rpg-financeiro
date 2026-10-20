@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import useGameStore from '../store/gameStore'
 import { Avatar } from './Avatars'
-import { TASK_EVENT, monthTasks, worthSeries, worthNow, sparkPoints, pointsLeft } from './sidebarData'
+import { TASK_EVENT, dilemmaAnswered, monthTasks, worthSeries, worthNow, sparkPoints, pointsLeft } from './sidebarData'
 import { useRolling, useMonthClock } from './hudHooks'
 import { clockText, formatClock, isUrgent } from './monthClock'
 import { sfx, setSoundOn, useSoundOn } from '../services/sound'
@@ -246,7 +246,7 @@ function WorthCard({ character }) {
 }
 
 // O mês: as tarefas em ícones e quantos da turma já encerraram.
-function MonthCard({ turn, tasks, clock, onTask }) {
+function MonthCard({ turn, tasks, clock }) {
   const total = clock?.total ?? 0
   const ready = clock?.closed ?? 0
   return (
@@ -255,16 +255,15 @@ function MonthCard({ turn, tasks, clock, onTask }) {
         <b className="font-toy text-[19px] font-extrabold">{MONTHS[turn - 1]}</b>
         <span className="text-[12px] font-extrabold text-[#A9B19E]">{turn}/12</span>
       </div>
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className="grid grid-cols-4 gap-1.5">
         {tasks.map((t) => (
-          <button
+          <span
             key={t.id}
-            type="button"
-            onClick={() => onTask(t.id)}
+            role="img"
             title={`${t.label}${t.done ? ' · feito' : ' · falta'}`}
             aria-label={`${t.label}: ${t.done ? 'feito' : 'falta'}`}
             className={[
-              'relative grid aspect-square place-items-center rounded-[14px] border-2 transition-transform hover:-translate-y-0.5 cursor-pointer',
+              'relative grid aspect-square place-items-center rounded-[14px] border-2',
               t.done ? 'border-[var(--theme-primary)] bg-[color-mix(in_srgb,var(--theme-secondary)_22%,white)] text-[var(--theme-primary)]' : 'border-dashed border-[#E2D6BE] bg-[#FFFDF5] text-[#A9B19E]',
             ].join(' ')}
           >
@@ -274,7 +273,7 @@ function MonthCard({ turn, tasks, clock, onTask }) {
                 <svg viewBox="0 0 16 16" className="h-2 w-2" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M3.5 8.5l3 3L12.5 5" /></svg>
               </span>
             )}
-          </button>
+          </span>
         ))}
       </div>
       {total > 0 && (
@@ -317,7 +316,7 @@ export default function GameHeader() {
   const playing = room?.status === 'active'
   const turn = playing ? Math.min(room?.currentTurn ?? 0, 12) : 0
   const tasks = monthTasks(character?.eventLog, turn)
-  const answered = Boolean(tasks.find((t) => t.id === 'dilemma')?.done)
+  const answered = dilemmaAnswered(character?.eventLog, turn)
   const clock = useMonthClock(room?.id, playing && user?.role !== 'admin', answered)
 
   const path = location.pathname
@@ -402,7 +401,7 @@ export default function GameHeader() {
             {sidebarExpanded ? (
               <>
                 <WorthCard character={character} />
-                {turn > 0 && <MonthCard turn={turn} tasks={tasks} clock={clock} onTask={openTask} />}
+                {turn > 0 && <MonthCard turn={turn} tasks={tasks} clock={clock} />}
               </>
             ) : (
               <div className="flex flex-col items-center gap-3">

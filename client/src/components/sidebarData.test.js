@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { TASKS, monthTasks, worthSeries, worthNow, sparkPoints, pointsLeft } from './sidebarData.js'
+import { TASKS, dilemmaAnswered, monthTasks, worthSeries, worthNow, sparkPoints, pointsLeft } from './sidebarData.js'
 
 const log = (turn, description) => ({ turn, description })
 
-test('monthTasks: as 5 tarefas, o dilema por último, marcando o que já foi feito no mês', () => {
+test('monthTasks: as 4 tarefas (lazer e contas), marcando o que já foi feito no mês', () => {
   const logs = [
     log(4, 'Dilema "Dor de dente" — Opção A: ...'),
     log(4, 'Conta: Mercadinho (-R$ 1000.00)'),
@@ -12,10 +12,10 @@ test('monthTasks: as 5 tarefas, o dilema por último, marcando o que já foi fei
   ]
   const tasks = monthTasks(logs, 4)
   assert.deepEqual(tasks.map((t) => t.id), TASKS.map((t) => t.id))
-  assert.deepEqual(tasks.map((t) => t.done), [false, true, false, false, true])
+  assert.deepEqual(tasks.map((t) => t.done), [false, true, false, false])
 })
 
-test('monthTasks: dezembro não tem dilema', () => {
+test('monthTasks: dezembro tem as mesmas 4 tarefas', () => {
   assert.deepEqual(monthTasks([], 12).map((t) => t.id), ['leisure', 'food', 'utilities', 'internet'])
 })
 
@@ -24,9 +24,15 @@ test('monthTasks: sala esperando (mês 0) não tem tarefa', () => {
   assert.deepEqual(monthTasks(undefined, undefined), [])
 })
 
-test('monthTasks: dilema sem resposta (inércia) também conta como feito', () => {
+test('monthTasks: o dilema não entra no checklist (só lazer e contas)', () => {
   const t = monthTasks([log(2, 'Dilema "Chave perdida" — Sem resposta: ...')], 2)
-  assert.equal(t.find((x) => x.id === 'dilemma').done, true)
+  assert.deepEqual(t.map((x) => x.id), ['leisure', 'food', 'utilities', 'internet'])
+})
+
+test('dilemmaAnswered: resposta ou inércia contam; outro mês não', () => {
+  assert.equal(dilemmaAnswered([log(2, 'Dilema "Chave perdida" — Sem resposta: ...')], 2), true)
+  assert.equal(dilemmaAnswered([log(1, 'Dilema "x" — A')], 2), false)
+  assert.equal(dilemmaAnswered(undefined, 2), false)
 })
 
 test('worthSeries: retrato da virada vira o mês que fechou, em ordem, Decimal em número', () => {
