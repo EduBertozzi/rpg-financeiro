@@ -5,7 +5,6 @@ import { formatClock, isUrgent } from './monthClock'
 import api from '../services/api'
 import useGameStore from '../store/gameStore'
 import { TOY_CARD, TOY_ERROR } from './town/toy'
-import { afterLabel, savedTotal } from './dilemmaMoney'
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 const brl = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -42,7 +41,6 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
   const [result, setResult] = useState(null) // { result, cashImpact, lockSeconds }
   const [error, setError] = useState('')
   const [wasAlreadyAnswered, setWasAlreadyAnswered] = useState(false)
-  const [money, setMoney] = useState(null) // { cash, saved } atualizado na hora
 
   useEffect(() => {
     if (!character?.id || !turn) return
@@ -58,10 +56,6 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
       })
       .catch(() => setError('Não deu para carregar o dilema do mês.'))
       .finally(() => setLoading(false))
-    // saldo de agora (o da tela pode ser de antes da virada)
-    api.get(`/characters/${character.id}`)
-      .then(({ data }) => setMoney({ cash: Number(data.cash), saved: savedTotal(data.fixedInvestments ?? []) }))
-      .catch(() => setMoney(null))
   }, [character?.id, turn])
 
   const handleChoose = async (optionIndex) => {
@@ -92,7 +86,7 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
         <Letter />
         {!result && timeLeft != null && (
           <p role="timer" className={`mx-auto -mt-1 mb-2 w-fit rounded-full px-3 py-1 text-sm font-extrabold tabular-nums ${isUrgent(timeLeft) ? 'animate-pulse bg-[#C4283D] text-white' : 'bg-[#FFF3C4] text-[#7A5200]'}`}>
-            ⏱ {formatClock(timeLeft)} para decidir · sem resposta, vale a opção de quem não fez nada
+            ⏱ {formatClock(timeLeft)} para decidir · se não responder, o jogo escolhe por você
           </p>
         )}
 
@@ -114,12 +108,6 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
             {!result ? (
               <>
                 <p className="text-center text-[15px] leading-relaxed text-[#4A5A42]">{dilemma.description}</p>
-                {money && (
-                  <div className="flex flex-wrap justify-center gap-2 text-[13px] font-bold">
-                    <span className={`rounded-full px-3 py-1 tabular-nums ${money.cash < 0 ? 'bg-[#FDE2E5] text-[#9F1D2F]' : 'bg-[#E2F4E5] text-[#2B8C41]'}`}>Na conta: {money.cash < 0 ? '−' : ''}{brl(Math.abs(money.cash))}</span>
-                    <span className="rounded-full bg-[#DCE7FB] px-3 py-1 tabular-nums text-[#2457C5]">Guardado nas caixinhas: {brl(money.saved)}</span>
-                  </div>
-                )}
                 <div className="grid gap-3">
                   {dilemma.options.map((option, index) => (
                     <button
@@ -132,10 +120,6 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#FFF3C4] font-toy text-lg font-extrabold text-[#B07A0C]">{option.label}</span>
                       <span className="grid min-w-0 flex-1 gap-0.5">
                         <span className="text-[15px] font-semibold leading-snug">{option.text}</span>
-                        {money && (() => {
-                          const after = afterLabel(money.cash, option, brl)
-                          return <span className={`text-[12px] font-bold ${after.negative ? 'text-[#C4283D]' : 'text-[#6B7A62]'}`}>{after.text}</span>
-                        })()}
                       </span>
                       <span className="shrink-0 rounded-full bg-[#F6EFDF] px-3 py-1 text-xs font-extrabold tabular-nums text-[#6B5A2E]">{priceLabel(option)}</span>
                     </button>
@@ -144,7 +128,7 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
                 {error && <p className={TOY_ERROR}>{error}</p>}
                 {onBank && (
                   <button type="button" onClick={onBank} className="justify-self-center rounded-full border-2 border-[#CFE3E0] bg-[#EAF6F4] px-4 py-1.5 text-sm font-extrabold text-[#0A7F75] hover:bg-[#DDF1EE] cursor-pointer">
-                    Olhar o banco antes de decidir
+                    Acessar o banco
                   </button>
                 )}
               </>

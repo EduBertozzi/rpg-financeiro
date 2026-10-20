@@ -113,7 +113,6 @@ export default function Bank() {
   const stocksValue = stocksValueOf(portfolio)
   const boxesTotal = activeTypes.reduce((sum, t) => sum + boxValue(t), 0)
   const total = cash + boxesTotal + stocksValue
-  const monthlyYield = activeTypes.reduce((sum, t) => sum + boxYield(t), 0)
   const reserveGoal = reserveGoalOf(character)
   // caixinha com mais dinheiro resgatável para cobrir o cheque especial
   const coverType = activeTypes
@@ -279,12 +278,7 @@ export default function Bank() {
 
             {/* caixinhas */}
             <section className="grid gap-4 rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
-              <h3 className="flex flex-wrap items-center justify-between gap-2 font-extrabold">
-                Caixinhas
-                <span className="text-sm font-medium text-[#627673]">
-                  Rendem cerca de <b className="tabular-nums text-[#0B8A50]">{money(monthlyYield)}</b> até o fim do mês
-                </span>
-              </h3>
+              <h3 className="font-extrabold">Caixinhas</h3>
               <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#627673]">
                 <span>O que é cada uma?</span>
                 {BOXES.map((b) => (
