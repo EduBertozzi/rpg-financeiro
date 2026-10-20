@@ -10,6 +10,31 @@ export function parseAmount(text) {
   return Number(clean.replace(/\./g, '').replace(',', '.'))
 }
 
+// Máscara do campo de valor em R$, enquanto a pessoa digita: pontos de milhar
+// e vírgula para os centavos (no máximo 2 casas).
+// "1000" → "1.000" · "1234567,891" → "1.234.567,89" · "0012" → "12" · "abc" → ""
+// Um ponto digitado no fim (sem vírgula ainda) vira a vírgula dos centavos.
+export function maskAmount(text) {
+  let raw = String(text ?? '')
+  if (raw.endsWith('.') && !raw.includes(',')) raw = `${raw.slice(0, -1)},`
+  raw = raw.replace(/[^\d,]/g, '')
+  const comma = raw.indexOf(',')
+  const intDigits = (comma === -1 ? raw : raw.slice(0, comma)).replace(/^0+(?=\d)/, '')
+  const intPart = intDigits.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  if (comma === -1) return intPart
+  const decimals = raw.slice(comma + 1).replace(/,/g, '').slice(0, 2)
+  return `${intPart || '0'},${decimals}`
+}
+
+// Ao sair do campo: completa para 2 casas ("1.000" → "1.000,00", "5,5" → "5,50").
+export function finishAmount(text) {
+  const n = parseAmount(maskAmount(text))
+  if (!Number.isFinite(n)) return ''
+  return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const cents = (n) => Math.round(n * 100) / 100
+
 // Total guardado numa caixinha de renda fixa (o servidor já soma os rendimentos).
 export const fixedBoxValue = (investments, type) =>
   investments.filter((f) => f.type === type).reduce((sum, f) => sum + Number(f.amount), 0)
@@ -28,6 +53,64 @@ export const freeBoxValue = (investments, type, turn) =>
 export const nextUnlock = (investments, type, turn) => {
   const held = investments.filter((f) => f.type === type && !isFree(f, turn)).map((f) => unlocksAt(type, f.investedAt))
   return held.length ? Math.min(...held) : null
+}
+
+// IR sobre o rendimento, cobrado só no resgate (igual a incomeTaxRate do
+// servidor): CDB 17,5%; Tesouro 22,5% antes de 6 meses e 15% depois;
+// poupança, LCI e LCA isentas.
+export const EARLY_REDEMPTION_MONTHS = 6
+export function incomeTaxRate(type, monthsHeld) {
+  if (type === 'CDB') return 0.175
+  if (type === 'TESOURO_SELIC' || type === 'TESOURO_PRE') return monthsHeld < EARLY_REDEMPTION_MONTHS ? 0.225 : 0.15
+  return 0
+}
+
+// Valor aplicado originalmente: desfaz os meses de juros compostos já somados em `amount`.
+export function principalOf(investment, turn) {
+  const months = Math.max(turn - investment.investedAt, 0)
+  return Number(investment.amount) / Math.pow(1 + Number(investment.monthlyRate), months)
+}
+
+// Prévia do resgate parcial de uma caixinha, espelho de planWithdrawal do
+// servidor: tira do mais antigo para o mais novo e o IR incide só sobre a parte
+// do rendimento. Na LCI e na LCA só entram as aplicações fora da carência.
+// Retorna { error: 'insufficient', available } quando não dá para resgatar o valor.
+export function planWithdrawal(investments, type, amount, turn) {
+  const all = investments
+    .filter((inv) => inv.type === undefined || inv.type === type)
+    .sort((a, b) => a.investedAt - b.investedAt)
+  const free = all.filter((inv) => turn >= unlocksAt(type, inv.investedAt))
+  const available = free.reduce((sum, inv) => sum + Number(inv.amount), 0)
+  const value = cents(Number(amount))
+  if (value > available + 0.005) return { error: 'insufficient', available: cents(available) }
+
+  let remaining = value
+  let incomeTax = 0
+  for (const inv of free) {
+    if (remaining <= 0.005) break
+    const invValue = Number(inv.amount)
+    const take = Math.min(remaining, invValue)
+    const gain = Math.max(invValue - principalOf(inv, turn), 0) * (take / invValue)
+    incomeTax += gain * incomeTaxRate(type, turn - inv.investedAt)
+    remaining -= take
+  }
+  incomeTax = cents(incomeTax)
+  return { available: cents(available), incomeTax, gross: value, net: cents(value - incomeTax) }
+}
+
+// Ações: total de uma ordem e quantidade válida (inteiro de 1 até `max`).
+export const tradeTotal = (price, quantity) => cents(Number(price) * Number(quantity))
+
+export function clampQuantity(value, max = Infinity) {
+  const n = Math.floor(Number(String(value ?? '').replace(/\D/g, '')))
+  if (!Number.isFinite(n) || n < 1) return 1
+  return Math.max(1, Math.min(n, max))
+}
+
+// Compra de ações: o saldo da conta precisa cobrir o total.
+export function buyCheck(cash, price, quantity) {
+  const total = tradeTotal(price, quantity)
+  return { total, ok: Number(cash) >= total }
 }
 
 // Quanto a caixinha deve render até o fim do mês.

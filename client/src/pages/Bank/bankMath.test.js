@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   activeDebentures, debentureValue, debentureYield, fixedBoxValue, fixedBoxYield, monthlyBills,
-  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, stocksValue, freeBoxValue, nextUnlock, unlocksAt,
+  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, maskAmount, finishAmount, incomeTaxRate, principalOf, planWithdrawal, tradeTotal, clampQuantity, buyCheck, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, stocksValue, freeBoxValue, nextUnlock, unlocksAt,
 } from './bankMath.js'
 
 const close = (actual, expected, digits = 2) =>
@@ -224,5 +224,190 @@ describe('carência da LCI e da LCA', () => {
     assert.equal(nextUnlock(inv, 'LCI', 7), 9)
     assert.equal(nextUnlock(inv, 'LCI', 9), null)
     assert.equal(nextUnlock(inv, 'CDB', 5), null)
+  })
+})
+
+describe('maskAmount (máscara do campo de valor)', () => {
+  it('coloca pontos de milhar', () => {
+    assert.equal(maskAmount('1000'), '1.000')
+    assert.equal(maskAmount('1234567'), '1.234.567')
+    assert.equal(maskAmount('100'), '100')
+    assert.equal(maskAmount('12345'), '12.345')
+  })
+  it('refaz os pontos quando a pessoa continua digitando ou apaga', () => {
+    assert.equal(maskAmount('1.0000'), '10.000')
+    assert.equal(maskAmount('1.00'), '100')
+  })
+  it('aceita vírgula com no máximo 2 casas', () => {
+    assert.equal(maskAmount('1000,'), '1.000,')
+    assert.equal(maskAmount('1000,5'), '1.000,5')
+    assert.equal(maskAmount('1000,567'), '1.000,56')
+    assert.equal(maskAmount('1,2,3'), '1,23')
+  })
+  it('vírgula sozinha vira 0,', () => {
+    assert.equal(maskAmount(','), '0,')
+    assert.equal(maskAmount(',5'), '0,5')
+  })
+  it('ponto digitado no fim vira vírgula', () => {
+    assert.equal(maskAmount('10.'), '10,')
+    assert.equal(maskAmount('1.000,5.'), '1.000,5')
+  })
+  it('tira zeros à esquerda, letras e sinal', () => {
+    assert.equal(maskAmount('0012'), '12')
+    assert.equal(maskAmount('0'), '0')
+    assert.equal(maskAmount('0,50'), '0,50')
+    assert.equal(maskAmount('R$ 1a2b3'), '123')
+    assert.equal(maskAmount('-500'), '500')
+    assert.equal(maskAmount('abc'), '')
+    assert.equal(maskAmount(''), '')
+    assert.equal(maskAmount(undefined), '')
+  })
+  it('parseAmount lê o valor mascarado', () => {
+    assert.equal(parseAmount(maskAmount('1000')), 1000)
+    assert.equal(parseAmount(maskAmount('1234567,89')), 1234567.89)
+    assert.equal(parseAmount(maskAmount('1000,5')), 1000.5)
+    assert.equal(parseAmount(maskAmount('1000,')), 1000)
+  })
+})
+
+describe('finishAmount (completa ao sair do campo)', () => {
+  it('completa para 2 casas', () => {
+    assert.equal(finishAmount('1.000'), '1.000,00')
+    assert.equal(finishAmount('5,5'), '5,50')
+    assert.equal(finishAmount('1.000,'), '1.000,00')
+    assert.equal(finishAmount('1.234.567,89'), '1.234.567,89')
+    assert.equal(finishAmount('0,5'), '0,50')
+  })
+  it('campo vazio fica vazio', () => {
+    assert.equal(finishAmount(''), '')
+    assert.equal(finishAmount('abc'), '')
+  })
+  it('parseAmount lê o valor completado', () => {
+    assert.equal(parseAmount(finishAmount('1.000')), 1000)
+    assert.equal(parseAmount(finishAmount('6.187,75')), 6187.75)
+  })
+})
+
+describe('incomeTaxRate (igual ao servidor)', () => {
+  it('CDB paga 17,5% sempre', () => {
+    assert.equal(incomeTaxRate('CDB', 0), 0.175)
+    assert.equal(incomeTaxRate('CDB', 12), 0.175)
+  })
+  it('Tesouro paga 22,5% antes de 6 meses e 15% depois', () => {
+    assert.equal(incomeTaxRate('TESOURO_SELIC', 5), 0.225)
+    assert.equal(incomeTaxRate('TESOURO_SELIC', 6), 0.15)
+    assert.equal(incomeTaxRate('TESOURO_PRE', 1), 0.225)
+    assert.equal(incomeTaxRate('TESOURO_PRE', 10), 0.15)
+  })
+  it('poupança, LCI e LCA são isentas', () => {
+    for (const t of ['POUPANCA', 'LCI', 'LCA']) assert.equal(incomeTaxRate(t, 3), 0)
+  })
+})
+
+describe('principalOf', () => {
+  it('desfaz os meses de juros compostos', () => {
+    close(principalOf({ amount: 1000 * 1.01 ** 3, monthlyRate: 0.01, investedAt: 2 }, 5), 1000, 6)
+  })
+  it('sem meses passados, é o próprio valor', () => {
+    assert.equal(principalOf({ amount: '500', monthlyRate: '0.01', investedAt: 5 }, 5), 500)
+    assert.equal(principalOf({ amount: 500, monthlyRate: 0.01, investedAt: 6 }, 5), 500)
+  })
+})
+
+describe('planWithdrawal (espelho do servidor)', () => {
+  // 6 aplicações de R$ 1.000 no Tesouro Selic, nos meses 1 a 6, já com os rendimentos até o mês 7
+  const selic = [[1, 1054.03], [2, 1044.83], [3, 1035.71], [4, 1026.67], [5, 1017.70], [6, 1008.81]]
+    .map(([k, amount]) => ({ id: k, type: 'TESOURO_SELIC', investedAt: k, monthlyRate: 0.00881, amount }))
+
+  it('resgate total no mês 7: IR de R$ 38,19 e R$ 6.149,56 na conta', () => {
+    const plan = planWithdrawal(selic, 'TESOURO_SELIC', 6187.75, 7)
+    assert.equal(plan.error, undefined)
+    assert.equal(plan.available, 6187.75)
+    assert.equal(plan.incomeTax, 38.19)
+    assert.equal(plan.gross, 6187.75)
+    assert.equal(plan.net, 6149.56)
+  })
+  it('com a taxa exata (1,111)^(1/12) − 1 e aplicações de R$ 1.000 dá o mesmo IR', () => {
+    const r = monthlyFromAnnual(0.111)
+    const exact = [1, 2, 3, 4, 5, 6].map((k) => ({ type: 'TESOURO_SELIC', investedAt: k, monthlyRate: r, amount: 1000 * (1 + r) ** (7 - k) }))
+    const total = exact.reduce((s, i) => s + i.amount, 0)
+    const plan = planWithdrawal(exact, 'TESOURO_SELIC', total, 7)
+    assert.equal(plan.incomeTax, 38.19)
+    close(plan.net, 6149.57)
+  })
+  it('resgate parcial tira do mais antigo primeiro', () => {
+    const plan = planWithdrawal(selic, 'TESOURO_SELIC', 2500, 7)
+    assert.equal(plan.incomeTax, 21.3)
+    assert.equal(plan.net, 2478.7)
+    const small = planWithdrawal(selic, 'TESOURO_SELIC', 100, 7)
+    assert.equal(small.incomeTax, 0.77)
+    assert.equal(small.net, 99.23)
+  })
+  it('a ordem da lista não muda o resultado', () => {
+    assert.equal(planWithdrawal([...selic].reverse(), 'TESOURO_SELIC', 2500, 7).incomeTax, 21.3)
+  })
+  it('depois de 6 meses o Tesouro paga 15%', () => {
+    const plan = planWithdrawal(selic, 'TESOURO_SELIC', 6187.75, 12)
+    assert.equal(plan.incomeTax, 66.78)
+    assert.equal(plan.net, 6120.97)
+  })
+  it('valor maior que a caixinha dá erro com o disponível', () => {
+    assert.deepEqual(planWithdrawal(selic, 'TESOURO_SELIC', 6187.76, 7), { error: 'insufficient', available: 6187.75 })
+  })
+  it('ignora aplicações de outro tipo', () => {
+    const mixed = [...selic, { id: 9, type: 'CDB', investedAt: 1, monthlyRate: 0.01, amount: 5000 }]
+    assert.equal(planWithdrawal(mixed, 'TESOURO_SELIC', 6187.75, 7).net, 6149.56)
+  })
+  it('CDB paga 17,5% sobre o rendimento (valores em texto, como vêm da API)', () => {
+    const cdb = [
+      { id: 1, type: 'CDB', investedAt: 1, monthlyRate: 0.00843, amount: '2144.41' },
+      { id: 2, type: 'CDB', investedAt: 3, monthlyRate: '0.00843', amount: '2107.36' },
+    ]
+    const plan = planWithdrawal(cdb, 'CDB', 3000, 9)
+    assert.equal(plan.available, 4251.77)
+    assert.equal(plan.incomeTax, 31.73)
+    assert.equal(plan.net, 2968.27)
+  })
+  it('LCI: só entra o que saiu da carência, sem IR', () => {
+    const lci = [
+      { id: 1, type: 'LCI', investedAt: 1, monthlyRate: 0.0091, amount: 1064.06 },
+      { id: 2, type: 'LCI', investedAt: 5, monthlyRate: 0.0091, amount: 1026.97 },
+    ]
+    const plan = planWithdrawal(lci, 'LCI', 500, 8)
+    assert.equal(plan.available, 1064.06)
+    assert.equal(plan.incomeTax, 0)
+    assert.equal(plan.net, 500)
+    assert.deepEqual(planWithdrawal(lci, 'LCI', 1500, 8), { error: 'insufficient', available: 1064.06 })
+    assert.equal(planWithdrawal(lci, 'LCI', 2091.03, 11).net, 2091.03)
+  })
+  it('poupança é isenta', () => {
+    const plan = planWithdrawal([{ type: 'POUPANCA', investedAt: 0, monthlyRate: 0.005, amount: 1100 }], 'POUPANCA', 1100, 10)
+    assert.equal(plan.incomeTax, 0)
+    assert.equal(plan.net, 1100)
+  })
+  it('caixinha vazia', () => {
+    assert.deepEqual(planWithdrawal([], 'CDB', 10, 3), { error: 'insufficient', available: 0 })
+  })
+})
+
+describe('ações: quantidade e total', () => {
+  it('tradeTotal multiplica e arredonda nos centavos', () => {
+    assert.equal(tradeTotal(10.1, 3), 30.3)
+    assert.equal(tradeTotal('33.33', 3), 99.99)
+    assert.equal(tradeTotal(0.1, 7), 0.7)
+  })
+  it('clampQuantity: inteiro de 1 até o máximo', () => {
+    assert.equal(clampQuantity('5'), 5)
+    assert.equal(clampQuantity(''), 1)
+    assert.equal(clampQuantity('0'), 1)
+    assert.equal(clampQuantity(-3), 3)
+    assert.equal(clampQuantity(12, 10), 10)
+    assert.equal(clampQuantity('abc', 10), 1)
+    assert.equal(clampQuantity(3, 0), 1)
+  })
+  it('buyCheck: saldo precisa cobrir o total', () => {
+    assert.deepEqual(buyCheck(100, 25, 4), { total: 100, ok: true })
+    assert.deepEqual(buyCheck(99.99, 25, 4), { total: 100, ok: false })
+    assert.deepEqual(buyCheck('-10', 1, 1), { total: 1, ok: false })
   })
 })
