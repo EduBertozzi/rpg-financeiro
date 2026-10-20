@@ -24,21 +24,21 @@ describe('tabela de dons', () => {
     expect(typeof GIFTS[id].description).toBe('string')
   })
 
-  it('frugal: 10% de desconto nos custos fixos', () => {
-    expect(GIFTS.frugal.costDiscount).toBe(0.10)
+  it('frugal: 5% de desconto nos custos fixos', () => {
+    expect(GIFTS.frugal.costDiscount).toBe(0.05)
   })
 
-  it('agile: freela de R$ 240 e +50% nos eventos positivos', () => {
-    expect(GIFTS.agile.monthlyIncome).toEqual({ label: 'Freela', amount: 240 })
-    expect(GIFTS.agile.positiveEventBonus).toBe(0.5)
+  it('agile: freela de R$ 120 e +25% nos eventos positivos', () => {
+    expect(GIFTS.agile.monthlyIncome).toEqual({ label: 'Freela', amount: 120 })
+    expect(GIFTS.agile.positiveEventBonus).toBe(0.25)
   })
 
   it('smart: 2 pontos iniciais e limite 10', () => {
     expect(GIFTS.smart.skillPoints).toEqual({ totalPoints: 2, maxPoints: 10 })
   })
 
-  it('custos base: 1500 / 1000 / 250 / 250', () => {
-    expect(BASE_COSTS).toEqual({ housingCost: 1500, foodCost: 1000, utilitiesCost: 250, transportCost: 250 })
+  it('custos base: 2100 / 1000 / 250 / 250', () => {
+    expect(BASE_COSTS).toEqual({ housingCost: 2100, foodCost: 1000, utilitiesCost: 250, transportCost: 250 })
   })
 
   it('pontos base: 0 pontos e limite 8', () => {
@@ -61,13 +61,13 @@ describe('giftOf / isValidGift', () => {
 // ─── custos iniciais ──────────────────────────────────────────────────────────
 
 describe('startingCosts', () => {
-  it('frugal: exatamente 1350 / 900 / 225 / 225', () => {
-    expect(startingCosts('frugal')).toEqual({ housingCost: 1350, foodCost: 900, utilitiesCost: 225, transportCost: 225 })
+  it('frugal: exatamente 1995 / 950 / 237,50 / 237,50', () => {
+    expect(startingCosts('frugal')).toEqual({ housingCost: 1995, foodCost: 950, utilitiesCost: 237.5, transportCost: 237.5 })
   })
 
-  it('frugal: soma R$ 2.700 (R$ 300 a menos por mês)', () => {
+  it('frugal: soma R$ 3.420 (R$ 180 a menos por mês)', () => {
     const total = Object.values(startingCosts('frugal')).reduce((a, b) => a + b, 0)
-    expect(total).toBe(2700)
+    expect(total).toBe(3420)
   })
 
   it.each(['agile', 'smart'])('%s: custos cheios', (gift) => {
@@ -85,8 +85,8 @@ describe('startingCosts', () => {
   it('devolve um objeto novo a cada chamada (não expõe BASE_COSTS)', () => {
     const costs = startingCosts('agile')
     costs.housingCost = 1
-    expect(BASE_COSTS.housingCost).toBe(1500)
-    expect(startingCosts('agile').housingCost).toBe(1500)
+    expect(BASE_COSTS.housingCost).toBe(2100)
+    expect(startingCosts('agile').housingCost).toBe(2100)
   })
 })
 
@@ -114,8 +114,8 @@ describe('startingSkillPoints', () => {
 // ─── renda do dom ─────────────────────────────────────────────────────────────
 
 describe('giftIncome / giftIncomeEntry', () => {
-  it('agile: R$ 240 por mês', () => {
-    expect(giftIncome('agile')).toBe(240)
+  it('agile: R$ 120 por mês', () => {
+    expect(giftIncome('agile')).toBe(120)
   })
 
   it.each(['frugal', 'smart', ...NEUTRAL])('%p: 0', (gift) => {
@@ -123,7 +123,7 @@ describe('giftIncome / giftIncomeEntry', () => {
   })
 
   it('agile: linha do extrato no formato das rendas das habilidades', () => {
-    expect(giftIncomeEntry('agile')).toEqual({ label: 'Freela', skill: 'Desenrolado', amount: 240 })
+    expect(giftIncomeEntry('agile')).toEqual({ label: 'Freela', skill: 'Desenrolado', amount: 120 })
   })
 
   it.each(['frugal', 'smart', ...NEUTRAL])('%p: sem linha', (gift) => {
@@ -134,8 +134,8 @@ describe('giftIncome / giftIncomeEntry', () => {
 // ─── eventos positivos ────────────────────────────────────────────────────────
 
 describe('positiveEventMultiplier / giftEventImpact', () => {
-  it('agile: 1,5', () => {
-    expect(positiveEventMultiplier('agile')).toBe(1.5)
+  it('agile: 1,25', () => {
+    expect(positiveEventMultiplier('agile')).toBe(1.25)
   })
 
   it.each(['frugal', 'smart', ...NEUTRAL])('%p: 1', (gift) => {
@@ -143,12 +143,14 @@ describe('positiveEventMultiplier / giftEventImpact', () => {
   })
 
   it.each([
-    [800, 1200],
-    [1500, 2250],
-    [100, 150],
-    [0.01, 0.02], // 0,015 → 0,02 (arredonda pro centavo)
-    [33.33, 50],  // 49,995 → 50,00
-    [10.01, 15.02], // 15,015 → 15,02
+    [800, 1000],
+    [1500, 1875],
+    [100, 125],
+    [0.01, 0.01], // 0,0125 → 0,01 (arredonda pro centavo)
+    [0.02, 0.03], // 0,025 → 0,03 (meio centavo sobe)
+    [0.06, 0.08], // 0,075 → 0,08
+    [33.33, 41.66], // 41,6625 → 41,66
+    [10.01, 12.51], // 12,5125 → 12,51
   ])('agile: %p vira %p', (value, expected) => {
     expect(giftEventImpact(value, 'agile')).toBe(expected)
   })
@@ -170,11 +172,15 @@ describe('positiveEventMultiplier / giftEventImpact', () => {
   })
 })
 
-// ─── balanceamento: cada dom vale ≈ R$ 3.600 por ano ─────────────────────────
+// ─── balanceamento: cada dom vale ≈ R$ 1.800 por ano ─────────────────────────
+// Em 20/10/2026 os dons foram cortados pela metade (alvo era R$ 3.600). O
+// aluguel base subiu de 1.500 para 2.100 no mesmo ajuste, então o desconto de
+// 5% do frugal ficou maior que a metade antiga: R$ 180/mês = R$ 2.160/ano.
 
 describe('balanceamento anual dos dons', () => {
   const MONTHS = 12
-  const TARGET = 3600
+  const TARGET = 1800
+  const OLD_TARGET = 3600
   const within10 = (value) => {
     expect(value).toBeGreaterThanOrEqual(TARGET * 0.9)
     expect(value).toBeLessThanOrEqual(TARGET * 1.1)
@@ -204,23 +210,39 @@ describe('balanceamento anual dos dons', () => {
     expect(thirteenth.category).toBe('salary')
   })
 
-  it('frugal vale R$ 3.600 por ano (R$ 300 × 12)', () => {
-    expect(yearlyValue.frugal()).toBe(3600)
-    within10(yearlyValue.frugal())
+  it('frugal vale R$ 2.160 por ano (5% de R$ 3.600 = R$ 180 × 12)', () => {
+    expect(yearlyValue.frugal()).toBe(2160)
   })
 
-  it('agile vale ≈ R$ 3.576 por ano (240 × 12 + 50% de R$ 1.392)', () => {
-    expect(yearlyValue.agile()).toBeCloseTo(2880 + 696, 6)
+  it('frugal fica 20% acima do alvo de R$ 1.800 (efeito do aluguel de R$ 2.100)', () => {
+    // desequilíbrio conhecido: o desconto é proporcional aos custos, que subiram
+    expect(yearlyValue.frugal() / TARGET).toBeCloseTo(1.2, 6)
+  })
+
+  it('agile vale ≈ R$ 1.788 por ano (120 × 12 + 25% de R$ 1.392)', () => {
+    expect(yearlyValue.agile()).toBeCloseTo(1440 + 348, 6)
     within10(yearlyValue.agile())
+  })
+
+  it('agile vale exatamente metade do que valia (R$ 3.576 → R$ 1.788)', () => {
+    expect(yearlyValue.agile() * 2).toBeCloseTo(3576, 6)
   })
 
   it('o freela fixo sozinho já é 2/3 do valor do agile (menos dependente da sorte)', () => {
     expect(giftIncome('agile') * MONTHS / yearlyValue.agile()).toBeGreaterThan(0.6)
   })
 
-  it('frugal e agile ficam a menos de 5% um do outro', () => {
+  // Com o aluguel novo os dois dons deixaram de se equilibrar: frugal 2.160 x
+  // agile 1.788 (diferença de R$ 372, ≈ 21% do alvo). Se o game design
+  // reequilibrar, este teste avisa.
+  it('frugal e agile hoje estão a mais de 5% um do outro (≈ 21% do alvo)', () => {
     const diff = Math.abs(yearlyValue.frugal() - yearlyValue.agile())
-    expect(diff / TARGET).toBeLessThan(0.05)
+    expect(diff / TARGET).toBeGreaterThan(0.05)
+    expect(diff / TARGET).toBeCloseTo(372 / 1800, 6)
+  })
+
+  it('hoje frugal e agile estão R$ 372 distantes', () => {
+    expect(yearlyValue.frugal() - yearlyValue.agile()).toBeCloseTo(372, 6)
   })
 
   it('smart: 2 pontos a mais logo no início e 2 a mais de limite', () => {
@@ -230,13 +252,13 @@ describe('balanceamento anual dos dons', () => {
     expect(smart.maxPoints - base.maxPoints).toBe(2)
   })
 
-  it('os valores antigos estavam desbalanceados (frugal 15% ≈ 5.400, agile 20% ≈ 460)', () => {
+  it('os valores bem antigos estavam desbalanceados contra o alvo de R$ 3.600 (frugal 15% ≈ 5.400, agile 20% ≈ 460)', () => {
     const oldFrugal = 3000 * 0.15 * MONTHS
     // eventos antigos: positivos de R$ 800 e R$ 1.500 entre 12 sorteáveis
     const oldAgile = 0.2 * ((800 + 1500) / 12) * MONTHS
     expect(oldFrugal).toBeCloseTo(5400, 6)
     expect(oldAgile).toBeCloseTo(460, 6)
-    expect(oldFrugal).toBeGreaterThan(TARGET * 1.1)
-    expect(oldAgile).toBeLessThan(TARGET * 0.9)
+    expect(oldFrugal).toBeGreaterThan(OLD_TARGET * 1.1)
+    expect(oldAgile).toBeLessThan(OLD_TARGET * 0.9)
   })
 })

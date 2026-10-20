@@ -5,8 +5,27 @@
 const { cents } = require('./finance')
 const { EVENT_CALENDAR, QUIET } = require('./events')
 
+// Linhas do holerite no extrato: o salário bruto entra e o INSS e o IR saem,
+// cada um na sua linha, para a soma bater com o líquido que caiu na conta.
+const SALARY_PREFIX = 'Salário (bruto):'
+const INSS_PREFIX = 'INSS:'
+const IR_PREFIX = 'Imposto de Renda na fonte:'
+
+const salaryLine = (gross) => `${SALARY_PREFIX} Depósito do mês (+R$ ${Number(gross).toFixed(2)})`
+
+// descontos do holerite ({ inss, ir } de payslip) como linhas do extrato
+function payslipDeductions(slip) {
+  const lines = []
+  if (slip.inss > 0) lines.push({ amount: -slip.inss, description: `${INSS_PREFIX} Desconto da Previdência Social (-R$ ${slip.inss.toFixed(2)})` })
+  if (slip.ir > 0) lines.push({ amount: -slip.ir, description: `${IR_PREFIX} Desconto do mês (-R$ ${slip.ir.toFixed(2)})` })
+  return lines
+}
+
 const MONEY = {
-  salary: ['Salário:'],
+  // 'Salário:' é o texto antigo, de antes do holerite
+  salary: [SALARY_PREFIX, 'Salário:'],
+  inss: [INSS_PREFIX],
+  ir: [IR_PREFIX],
   extras: ['Bônus salarial:', 'Freela:', 'Projeto paralelo:', 'Gestão:'],
   rent: ['Aluguel:'],
   interest: ['Cheque especial:'],
@@ -26,7 +45,7 @@ function eventTitles(turn) {
 function turnSummary({ turn, logs = [], effectLabels = [] }) {
   const t = Number(turn)
   const titles = eventTitles(t)
-  const summary = { turn: t, events: [], consequences: [], investments: [], late: [], money: { salary: 0, extras: 0, rent: 0, interest: 0 }, net: 0 }
+  const summary = { turn: t, events: [], consequences: [], investments: [], late: [], money: { salary: 0, inss: 0, ir: 0, extras: 0, rent: 0, interest: 0 }, net: 0 }
   const amount = (l) => cents(Number(l.cashImpact ?? 0))
 
   for (const l of logs.filter((x) => Number(x.turn) === t)) {
@@ -62,4 +81,4 @@ function turnSummary({ turn, logs = [], effectLabels = [] }) {
   return summary
 }
 
-module.exports = { turnSummary, eventTitles }
+module.exports = { turnSummary, eventTitles, salaryLine, payslipDeductions }

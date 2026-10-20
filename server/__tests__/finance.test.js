@@ -3,7 +3,7 @@ const {
   ANNUAL_RATES, SELIC_ANNUAL, cents, monthlyFromAnnual, getMonthlyRate, incomeTaxRate,
   monthlyReturn, principalOf, redemptionOf, planWithdrawal, debentureMaturity, LOCK_MONTHS, unlocksAt, isLocked,
   debentureReturn, averagePrice, nextStockPrice,
-  OVERDRAFT_MONTHLY_RATE, SALARY, overdraftInterest, closeMonth, balanceSheet,
+  OVERDRAFT_MONTHLY_RATE, SALARY, payslip, overdraftInterest, closeMonth, balanceSheet,
 } = require('../src/utils/finance')
 
 // Simula o turnEngine: todo mês soma amount * monthlyRate em amount.
@@ -535,5 +535,74 @@ describe('caixinhas: juros compostos mês a mês', () => {
     for (let i = 1; i < gains.length; i++) expect(gains[i]).toBeGreaterThan(gains[i - 1])
     expect(amount).toBeCloseTo(1000 * (1 + ANNUAL_RATES[type]), 6)
     expect(amount).toBeGreaterThan(1000 * (1 + rate * 12)) // mais que juros simples
+  })
+})
+
+// ─── holerite (INSS e IR 2026) ───────────────────────────────────────────────
+
+describe('payslip — salário bruto e líquido', () => {
+  it('7.000 brutos: INSS 781,51, IR 754,75, líquido 5.463,74', () => {
+    expect(payslip(7000)).toEqual({ gross: 7000, inss: 781.51, ir: 754.75, net: 5463.74 })
+    expect(payslip(SALARY).net).toBe(5463.74)
+  })
+
+  it('5.000 brutos: isento de IR pelo redutor', () => {
+    expect(payslip(5000)).toEqual({ gross: 5000, inss: 501.51, ir: 0, net: 4498.49 })
+  })
+
+  it('6.000 brutos: INSS 641,51 e IR 385,10 (com redutor)', () => {
+    const slip = payslip(6000)
+    expect(slip.inss).toBe(641.51)
+    expect(slip.ir).toBe(385.1)
+    expect(slip.net).toBe(cents(6000 - 641.51 - 385.1))
+  })
+
+  it('INSS progressivo faixa a faixa', () => {
+    expect(payslip(1000).inss).toBe(75) // 7,5%
+    expect(payslip(1621).inss).toBeCloseTo(121.575, 1) // fim da 1ª faixa
+    expect(payslip(2000).inss).toBe(cents(121.575 + (2000 - 1621) * 0.09))
+    expect(payslip(4000).inss).toBe(cents(121.575 + 1281.84 * 0.09 + (4000 - 2902.84) * 0.12))
+  })
+
+  it('INSS para no teto (8.475,55)', () => {
+    const teto = payslip(8475.55).inss
+    expect(teto).toBe(988.09)
+    expect(payslip(10000).inss).toBe(teto)
+    expect(payslip(20000).inss).toBe(teto)
+  })
+
+  it('acima de 7.350 não tem redutor: 27,5% − 908,73 sobre (bruto − INSS)', () => {
+    const slip = payslip(10000)
+    expect(slip.ir).toBe(cents((10000 - 988.09) * 0.275 - 908.73))
+    expect(slip.net).toBe(cents(10000 - slip.inss - slip.ir))
+  })
+
+  it('redutor some aos poucos entre 5.000 e 7.350', () => {
+    const at7350 = payslip(7350)
+    expect(at7350.ir).toBe(cents((7350 - at7350.inss) * 0.275 - 908.73 - (978.62 - 0.133145 * 7350)))
+    expect(payslip(5001).ir).toBeLessThan(payslip(6000).ir) // logo acima de 5.000 o IR é pequeno
+    expect(payslip(5001).ir).toBeLessThan(30)
+  })
+
+  it('salário maior nunca deixa líquido menor', () => {
+    let prev = 0
+    for (let g = 0; g <= 12000; g += 50) {
+      const { net } = payslip(g)
+      expect(net).toBeGreaterThanOrEqual(prev)
+      prev = net
+    }
+  })
+
+  it('líquido = bruto − INSS − IR, sempre em centavos', () => {
+    for (const g of [1412, 3000, 5500, 7200, 7400, 8050, 9000]) {
+      const s = payslip(g)
+      expect(s.net).toBe(cents(s.gross - s.inss - s.ir))
+      expect(Number.isInteger(Math.round(s.inss * 100))).toBe(true)
+    }
+  })
+
+  it('zero ou inválido não desconta nada', () => {
+    expect(payslip(0)).toEqual({ gross: 0, inss: 0, ir: 0, net: 0 })
+    expect(payslip(undefined)).toEqual({ gross: 0, inss: 0, ir: 0, net: 0 })
   })
 })

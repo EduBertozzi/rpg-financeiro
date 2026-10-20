@@ -261,9 +261,11 @@ describe('prêmios (puro)', () => {
 
   it.each([
     [1000, 200, 800],
-    [900, 180, 720], // Mão de Vaca
-    [850, 170, 680], // Organização Financeira
-    [765, 153, 612], // Mão de Vaca + Organização Financeira
+    [950, 190, 760], // Mão de Vaca (5% a menos)
+    [925, 185, 740], // Organização Financeira (7,5% a menos)
+    [878.75, 175.75, 703], // Mão de Vaca + Organização Financeira
+    [900, 180, 720],
+    [850, 170, 680],
     [333.33, 66.67, 266.66],
     [0.05, 0.01, 0.04],
     [0, 0, 0],
@@ -281,11 +283,12 @@ describe('prêmios (puro)', () => {
 
   it('aceita valores Decimal em texto', () => {
     expect(foodCouponDiscount('1000')).toBe(200)
-    expect(foodBillWithCoupon('850.00')).toBe(680)
+    expect(foodBillWithCoupon('925.00')).toBe(740)
   })
 
   it('desconto combinado: cupom vale sobre o que sobrou da habilidade', () => {
     expect(combinedDiscount(0)).toBe(0.2)
+    expect(combinedDiscount(0.075)).toBe(0.26) // Organização Financeira
     expect(combinedDiscount(0.15)).toBe(0.32)
     expect(combinedDiscount(0.1)).toBe(0.28)
   })
@@ -730,7 +733,7 @@ describe('resgate: Semente da Árvore', () => {
 })
 
 describe('resgate: Cupom do Mercadinho', () => {
-  const ORG = { skillNode: { path: 'management', level: 1 } } // Mercadinho 15% mais barato
+  const ORG = { skillNode: { path: 'management', level: 1 } } // Mercadinho 7,5% mais barato
   const setup = (overrides = {}, paidEntry = null) => {
     prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { currentTurn: 6, status: 'active' }, ...overrides }))
     prismaMock.characterCoupon.findMany.mockResolvedValue(PLAN)
@@ -758,16 +761,16 @@ describe('resgate: Cupom do Mercadinho', () => {
       })
     })
 
-    it('o desconto previsto já considera a habilidade (850 → R$ 170)', async () => {
+    it('o desconto previsto já considera a habilidade (925 → R$ 185)', async () => {
       setup({ unlockedSkills: [ORG] })
       const res = await claim(6)
-      expect(res.body.reward.amount).toBe(170)
+      expect(res.body.reward.amount).toBe(185)
     })
 
-    it('Mão de Vaca (R$ 900) → R$ 180', async () => {
-      setup({ foodCost: 900 })
+    it('Mão de Vaca (R$ 950) → R$ 190', async () => {
+      setup({ foodCost: 950 })
       const res = await claim(6)
-      expect(res.body.reward.amount).toBe(180)
+      expect(res.body.reward.amount).toBe(190)
     })
 
     it('extrato sem impacto no caixa e cupom marcado, numa transação', async () => {
@@ -793,11 +796,11 @@ describe('resgate: Cupom do Mercadinho', () => {
       expect(prismaMock.character.update).toHaveBeenCalledWith({ where: { id: 'char-1' }, data: { cash: { increment: 200 } } })
     })
 
-    it('a devolução é sobre o valor pago (já com a habilidade): 850 → R$ 170', async () => {
-      setup({ unlockedSkills: [ORG] }, { cashImpact: '-850', description: 'Conta: Mercadinho — Pago (-R$ 850)' })
+    it('a devolução é sobre o valor pago (já com a habilidade): 925 → R$ 185', async () => {
+      setup({ unlockedSkills: [ORG] }, { cashImpact: '-925', description: 'Conta: Mercadinho — Pago (-R$ 925)' })
       const res = await claim(6)
-      expect(res.body.reward.amount).toBe(170)
-      expect(res.body.cashAfter).toBe(5170)
+      expect(res.body.reward.amount).toBe(185)
+      expect(res.body.cashAfter).toBe(5185)
     })
 
     it('em centavos: pagou R$ 333,33 → devolve R$ 66,67', async () => {
@@ -859,13 +862,13 @@ describe('Cupom do Mercadinho nas contas', () => {
       })
     })
 
-    it('cupom + Organização Financeira: 1000 → 850 → 680, desconto 32%', async () => {
+    it('cupom + Organização Financeira: 1000 → 925 → 740, desconto 26%', async () => {
       setup({ unlockedSkills: [ORG] })
       prismaMock.characterCoupon.findFirst.mockResolvedValue(claimedCoupon)
       prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
 
       const res = await bills()
-      expect(res.body.find(b => b.type === 'food')).toMatchObject({ amount: 680, baseAmount: 1000, discount: 0.32, coupon: true })
+      expect(res.body.find(b => b.type === 'food')).toMatchObject({ amount: 740, baseAmount: 1000, discount: 0.26, coupon: true })
     })
 
     it('o cupom não mexe nas outras contas', async () => {
@@ -874,8 +877,8 @@ describe('Cupom do Mercadinho nas contas', () => {
       prismaMock.characterEventLog.findFirst.mockResolvedValue(null)
 
       const res = await bills()
-      expect(res.body.find(b => b.type === 'utilities')).toMatchObject({ amount: 175, discount: 0.3, coupon: false })
-      expect(res.body.find(b => b.type === 'transport')).toMatchObject({ amount: 175, discount: 0.3, coupon: false })
+      expect(res.body.find(b => b.type === 'utilities')).toMatchObject({ amount: 212.5, discount: 0.15, coupon: false })
+      expect(res.body.find(b => b.type === 'transport')).toMatchObject({ amount: 212.5, discount: 0.15, coupon: false })
     })
 
     it('sem cupom: tudo como antes, coupon false', async () => {
@@ -946,8 +949,8 @@ describe('Cupom do Mercadinho nas contas', () => {
 
       const res = await pay('food')
 
-      expect(res.body.amount).toBe(680)
-      expect(prismaMock.characterCoupon.update).toHaveBeenCalledWith({ where: { id: 'cup-b' }, data: { value: 170 } })
+      expect(res.body.amount).toBe(740)
+      expect(prismaMock.characterCoupon.update).toHaveBeenCalledWith({ where: { id: 'cup-b' }, data: { value: 185 } })
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
       expect(prismaMock.$transaction.mock.calls[0][0]).toHaveLength(3)
     })

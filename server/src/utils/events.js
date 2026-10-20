@@ -2,8 +2,15 @@
 // virada para o mês. Cada mês tem a sua lista; os `fixed` acontecem sempre e,
 // dos outros, o jogo sorteia um (ou nenhum). Fonte: mural de game design.
 //
-// `repair`: conserto — o Técnico (Resolução de Problemas) paga metade.
+// `repair`: conserto — o Técnico (Resolução de Problemas) paga 25% menos.
 // `salary`: verba do trabalho (13º) — não ganha o bônus do dom Desenrolado.
+
+const { SALARY, payslip } = require('./finance')
+
+const brl = (n) => Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+// 13º: um salário bruto a mais, que também paga INSS e IR; cai o líquido
+const THIRTEENTH = payslip(SALARY)
 
 // chance de um mês passar sem imprevisto sorteado
 const QUIET_CHANCE = 0.2
@@ -51,7 +58,13 @@ const EVENT_CALENDAR = {
     { title: 'Sorteio do Mercadinho', description: 'Você ganhou o sorteio de Natal do Mercadinho.', cashImpact: 150, category: 'positive' },
   ],
   12: [
-    { title: '13º salário', description: 'Caiu o décimo terceiro.', cashImpact: 7000, category: 'salary', fixed: true },
+    {
+      title: '13º salário',
+      description: `Caiu o décimo terceiro: R$ ${brl(THIRTEENTH.gross)} brutos, menos INSS (R$ ${brl(THIRTEENTH.inss)}) e Imposto de Renda (R$ ${brl(THIRTEENTH.ir)}). Na conta entraram R$ ${brl(THIRTEENTH.net)} líquidos.`,
+      cashImpact: THIRTEENTH.net,
+      category: 'salary',
+      fixed: true,
+    },
     { title: 'Gastos de fim de ano', description: 'Confraternizações, amigo secreto e presentes apertaram o mês.', cashImpact: -550, category: 'daily', fixed: true },
   ],
 }

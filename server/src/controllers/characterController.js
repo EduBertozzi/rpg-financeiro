@@ -1,12 +1,12 @@
 const prisma = require('../lib/prisma')
-const { SALARY, cents } = require('../utils/finance')
+const { SALARY, cents, payslip } = require('../utils/finance')
 const { isValidGift, startingCosts, startingSkillPoints, giftIncomeEntry } = require('../utils/gifts')
 const { closedAt } = require('../utils/monthClock')
 const { clockNow, checkSoon } = require('../realtime')
 const { leisureFor } = require('../utils/leisure')
 const { dilemmaFor } = require('../utils/dilemmas')
 const { BILLS, pendingForMonth } = require('../utils/settle')
-const { turnSummary } = require('../utils/turnSummary')
+const { turnSummary, salaryLine, payslipDeductions } = require('../utils/turnSummary')
 const { createCouponPlan } = require('./couponController')
 
 // gênero saiu da criação de personagem; a coluna continua obrigatória no
@@ -34,10 +34,11 @@ exports.createCharacter = async (req, res) => {
 
     // O primeiro mês não tem virada: o salário dele (e a renda do dom) entra
     // aqui e o aluguel já sai, igual nos outros meses.
-    const costs = startingCosts(gift) // aluguel, mercado, contas e transporte (Mão de Vaca: -10%)
+    const costs = startingCosts(gift) // aluguel, mercado, contas e transporte (Mão de Vaca: -5%)
     const extra = giftIncomeEntry(gift) // Desenrolado: freela
     const turn = room.status === 'active' ? room.currentTurn : 1
     const rent = Number(costs.housingCost)
+    const slip = payslip(SALARY) // cai o líquido: bruto menos INSS e IR
 
     const character = await prisma.character.create({
       data: {
@@ -48,14 +49,15 @@ exports.createCharacter = async (req, res) => {
         avatarId,
         course,
         gift,
-        cash: cents(SALARY + (extra?.amount ?? 0) - rent),
+        cash: cents(slip.net + (extra?.amount ?? 0) - rent),
         ...costs,
       }
     })
 
     await prisma.characterEventLog.createMany({
       data: [
-        { characterId: character.id, turn, cashImpact: SALARY, description: `Salário: Depósito do mês (+R$ ${SALARY.toFixed(2)})` },
+        { characterId: character.id, turn, cashImpact: SALARY, description: salaryLine(SALARY) },
+        ...payslipDeductions(slip).map((l) => ({ characterId: character.id, turn, cashImpact: l.amount, description: l.description })),
         ...(extra ? [{ characterId: character.id, turn, cashImpact: extra.amount, description: `${extra.label}: ${extra.skill} (+R$ ${extra.amount.toFixed(2)})` }] : []),
         { characterId: character.id, turn, cashImpact: -rent, description: `Aluguel: Casa — Pago (-R$ ${rent})` },
       ]

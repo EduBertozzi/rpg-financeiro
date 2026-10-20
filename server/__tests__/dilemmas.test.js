@@ -34,22 +34,22 @@ describe('calendário de dilemas', () => {
 
 describe('janeiro — a rotina desandou', () => {
   it('as duas escolhas custam igual (dilema sem diferença de dinheiro)', () => {
-    expect(resolve(1, 0).cash).toBe(-300)
-    expect(resolve(1, 1).cash).toBe(-300)
+    expect(resolve(1, 0).cash).toBe(-450)
+    expect(resolve(1, 1).cash).toBe(-450)
     expect(resolve(1, 0).effects).toEqual([])
     expect(resolve(1, 1).effects).toEqual([])
   })
 })
 
 describe('fevereiro — empréstimo para o amigo', () => {
-  it('emprestar: -500 agora, +537 na virada para maio', () => {
+  it('emprestar: -750 agora, +810 na virada para maio', () => {
     const r = resolve(2, 0)
-    expect(r.cash).toBe(-500)
-    expect(r.effects).toEqual([expect.objectContaining({ turn: 5, kind: 'cash', amount: 537 })])
+    expect(r.cash).toBe(-750)
+    expect(r.effects).toEqual([expect.objectContaining({ turn: 5, kind: 'cash', amount: 810 })])
   })
 
-  it('o amigo devolve 7,4% a mais', () => {
-    expect(537 / 500 - 1).toBeCloseTo(0.074, 3)
+  it('o amigo devolve 8% a mais', () => {
+    expect(810 / 750 - 1).toBeCloseTo(0.08, 3)
   })
 
   it('não emprestar não custa nada', () => {
@@ -58,42 +58,42 @@ describe('fevereiro — empréstimo para o amigo', () => {
 })
 
 describe('março — dor de dente', () => {
-  it('deixar para depois: grátis agora, canal de R$ 500 em junho', () => {
+  it('deixar para depois: grátis agora, canal de R$ 750 em junho', () => {
     const r = resolve(3, 0)
     expect(r.cash).toBe(0)
-    expect(r.effects).toEqual([expect.objectContaining({ turn: 6, kind: 'cash', amount: -500 })])
+    expect(r.effects).toEqual([expect.objectContaining({ turn: 6, kind: 'cash', amount: -750 })])
   })
 
-  it('ir ao dentista sai pela metade do canal', () => {
-    expect(resolve(3, 1).cash).toBe(-250)
+  it('ir ao dentista sai por pouco mais da metade do canal (R$ 380)', () => {
+    expect(resolve(3, 1).cash).toBe(-380)
   })
 })
 
 describe('abril — máquina de lavar', () => {
-  it('parcelado: 12 × 335,20 = 4.022,40', () => {
-    expect(machinePaid({ 4: 0 })).toBe(4022.4)
+  it('parcelado: 12 × 502,80 = 6.033,60', () => {
+    expect(machinePaid({ 4: 0 })).toBe(6033.6)
   })
 
-  it('à vista: 3.620', () => {
-    expect(machinePaid({ 4: 1 })).toBe(3620)
-    expect(resolve(4, 1).cash).toBe(-3620)
+  it('à vista: 5.430', () => {
+    expect(machinePaid({ 4: 1 })).toBe(5430)
+    expect(resolve(4, 1).cash).toBe(-5430)
   })
 
   it('parcelar custa 11,1% a mais que pagar à vista', () => {
-    expect(4022.4 / 3620 - 1).toBeCloseTo(0.111, 3)
+    expect(6033.6 / 5430 - 1).toBeCloseTo(0.111, 3)
   })
 
   it('primeira parcela na hora e 11 nas viradas seguintes, até janeiro do outro ano', () => {
     const r = resolve(4, 0)
-    expect(r.cash).toBe(-335.2)
+    expect(r.cash).toBe(-502.8)
     expect(r.effects).toHaveLength(11)
-    expect(r.effects[0]).toEqual({ turn: 5, kind: 'installment', amount: -335.2, label: 'Parcela: Máquina de lavar (2/12)' })
-    expect(r.effects[10]).toEqual({ turn: 15, kind: 'installment', amount: -335.2, label: 'Parcela: Máquina de lavar (12/12)' })
+    expect(r.effects[0]).toEqual({ turn: 5, kind: 'installment', amount: -502.8, label: 'Parcela: Máquina de lavar (2/12)' })
+    expect(r.effects[10]).toEqual({ turn: 15, kind: 'installment', amount: -502.8, label: 'Parcela: Máquina de lavar (12/12)' })
   })
 
   it('primeira parcela + todas as marcadas = preço total parcelado', () => {
     const r = resolve(4, 0)
-    expect(sum([-r.cash, ...r.effects.map((e) => -e.amount)])).toBe(4022.4)
+    expect(sum([-r.cash, ...r.effects.map((e) => -e.amount)])).toBe(6033.6)
   })
 
   it('no ano cabem 9 parcelas (abril a dezembro); 3 sobram como dívida', () => {
@@ -101,57 +101,57 @@ describe('abril — máquina de lavar', () => {
     const inGame = r.effects.filter((e) => e.turn <= 12)
     const after = r.effects.filter((e) => e.turn > 12)
     expect(1 + inGame.length).toBe(9)
-    expect(installmentDebt(after)).toBe(1005.6)
+    expect(installmentDebt(after)).toBe(1508.4)
   })
 
   it('contando a dívida, parcelar nunca sai mais barato que à vista', () => {
     const r = resolve(4, 0)
     const paidInYear = sum([-r.cash, ...r.effects.filter((e) => e.turn <= 12).map((e) => -e.amount)])
     const debt = installmentDebt(r.effects.filter((e) => e.turn > 12))
-    expect(paidInYear).toBe(3016.8) // sem a dívida, pareceria mais barato
-    expect(sum([paidInYear, debt])).toBeGreaterThan(3620)
+    expect(paidInYear).toBe(4525.2) // sem a dívida, pareceria mais barato
+    expect(sum([paidInYear, debt])).toBeGreaterThan(5430)
   })
 })
 
 describe('maio — chave perdida', () => {
-  it('arrombar: grátis agora, porta de R$ 300 em junho', () => {
+  it('arrombar: grátis agora, porta de R$ 450 em junho', () => {
     const r = resolve(5, 0)
     expect(r.cash).toBe(0)
-    expect(r.effects).toEqual([expect.objectContaining({ turn: 6, amount: -300 })])
+    expect(r.effects).toEqual([expect.objectContaining({ turn: 6, amount: -450 })])
   })
 
-  it('chaveiro: R$ 180 e sem consequência imediata', () => {
-    expect(resolve(5, 1)).toEqual(expect.objectContaining({ cash: -180, effects: [] }))
+  it('chaveiro: R$ 270 e sem consequência imediata', () => {
+    expect(resolve(5, 1)).toEqual(expect.objectContaining({ cash: -270, effects: [] }))
   })
 })
 
 describe('junho — esgotamento', () => {
-  it('descansar: R$ 1.000 agora', () => {
-    expect(resolve(6, 0)).toEqual(expect.objectContaining({ cash: -1000, effects: [] }))
+  it('descansar: R$ 1.500 agora', () => {
+    expect(resolve(6, 0)).toEqual(expect.objectContaining({ cash: -1500, effects: [] }))
   })
 
-  it('seguir trabalhando: crise de coluna de R$ 2.000 em agosto', () => {
-    expect(resolve(6, 1).effects).toEqual([expect.objectContaining({ turn: 8, kind: 'cash', amount: -2000 })])
+  it('seguir trabalhando: crise de coluna de R$ 3.000 em agosto', () => {
+    expect(resolve(6, 1).effects).toEqual([expect.objectContaining({ turn: 8, kind: 'cash', amount: -3000 })])
   })
 })
 
 describe('julho — academia', () => {
-  it('semestral à vista: R$ 1.200', () => {
-    expect(resolve(7, 0).cash).toBe(-1200)
+  it('semestral à vista: R$ 1.800', () => {
+    expect(resolve(7, 0).cash).toBe(-1800)
   })
 
-  it('mensal: 6 × 239,90 de julho a dezembro, todas dentro do ano', () => {
+  it('mensal: 6 × 359,85 de julho a dezembro, todas dentro do ano', () => {
     const r = resolve(7, 1)
-    expect(r.cash).toBe(-239.9)
+    expect(r.cash).toBe(-359.85)
     expect(r.effects.map((e) => e.turn)).toEqual([8, 9, 10, 11, 12])
-    expect(sum([-r.cash, ...r.effects.map((e) => -e.amount)])).toBe(1439.4)
+    expect(sum([-r.cash, ...r.effects.map((e) => -e.amount)])).toBe(2159.1)
     expect(installmentDebt(r.effects.filter((e) => e.turn > 12))).toBe(0)
   })
 })
 
 describe('agosto — ônibus quebrado', () => {
-  it('aplicativo: R$ 45 e sem trava', () => {
-    expect(resolve(8, 0)).toEqual(expect.objectContaining({ cash: -45, lockSeconds: 0 }))
+  it('aplicativo: R$ 70 e sem trava', () => {
+    expect(resolve(8, 0)).toEqual(expect.objectContaining({ cash: -70, lockSeconds: 0 }))
   })
 
   it('a pé: grátis, mas trava a tela por 2 minutos', () => {
@@ -160,23 +160,24 @@ describe('agosto — ônibus quebrado', () => {
 })
 
 describe('setembro — programa de TV', () => {
-  it('participar: R$ 800 e promoção de 10% (R$ 700) nas viradas de out, nov e dez', () => {
+  it('participar: R$ 1.200 e promoção de 15% (R$ 1.050) nas viradas de out, nov e dez', () => {
     const r = resolve(9, 0)
-    expect(r.cash).toBe(-800)
+    expect(r.cash).toBe(-1200)
     expect(r.effects.map((e) => [e.turn, e.kind, e.amount])).toEqual([
-      [10, 'salary_raise', 700], [11, 'salary_raise', 700], [12, 'salary_raise', 700],
+      [10, 'salary_raise', 1050], [11, 'salary_raise', 1050], [12, 'salary_raise', 1050],
     ])
+    expect(r.effects[0].label).toBe('Promoção: Salário 15% maior depois do programa de TV')
   })
 
   it('a promoção paga 2,6 vezes o custo do programa', () => {
     const r = resolve(9, 0)
-    expect(sum(r.effects.map((e) => e.amount)) / 800).toBeCloseTo(2.625, 3)
+    expect(sum(r.effects.map((e) => e.amount)) / 1200).toBeCloseTo(2.625, 3)
   })
 
-  it('quem perdeu a reunião em maio sobe só 5%', () => {
+  it('quem perdeu a reunião em maio sobe só 7,5%', () => {
     const r = resolve(9, 0, { choices: { 5: 1 } })
-    expect(r.effects.map((e) => e.amount)).toEqual([350, 350, 350])
-    expect(r.effects[0].label).toContain('5%')
+    expect(r.effects.map((e) => e.amount)).toEqual([525, 525, 525])
+    expect(r.effects[0].label).toBe('Promoção: Salário 7,5% maior depois do programa de TV')
   })
 
   it('não participar sem atraso em agosto: nada', () => {
@@ -216,10 +217,10 @@ describe('outubro — incêndio', () => {
     expect(resolve(10, 1).effects[0]).toEqual(expect.objectContaining({ turn: 11, kind: 'notice', amount: 0 }))
   })
 
-  it('as duas escolhas precisam mobiliar a casa nova em novembro (R$ 2.000)', () => {
+  it('as duas escolhas precisam mobiliar a casa nova em novembro (R$ 3.000)', () => {
     for (const option of [0, 1]) {
       const furniture = resolve(10, option).effects.filter((e) => e.kind === 'cash')
-      expect(furniture).toEqual([expect.objectContaining({ turn: 11, amount: -2000 })])
+      expect(furniture).toEqual([expect.objectContaining({ turn: 11, amount: -3000 })])
     }
   })
 
@@ -239,39 +240,39 @@ describe('outubro — incêndio', () => {
 
 describe('novembro — a máquina quebrou de novo', () => {
   it('advogado: 40% do que foi pago na máquina', () => {
-    expect(lawyerCost({ 4: 1 })).toBe(1448)
-    expect(lawyerCost({ 4: 0 })).toBe(1608.96)
-    expect(resolve(11, 0, { choices: { 4: 1 } }).cash).toBe(-1448)
+    expect(lawyerCost({ 4: 1 })).toBe(2172)
+    expect(lawyerCost({ 4: 0 })).toBe(2413.44)
+    expect(resolve(11, 0, { choices: { 4: 1 } }).cash).toBe(-2172)
   })
 
-  it('advogado ganha R$ 5.000 em dezembro', () => {
-    expect(resolve(11, 0).effects).toEqual([expect.objectContaining({ turn: 12, kind: 'cash', amount: 5000 })])
+  it('advogado ganha R$ 7.500 em dezembro', () => {
+    expect(resolve(11, 0).effects).toEqual([expect.objectContaining({ turn: 12, kind: 'cash', amount: 7500 })])
   })
 
-  it('Black Friday: R$ 1.528,48', () => {
-    expect(resolve(11, 1)).toEqual(expect.objectContaining({ cash: -1528.48, effects: [] }))
+  it('Black Friday: R$ 2.290', () => {
+    expect(resolve(11, 1)).toEqual(expect.objectContaining({ cash: -2290, effects: [] }))
   })
 })
 
 describe('Trabalho em Equipe nos dilemas', () => {
-  it('30% a menos no gasto imediato', () => {
-    expect(resolve(6, 0, { perks: TEAMWORK })).toEqual(expect.objectContaining({ cash: -700, discount: 300 }))
-    expect(resolve(4, 1, { perks: TEAMWORK }).cash).toBe(-2534)
+  it('15% a menos no gasto imediato', () => {
+    expect(resolve(6, 0, { perks: TEAMWORK })).toEqual(expect.objectContaining({ cash: -1275, discount: 225 }))
+    expect(resolve(4, 1, { perks: TEAMWORK }).cash).toBe(-4615.5)
   })
 
   it('não vale em parcela', () => {
-    expect(resolve(4, 0, { perks: TEAMWORK })).toEqual(expect.objectContaining({ cash: -335.2, discount: 0 }))
-    expect(resolve(7, 1, { perks: TEAMWORK }).cash).toBe(-239.9)
+    expect(resolve(4, 0, { perks: TEAMWORK })).toEqual(expect.objectContaining({ cash: -502.8, discount: 0 }))
+    expect(resolve(7, 1, { perks: TEAMWORK }).cash).toBe(-359.85)
   })
 
   it('não vale nas consequências', () => {
     const r = resolve(3, 0, { perks: TEAMWORK })
-    expect(r.effects[0].amount).toBe(-500)
+    expect(r.effects[0].amount).toBe(-750)
   })
 
   it('optionPrice arredonda em centavos', () => {
     const option = { cost: 1528.48 }
-    expect(optionPrice(option, ctx({ perks: TEAMWORK }))).toBe(1069.94)
+    expect(optionPrice(option, ctx({ perks: TEAMWORK }))).toBe(1299.21) // 1.528,48 × 0,85 = 1.299,208
   })
 })
 
@@ -280,8 +281,8 @@ describe('publicDilemma', () => {
     const d = publicDilemma(4, ctx())
     expect(d.title).toBe('A máquina de lavar morreu')
     expect(d.options).toEqual([
-      expect.objectContaining({ label: 'A', price: 335.2, installment: { amount: 335.2, count: 12 } }),
-      expect.objectContaining({ label: 'B', price: 3620, installment: null }),
+      expect.objectContaining({ label: 'A', price: 502.8, installment: { amount: 502.8, count: 12 } }),
+      expect.objectContaining({ label: 'B', price: 5430, installment: null }),
     ])
     expect(JSON.stringify(d)).not.toMatch(/effects/)
   })
@@ -334,28 +335,28 @@ describe('choicesTimeline', () => {
 
   it('lista os dilemas respondidos em ordem, com escolha e custo', () => {
     const timeline = choicesTimeline([
-      { kind: 'dilemma', turn: 3, option: 1, amount: 250 },
-      { kind: 'leisure', turn: 2, option: 0, amount: 300 },
-      { kind: 'dilemma', turn: 2, option: 0, amount: 500 },
+      { kind: 'dilemma', turn: 3, option: 1, amount: 380 },
+      { kind: 'leisure', turn: 2, option: 0, amount: 450 },
+      { kind: 'dilemma', turn: 2, option: 0, amount: 750 },
     ], [])
-    expect(timeline.map((t) => [t.turn, t.label, t.amount])).toEqual([[2, 'A', 500], [3, 'B', 250]])
+    expect(timeline.map((t) => [t.turn, t.label, t.amount])).toEqual([[2, 'A', 750], [3, 'B', 380]])
     expect(timeline[0]).toEqual(expect.objectContaining({ title: 'Empréstimo para o amigo', choice: 'Emprestar o dinheiro' }))
   })
 
   it('junta as parcelas numa linha com quantas foram pagas', () => {
     const { effects } = resolve(4, 0)
     const rows = effects.map((e) => ({ ...e, sourceTurn: 4, appliedAt: e.turn <= 12 ? applied : null }))
-    const [machine] = choicesTimeline([{ kind: 'dilemma', turn: 4, option: 0, amount: 335.2 }], rows)
+    const [machine] = choicesTimeline([{ kind: 'dilemma', turn: 4, option: 0, amount: 502.8 }], rows)
 
     expect(machine.consequences).toEqual([
-      { label: 'Parcela: Máquina de lavar', turn: 5, amount: -2681.6, count: 11, applied: 8 },
+      { label: 'Parcela: Máquina de lavar', turn: 5, amount: -4022.4, count: 11, applied: 8 },
     ])
   })
 
   it('consequência que ainda não chegou aparece com valor zero', () => {
     const [loan] = choicesTimeline(
-      [{ kind: 'dilemma', turn: 2, option: 0, amount: 500 }],
-      [{ sourceTurn: 2, turn: 5, kind: 'cash', amount: 537, label: 'Empréstimo: Devolvido', appliedAt: null }]
+      [{ kind: 'dilemma', turn: 2, option: 0, amount: 750 }],
+      [{ sourceTurn: 2, turn: 5, kind: 'cash', amount: 810, label: 'Empréstimo: Devolvido', appliedAt: null }]
     )
     expect(loan.consequences).toEqual([{ label: 'Empréstimo: Devolvido', turn: 5, amount: 0, count: 1, applied: 0 }])
   })
@@ -369,7 +370,8 @@ describe('o ano inteiro em dilemas', () => {
 
   // Simula as escolhas e soma o que muda no caixa em relação a um ano sem
   // dilemas: gasto imediato + consequências até dezembro + aluguel que muda +
-  // salário perdido + parcelas que sobram como dívida.
+  // salário perdido + parcelas que sobram como dívida. Salário e promoção
+  // contam pelo bruto (antes de INSS e IR).
   function yearOf(picks) {
     const choices = {}
     let total = 0
@@ -396,25 +398,25 @@ describe('o ano inteiro em dilemas', () => {
   const PRUDENT = [0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
   const CARELESS = [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1]
 
-  it('prudente: -R$ 4.913 no ano', () => {
-    // -300 -250 -3620 -300 -1000 -1200 -45 -800 +2100 (promoção)
-    // -4050 +3000 (aluguel dispensado) -2000 (mobília) -1448 +5000 (causa)
-    expect(yearOf(PRUDENT)).toBe(-4913)
+  it('prudente: -R$ 6.852 no ano', () => {
+    // -450 -380 -5430 -450 -1500 -1800 -70 -1200 +3150 (promoção)
+    // -4050 +3000 (aluguel dispensado) -3000 (mobília) -2172 +7500 (causa)
+    expect(yearOf(PRUDENT)).toBe(-6852)
   })
 
-  it('descuidado: -R$ 20.433,28 no ano', () => {
-    // -300 +37 -500 -4022,40 -180 -2000 -1439,40 -7000 (demitido)
-    // -1500 (casa cara) -2000 (mobília) -1528,48
-    expect(yearOf(CARELESS)).toBe(-20433.28)
+  it('descuidado: -R$ 26.392,70 no ano', () => {
+    // -450 -750 +810 -750 -6033,60 -270 -3000 -2159,10 -7000 (demitido)
+    // -1500 (casa cara) -3000 (mobília) -2290
+    expect(yearOf(CARELESS)).toBe(-26392.7)
   })
 
-  it('a diferença entre os dois caminhos passa de R$ 15 mil', () => {
-    expect(yearOf(PRUDENT) - yearOf(CARELESS)).toBeGreaterThan(15000)
+  it('a diferença entre os dois caminhos passa de R$ 19 mil', () => {
+    expect(yearOf(PRUDENT) - yearOf(CARELESS)).toBeGreaterThan(19000)
   })
 
-  it('sem a demissão, o descuidado perde uns R$ 13 mil', () => {
+  it('sem a demissão, o descuidado perde uns R$ 19 mil', () => {
     const notFired = [...CARELESS]
     notFired[7] = 0 // pegou o aplicativo em agosto
-    expect(yearOf(notFired)).toBeCloseTo(-13478.28, 2)
+    expect(yearOf(notFired)).toBeCloseTo(-19462.7, 2)
   })
 })

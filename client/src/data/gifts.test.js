@@ -8,8 +8,15 @@ describe('dons', () => {
     assert.deepEqual(GIFTS.map((g) => g.id), ['frugal', 'agile', 'smart'])
   })
 
-  it('valem quase o mesmo no ano (±10% de R$ 3.600)', () => {
-    for (const g of GIFTS) assert.ok(Math.abs(g.year - 3600) <= 360, `${g.id}: ${g.year}`)
+  it('valor no ano pelas regras de 20/10/2026', () => {
+    assert.equal(giftById('frugal').year, 0.05 * (2100 + 1000 + 250 + 250) * 12) // 2.160
+    assert.equal(giftById('agile').year, 120 * 12 + 0.25 * 1392) // 1.788
+    assert.equal(giftById('smart').year, (100 + 0.075 * 1000) * 12) // 2.100 (estimativa)
+  })
+
+  it('ficam a até 20% de R$ 1.800 (o aluguel de R$ 2.100 deixou o frugal 20% acima)', () => {
+    for (const g of GIFTS) assert.ok(Math.abs(g.year - 1800) <= 360, `${g.id}: ${g.year}`)
+    assert.equal(giftById('frugal').year - giftById('agile').year, 372)
   })
 
   it('giftById acha o dom ou devolve null', () => {

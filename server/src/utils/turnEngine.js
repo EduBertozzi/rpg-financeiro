@@ -1,11 +1,12 @@
 const prisma = require('../lib/prisma')
-const { monthlyReturn, debentureReturn, nextStockPrice, closeMonth, balanceSheet, cents, SALARY } = require('./finance')
+const { monthlyReturn, debentureReturn, nextStockPrice, closeMonth, balanceSheet, cents, SALARY, payslip } = require('./finance')
 const { perksOf, rentAmount, eventImpact, savingsBonus, percentLabel, billAmount } = require('./skills')
 const { giftIncome, giftIncomeEntry, giftEventImpact } = require('./gifts')
 const { eventsFor } = require('./events')
 const { dilemmaFor, summarizeEffects, installmentDebt, resolveDilemma, inertiaOption } = require('./dilemmas')
 const { leisureFor, leisurePrice } = require('./leisure')
 const { latestPrices, stocksValueOf } = require('./yearSummary')
+const { salaryLine, payslipDeductions } = require('./turnSummary')
 const { BILLS, LATE_FEE, LATE_INTEREST, lateBillAmount, pendingForMonth } = require('./settle')
 
 const brl = (n) => Number(n).toFixed(2)
@@ -81,8 +82,11 @@ async function applyFixedCosts(character, turn, perks = perksOf(), { effects = [
   const fx = summarizeEffects(effects)
   const rent = final || fx.rentWaived ? 0 : rentAmount(character.housingCost, perks)
   const paidSalary = !final && !fx.skipSalary
-  const salary = paidSalary ? cents(SALARY + perks.salaryBonus + fx.raise) : 0
-  // renda fixa do dom (Desenrolado: freela de R$ 240) entra junto com o salário
+  // holerite: o bruto é o salário + bônus das habilidades + aumento do dilema
+  // da TV; na conta cai o líquido, já sem INSS e IR
+  const slip = payslip(paidSalary ? SALARY + perks.salaryBonus + fx.raise : 0)
+  const salary = slip.net
+  // renda fixa do dom (Desenrolado: freela de R$ 120) entra junto com o salário
   const extras = final ? 0 : cents(perks.extraIncome + giftIncome(character.gift))
   const income = cents(salary + extras)
   const giftExtra = final ? null : giftIncomeEntry(character.gift)
@@ -101,7 +105,7 @@ async function applyFixedCosts(character, turn, perks = perksOf(), { effects = [
   }
 
   if (paidSalary) {
-    await log(SALARY, `Salário: Depósito do mês (+R$ ${SALARY.toFixed(2)})`)
+    await log(SALARY, salaryLine(SALARY))
     // uma linha no extrato para cada bônus de salário das habilidades
     for (const bonus of perks.salaryBonuses) {
       await log(bonus.amount, `Bônus salarial: ${bonus.skill} (+R$ ${bonus.amount.toFixed(2)})`)
@@ -122,6 +126,11 @@ async function applyFixedCosts(character, turn, perks = perksOf(), { effects = [
     const value = ['cash', 'installment', 'salary_raise'].includes(e.kind) ? Number(e.amount ?? 0) : 0
     const suffix = value ? ` (${value > 0 ? '+' : '-'}R$ ${Math.abs(value).toFixed(2)})` : ''
     await log(value, `${e.label}${suffix}`)
+  }
+
+  // descontos do holerite sobre todo o bruto do mês (salário, bônus e aumento)
+  if (paidSalary) {
+    for (const line of payslipDeductions(slip)) await log(line.amount, line.description)
   }
 
   if (!final && !fx.rentWaived) {
@@ -183,7 +192,7 @@ async function applyEvents(character, turn, perks = perksOf()) {
     let cashImpact = eventImpact(event, perks)
     const repaired = cashImpact !== event.cashImpact
 
-    // dom Desenrolado recebe 50% a mais em eventos positivos (13º não conta)
+    // dom Desenrolado recebe 25% a mais em eventos positivos (13º não conta)
     if (event.category !== 'salary') cashImpact = giftEventImpact(cashImpact, character.gift)
 
     if (cashImpact !== 0) {

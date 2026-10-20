@@ -1,10 +1,10 @@
 // Dons do personagem (escolhidos na criação). Tudo que é número dos dons mora
 // aqui — o resto do servidor só chama os helpers. Balanceados para valer
-// ≈ R$ 3.600 por ano cada um (ver __tests__/gifts.test.js).
+// ≈ R$ 1.800 por ano cada um (metade do que era; ver __tests__/gifts.test.js).
 const { cents } = require('./finance')
 
 // custos fixos mensais de quem não tem dom de desconto
-const BASE_COSTS = { housingCost: 1500, foodCost: 1000, utilitiesCost: 250, transportCost: 250 }
+const BASE_COSTS = { housingCost: 2100, foodCost: 1000, utilitiesCost: 250, transportCost: 250 }
 
 // pontos de habilidade de quem não tem o dom Inteligente
 const BASE_SKILL_POINTS = { totalPoints: 0, maxPoints: 8 }
@@ -13,15 +13,15 @@ const GIFTS = {
   frugal: {
     id: 'frugal',
     name: 'Mão de Vaca Estratégico',
-    description: 'Todos os custos fixos do mês 10% mais baratos.',
-    costDiscount: 0.10,
+    description: 'Todos os custos fixos do mês 5% mais baratos.',
+    costDiscount: 0.05,
   },
   agile: {
     id: 'agile',
     name: 'Desenrolado',
-    description: 'Freela fixo de R$ 240 por mês e eventos positivos pagam 50% a mais.',
-    monthlyIncome: { label: 'Freela', amount: 240 },
-    positiveEventBonus: 0.50,
+    description: 'Freela fixo de R$ 120 por mês e eventos positivos pagam 25% a mais.',
+    monthlyIncome: { label: 'Freela', amount: 120 },
+    positiveEventBonus: 0.25,
   },
   smart: {
     id: 'smart',

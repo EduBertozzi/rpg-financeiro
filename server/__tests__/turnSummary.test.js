@@ -4,7 +4,8 @@ const request = require('supertest')
 const app = require('../src/app')
 const { prismaMock } = require('@prisma/client')
 const { makeToken, authHeader } = require('./helpers/auth')
-const { turnSummary, eventTitles } = require('../src/utils/turnSummary')
+const { turnSummary, eventTitles, salaryLine, payslipDeductions } = require('../src/utils/turnSummary')
+const { payslip } = require('../src/utils/finance')
 
 beforeEach(() => jest.clearAllMocks())
 
@@ -41,7 +42,7 @@ describe('turnSummary', () => {
   })
 
   it('dinheiro de sempre separado', () => {
-    expect(s.money).toEqual({ salary: 7000, extras: 200, rent: -1500, interest: 0 })
+    expect(s.money).toEqual({ salary: 7000, inss: 0, ir: 0, extras: 200, rent: -1500, interest: 0 })
   })
 
   it('saldo da virada soma tudo, sem as ações do jogador no mês', () => {
@@ -61,9 +62,25 @@ describe('turnSummary', () => {
   it('janeiro: salário e aluguel do primeiro mês, sem imprevisto', () => {
     const j = turnSummary({ turn: 1, logs: [log(1, 'Salário: Depósito do mês (+R$ 7000.00)', 7000), log(1, 'Aluguel: Casa — Pago (-R$ 1500)', -1500)] })
     expect(j.events).toEqual([])
-    expect(j.money).toEqual({ salary: 7000, extras: 0, rent: -1500, interest: 0 })
+    expect(j.money).toEqual({ salary: 7000, inss: 0, ir: 0, extras: 0, rent: -1500, interest: 0 })
     expect(j.net).toBe(5500)
     expect(eventTitles(1)).toEqual(['Nenhum imprevisto'])
+  })
+
+  it('janeiro com holerite: bruto, INSS, IR e aluguel; o saldo é o líquido menos o aluguel', () => {
+    const j = turnSummary({
+      turn: 1,
+      logs: [
+        log(1, 'Salário (bruto): Depósito do mês (+R$ 7000.00)', 7000),
+        log(1, 'INSS: Desconto da Previdência Social (-R$ 781.51)', -781.51),
+        log(1, 'Imposto de Renda na fonte: Desconto do mês (-R$ 754.75)', -754.75),
+        log(1, 'Aluguel: Casa — Pago (-R$ 2100)', -2100),
+      ],
+    })
+    expect(j.money).toEqual({ salary: 7000, inss: -781.51, ir: -754.75, extras: 0, rent: -2100, interest: 0 })
+    expect(j.net).toBe(3363.74)
+    expect(j.events).toEqual([])
+    expect(j.consequences).toEqual([])
   })
 
   it('aluguel adiantado entra como consequência, não como aluguel', () => {
@@ -117,6 +134,76 @@ describe('turnSummary — debêntures na virada', () => {
   it('calote aparece no resumo sem mexer no saldo (o dinheiro já tinha saído na compra)', () => {
     const s = turnSummary({ turn: 6, logs: [log(6, 'Debênture: Milhas Fácil entrou em calote! Você perdeu os R$ 5000.00 aplicados.', 0)] })
     expect(s.investments).toHaveLength(1)
+    expect(s.net).toBe(0)
+  })
+})
+
+describe('turnSummary — holerite (salário bruto, INSS e IR)', () => {
+  const log = (turn, description, cashImpact) => ({ turn, description, cashImpact })
+  const slip = payslip(7000)
+
+  it('salaryLine escreve o bruto com o prefixo "Salário (bruto):"', () => {
+    expect(salaryLine(7000)).toBe('Salário (bruto): Depósito do mês (+R$ 7000.00)')
+    expect(salaryLine(7200.5)).toBe('Salário (bruto): Depósito do mês (+R$ 7200.50)')
+  })
+
+  it('payslipDeductions gera uma linha de INSS e uma de IR, negativas', () => {
+    expect(payslipDeductions(slip)).toEqual([
+      { amount: -781.51, description: 'INSS: Desconto da Previdência Social (-R$ 781.51)' },
+      { amount: -754.75, description: 'Imposto de Renda na fonte: Desconto do mês (-R$ 754.75)' },
+    ])
+  })
+
+  it('payslipDeductions omite descontos zerados', () => {
+    expect(payslipDeductions(payslip(0))).toEqual([])
+    // até R$ 5.000 não há IR: só a linha do INSS
+    const low = payslipDeductions(payslip(3000))
+    expect(low).toHaveLength(1)
+    expect(low[0].description).toMatch(/^INSS:/)
+  })
+
+  it('as linhas do holerite vão para salary, inss e ir; o net é a variação do caixa', () => {
+    const logs = [
+      log(6, salaryLine(7000), 7000),
+      log(6, 'Bônus salarial: Pensamento Analítico Avançado (+R$ 200.00)', 200),
+      log(6, 'Freela: Fundamentos e Lógica (+R$ 100.00)', 100),
+      ...payslipDeductions(payslip(7200)).map((l) => log(6, l.description, l.amount)),
+      log(6, 'Aluguel: Casa — Pago (-R$ 2100)', -2100),
+      log(6, 'Cheque especial: Juros de 8% sobre R$ 100.00 (-R$ 8.00)', -8),
+    ]
+    const s = turnSummary({ turn: 6, logs })
+    expect(s.money).toEqual({ salary: 7000, inss: -809.51, ir: -828.68, extras: 300, rent: -2100, interest: -8 })
+    const sumOfLines = logs.reduce((acc, l) => acc + l.cashImpact, 0)
+    expect(s.net).toBeCloseTo(sumOfLines, 2)
+    // bruto + bônus − INSS − IR = líquido do holerite de R$ 7.200
+    expect(s.money.salary + 200 + s.money.inss + s.money.ir).toBeCloseTo(payslip(7200).net, 2)
+    expect(s.net).toBeCloseTo(payslip(7200).net + 100 - 2100 - 8, 2)
+  })
+
+  it('o net soma todas as linhas, inclusive as que não são do holerite', () => {
+    const logs = [
+      log(5, salaryLine(7000), 7000),
+      ...payslipDeductions(slip).map((l) => log(5, l.description, l.amount)),
+      log(5, 'Parcela: Máquina de lavar (2/12) (-R$ 502.80)', -502.8),
+      log(5, 'Aluguel: Casa — Pago (-R$ 2100)', -2100),
+      log(5, 'Celular no chão: Na correria do trabalho o celular caiu e a tela quebrou.', -450),
+    ]
+    const s = turnSummary({ turn: 5, logs, effectLabels: ['Parcela: Máquina de lavar (2/12)'] })
+    expect(s.money.salary).toBe(7000)
+    expect(s.money.inss).toBe(-781.51)
+    expect(s.money.ir).toBe(-754.75)
+    expect(s.net).toBeCloseTo(5463.74 - 502.8 - 2100 - 450, 2)
+  })
+
+  it('o texto antigo "Salário:" (antes do holerite) ainda conta como salário', () => {
+    const s = turnSummary({ turn: 3, logs: [log(3, 'Salário: Depósito do mês (+R$ 7000.00)', 7000), log(3, 'Aluguel: Casa — Pago (-R$ 1500)', -1500)] })
+    expect(s.money).toEqual({ salary: 7000, inss: 0, ir: 0, extras: 0, rent: -1500, interest: 0 })
+    expect(s.net).toBe(5500)
+  })
+
+  it('logs de outro mês não entram no holerite', () => {
+    const s = turnSummary({ turn: 3, logs: [log(2, salaryLine(7000), 7000), log(2, payslipDeductions(slip)[0].description, -781.51)] })
+    expect(s.money).toEqual({ salary: 0, inss: 0, ir: 0, extras: 0, rent: 0, interest: 0 })
     expect(s.net).toBe(0)
   })
 })

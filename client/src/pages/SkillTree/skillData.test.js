@@ -75,10 +75,20 @@ describe('dados da constelação', () => {
     for (const p of Object.values(PERKS)) assert.doesNotMatch(`${p.desc} ${p.perk} ${p.note ?? ''}`, /freela/i)
   })
 
-  it('o efeito das habilidades com texto novo não mudou', () => {
-    assert.equal(PERKS['technical-1'].perk, '+R$ 200 por mês')
-    assert.equal(PERKS['communication-1'].perk, 'Água, luz e internet 30% mais baratas')
-    assert.equal(PERKS['management-1'].perk, 'Mercadinho 15% mais barato')
+  it('os efeitos mostram os bônus pela metade (equilíbrio de 20/10/2026)', () => {
+    assert.equal(PERKS['technical-1'].perk, '+R$ 100 por mês')
+    assert.equal(PERKS['technical-2'].perk, 'Imprevistos de casa 25% mais baratos')
+    assert.equal(PERKS['technical-3'].perk, 'Salário +R$ 200 (R$ 7.200 brutos)')
+    assert.equal(PERKS['technical-4'].perk, '+R$ 200 por mês')
+    assert.equal(PERKS['communication-1'].perk, 'Água, luz e internet 15% mais baratas')
+    assert.equal(PERKS['communication-2'].perk, 'Lazer e dilemas 15% mais baratos')
+    assert.equal(PERKS['communication-3'].perk, 'Aluguel 7,5% mais barato')
+    assert.equal(PERKS['communication-4'].perk, 'Salário +R$ 200 (cargo de coordenação)')
+    assert.equal(PERKS['management-1'].perk, 'Mercadinho 7,5% mais barato')
+    assert.match(PERKS['management-2'].perk, /\+0,4% ao mês/)
+    assert.match(PERKS['management-3'].perk, /\+0,65% ao mês/)
+    assert.match(PERKS['management-4'].perk, /\+0,85% ao mês/)
+    assert.match(PERKS['communication-3'].note, /R\$ 2\.100/)
   })
 
   it('habilidade desconhecida cai na descrição do banco', () => {
