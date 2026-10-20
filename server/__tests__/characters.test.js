@@ -50,27 +50,55 @@ describe('POST /api/v1/characters', () => {
     return request(app).post('/api/v1/characters').set(authHeader(TOKEN)).send(body)
   }
 
-  it('janeiro: entra o salário e já sai o aluguel (sem PIX da família)', async () => {
+  it('janeiro: entra o salário líquido e já sai o aluguel (sem PIX da família)', async () => {
     await createWith({ ...validBody, gift: 'smart' })
 
-    expect(created().cash).toBe(7000 - 1500)
+    // líquido de R$ 7.000 brutos (5.463,74) menos o aluguel de R$ 2.100
+    expect(created().cash).toBe(3363.74)
+    expect(created().cash).toBeCloseTo(5463.74 - 2100, 2)
     expect(janLogs()).toEqual([
-      { characterId: 'char-1', turn: 1, cashImpact: 7000, description: 'Salário: Depósito do mês (+R$ 7000.00)' },
-      { characterId: 'char-1', turn: 1, cashImpact: -1500, description: 'Aluguel: Casa — Pago (-R$ 1500)' },
+      { characterId: 'char-1', turn: 1, cashImpact: 7000, description: 'Salário (bruto): Depósito do mês (+R$ 7000.00)' },
+      { characterId: 'char-1', turn: 1, cashImpact: -781.51, description: 'INSS: Desconto da Previdência Social (-R$ 781.51)' },
+      { characterId: 'char-1', turn: 1, cashImpact: -754.75, description: 'Imposto de Renda na fonte: Desconto do mês (-R$ 754.75)' },
+      { characterId: 'char-1', turn: 1, cashImpact: -2100, description: 'Aluguel: Casa — Pago (-R$ 2100)' },
     ])
     expect(janLogs().some((l) => /PIX|boas-vindas/i.test(l.description))).toBe(false)
   })
 
-  it('Mão de Vaca paga o aluguel de janeiro com 10% de desconto', async () => {
+  it('janeiro: a soma das linhas do extrato é o caixa inicial', async () => {
+    for (const gift of ['smart', 'frugal', 'agile']) {
+      jest.clearAllMocks()
+      await createWith({ ...validBody, gift })
+      const sum = janLogs().reduce((acc, l) => acc + l.cashImpact, 0)
+      expect(Math.round(sum * 100) / 100).toBe(created().cash)
+    }
+  })
+
+  it('janeiro: o holerite mostra INSS e IR sobre o bruto de R$ 7.000 para todos os dons', async () => {
+    for (const gift of ['smart', 'frugal', 'agile']) {
+      jest.clearAllMocks()
+      await createWith({ ...validBody, gift })
+      const byDesc = (re) => janLogs().filter((l) => re.test(l.description))
+      expect(byDesc(/^Salário \(bruto\):/).map((l) => l.cashImpact)).toEqual([7000])
+      expect(byDesc(/^INSS:/).map((l) => l.cashImpact)).toEqual([-781.51])
+      expect(byDesc(/^Imposto de Renda na fonte:/).map((l) => l.cashImpact)).toEqual([-754.75])
+      expect(byDesc(/^Salário:/)).toEqual([]) // o texto antigo não é mais gravado
+    }
+  })
+
+  it('Mão de Vaca paga o aluguel de janeiro com 5% de desconto', async () => {
     await createWith(validBody)
-    expect(created().cash).toBe(7000 - 1350)
-    expect(janLogs().at(-1)).toEqual(expect.objectContaining({ cashImpact: -1350 }))
+    expect(created().cash).toBe(3468.74) // 5.463,74 − 1.995
+    expect(janLogs().at(-1)).toEqual(expect.objectContaining({ cashImpact: -1995, description: 'Aluguel: Casa — Pago (-R$ 1995)' }))
   })
 
   it('Desenrolado recebe o freela já em janeiro', async () => {
     await createWith({ ...validBody, gift: 'agile' })
-    expect(created().cash).toBe(7000 + 240 - 1500)
-    expect(janLogs().map((l) => l.description)).toContain('Freela: Desenrolado (+R$ 240.00)')
+    expect(created().cash).toBe(3483.74) // 5.463,74 + 120 − 2.100
+    expect(janLogs().map((l) => l.description)).toContain('Freela: Desenrolado (+R$ 120.00)')
+    // o freela do dom não paga INSS nem IR: os descontos são só do salário
+    expect(janLogs().find((l) => /^INSS:/.test(l.description)).cashImpact).toBe(-781.51)
+    expect(janLogs().find((l) => /^Imposto de Renda/.test(l.description)).cashImpact).toBe(-754.75)
   })
 
   it('quem entra com a partida andando recebe e paga no mês atual', async () => {
@@ -143,25 +171,25 @@ describe('POST /api/v1/characters — dons', () => {
     prismaMock.characterSkillPoints.create.mockResolvedValue({})
   })
 
-  it('Mão de Vaca (frugal) começa com custos fixos 10% mais baratos', async () => {
+  it('Mão de Vaca (frugal) começa com custos fixos 5% mais baratos', async () => {
     const res = await create({ ...validBody, gift: 'frugal' })
 
     expect(res.status).toBe(201)
-    expect(createdData()).toMatchObject({ housingCost: 1350, foodCost: 900, utilitiesCost: 225, transportCost: 225 })
+    expect(createdData()).toMatchObject({ housingCost: 1995, foodCost: 950, utilitiesCost: 237.5, transportCost: 237.5 })
   })
 
-  it('frugal economiza exatamente R$ 300 por mês nos custos fixos', async () => {
+  it('frugal economiza exatamente R$ 180 por mês nos custos fixos', async () => {
     await create({ ...validBody, gift: 'frugal' })
     const d = createdData()
 
-    expect(d.housingCost + d.foodCost + d.utilitiesCost + d.transportCost).toBe(2700)
+    expect(d.housingCost + d.foodCost + d.utilitiesCost + d.transportCost).toBe(3420)
   })
 
   it.each(['agile', 'smart'])('dom %s começa com os custos cheios', async (gift) => {
     const res = await create({ ...validBody, gift })
 
     expect(res.status).toBe(201)
-    expect(createdData()).toMatchObject({ housingCost: 1500, foodCost: 1000, utilitiesCost: 250, transportCost: 250 })
+    expect(createdData()).toMatchObject({ housingCost: 2100, foodCost: 1000, utilitiesCost: 250, transportCost: 250 })
   })
 
   it('Inteligente (smart) começa com 2 pontos e limite 10', async () => {

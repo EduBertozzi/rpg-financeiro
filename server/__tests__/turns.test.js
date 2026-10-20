@@ -105,7 +105,7 @@ describe('GET /api/v1/characters/:id/dilemma/:turn', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.dilemma.title).toBe('Empréstimo para o amigo')
-    expect(res.body.dilemma.options.map((o) => [o.label, o.price])).toEqual([['A', 500], ['B', 0]])
+    expect(res.body.dilemma.options.map((o) => [o.label, o.price])).toEqual([['A', 750], ['B', 0]])
     expect(res.body.alreadyAnswered).toBe(false)
   })
 
@@ -127,22 +127,22 @@ describe('GET /api/v1/characters/:id/dilemma/:turn', () => {
     setup({ character: makeChar({ room: { status: 'active', currentTurn: 11 } }), choices: [{ turn: 4, option: 0 }] })
     const res = await request(app).get('/api/v1/characters/char-1/dilemma/11').set(authHeader(TOKEN))
 
-    expect(res.body.dilemma.options[0].price).toBe(1608.96) // 40% de 12 × 335,20
+    expect(res.body.dilemma.options[0].price).toBe(2413.44) // 40% de 12 × 502,80
   })
 
-  it('com Trabalho em Equipe o preço mostrado já vem com 30% a menos', async () => {
+  it('com Trabalho em Equipe o preço mostrado já vem com 15% a menos', async () => {
     setup({ character: makeChar({ unlockedSkills: [skill('communication', 2)] }) })
     const res = await request(app).get('/api/v1/characters/char-1/dilemma/2').set(authHeader(TOKEN))
 
-    expect(res.body.dilemma.options[0].price).toBe(350)
+    expect(res.body.dilemma.options[0].price).toBe(637.5)
   })
 
   it('mostra o resultado quando já respondeu', async () => {
-    setup({ answered: { option: 0, amount: 500 } })
+    setup({ answered: { option: 0, amount: 750 } })
     const res = await request(app).get('/api/v1/characters/char-1/dilemma/2').set(authHeader(TOKEN))
 
     expect(res.body.alreadyAnswered).toBe(true)
-    expect(res.body.previousResult).toEqual(expect.objectContaining({ label: 'A', cashImpact: -500 }))
+    expect(res.body.previousResult).toEqual(expect.objectContaining({ label: 'A', cashImpact: -750 }))
   })
 
   it('403 para personagem de outro usuário', async () => {
@@ -160,15 +160,15 @@ describe('GET /api/v1/characters/:id/dilemma/:turn', () => {
 // ─── POST dilema ──────────────────────────────────────────────────────────────
 
 describe('POST chooseDilemma', () => {
-  it('emprestar: sai R$ 500 agora e marca a devolução de R$ 537 em maio', async () => {
+  it('emprestar: sai R$ 750 agora e marca a devolução de R$ 810 em maio', async () => {
     setup()
     const res = await choose(2, 0)
 
     expect(res.status).toBe(200)
-    expect(res.body.cashImpact).toBe(-500)
-    expect(cashIncrement()).toBe(-500)
+    expect(res.body.cashImpact).toBe(-750)
+    expect(cashIncrement()).toBe(-750)
     expect(createdEffects()).toEqual([
-      expect.objectContaining({ characterId: 'char-1', sourceTurn: 2, turn: 5, kind: 'cash', amount: 537 }),
+      expect.objectContaining({ characterId: 'char-1', sourceTurn: 2, turn: 5, kind: 'cash', amount: 810 }),
     ])
   })
 
@@ -185,7 +185,7 @@ describe('POST chooseDilemma', () => {
     await choose(2, 0)
 
     expect(prismaMock.characterChoice.create).toHaveBeenCalledWith({
-      data: { characterId: 'char-1', turn: 2, kind: 'dilemma', option: 0, amount: 500 },
+      data: { characterId: 'char-1', turn: 2, kind: 'dilemma', option: 0, amount: 750 },
     })
   })
 
@@ -193,7 +193,7 @@ describe('POST chooseDilemma', () => {
     setup()
     await choose(2, 0)
 
-    expect(lastLog()).toEqual(expect.objectContaining({ turn: 2, cashImpact: -500 }))
+    expect(lastLog()).toEqual(expect.objectContaining({ turn: 2, cashImpact: -750 }))
     expect(lastLog().description).toMatch(/^Dilema "Empréstimo para o amigo" — Opção A: /)
     expect(prismaMock.characterSkillPoints.update).toHaveBeenCalledWith({
       where: { characterId: 'char-1' }, data: { totalPoints: { increment: 1 } },
@@ -203,18 +203,18 @@ describe('POST chooseDilemma', () => {
   it('a resposta não revela a consequência', async () => {
     setup()
     const res = await choose(2, 0)
-    expect(res.body.result).not.toMatch(/537|maio/i)
+    expect(res.body.result).not.toMatch(/810|maio/i)
   })
 
   it('parcelar a máquina: 1ª parcela agora e 11 parcelas marcadas de maio em diante', async () => {
     setup({ character: makeChar({ room: { status: 'active', currentTurn: 4 } }) })
     await choose(4, 0)
 
-    expect(cashIncrement()).toBe(-335.2)
+    expect(cashIncrement()).toBe(-502.8)
     const effects = createdEffects()
     expect(effects).toHaveLength(11)
     expect(effects.map((e) => e.turn)).toEqual([5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
-    expect(effects.every((e) => e.kind === 'installment' && e.amount === -335.2)).toBe(true)
+    expect(effects.every((e) => e.kind === 'installment' && e.amount === -502.8)).toBe(true)
     expect(effects[0].label).toBe('Parcela: Máquina de lavar (2/12)')
   })
 
@@ -222,15 +222,15 @@ describe('POST chooseDilemma', () => {
     setup({ character: makeChar({ room: { status: 'active', currentTurn: 4 }, unlockedSkills: [skill('communication', 2)] }) })
     await choose(4, 0)
 
-    expect(cashIncrement()).toBe(-335.2)
+    expect(cashIncrement()).toBe(-502.8)
   })
 
-  it('Trabalho em Equipe: à vista sai 30% mais barato (3.620 → 2.534)', async () => {
+  it('Trabalho em Equipe: à vista sai 15% mais barato (5.430 → 4.615,50)', async () => {
     setup({ character: makeChar({ room: { status: 'active', currentTurn: 4 }, unlockedSkills: [skill('communication', 2)] }) })
     const res = await choose(4, 1)
 
-    expect(cashIncrement()).toBe(-2534)
-    expect(res.body.result).toContain('30% a menos com Trabalho em Equipe')
+    expect(cashIncrement()).toBe(-4615.5)
+    expect(res.body.result).toContain('15% a menos com Trabalho em Equipe')
   })
 
   it('ir a pé em agosto trava a tela por 2 minutos', async () => {
@@ -245,7 +245,7 @@ describe('POST chooseDilemma', () => {
     const res = await choose(8, 0)
 
     expect(res.body.lockSeconds).toBe(0)
-    expect(cashIncrement()).toBe(-45)
+    expect(cashIncrement()).toBe(-70)
   })
 
   it('atrasou em agosto e faltou à TV: demitido em novembro, dezembro sem salário', async () => {
@@ -262,20 +262,20 @@ describe('POST chooseDilemma', () => {
     expect(prismaMock.scheduledEffect.createMany).not.toHaveBeenCalled()
   })
 
-  it('foi à TV: promoção de 10% de outubro a dezembro', async () => {
+  it('foi à TV: promoção de 15% de outubro a dezembro', async () => {
     setup({ character: makeChar({ room: { status: 'active', currentTurn: 9 } }), choices: [{ turn: 5, option: 0 }] })
     await choose(9, 0)
 
     expect(createdEffects().map((e) => [e.turn, e.kind, e.amount])).toEqual([
-      [10, 'salary_raise', 700], [11, 'salary_raise', 700], [12, 'salary_raise', 700],
+      [10, 'salary_raise', 1050], [11, 'salary_raise', 1050], [12, 'salary_raise', 1050],
     ])
   })
 
-  it('quem perdeu a reunião de maio ganha só 5%', async () => {
+  it('quem perdeu a reunião de maio ganha só 7,5%', async () => {
     setup({ character: makeChar({ room: { status: 'active', currentTurn: 9 } }), choices: [{ turn: 5, option: 1 }] })
     await choose(9, 0)
 
-    expect(createdEffects().map((e) => e.amount)).toEqual([350, 350, 350])
+    expect(createdEffects().map((e) => e.amount)).toEqual([525, 525, 525])
   })
 
   it('incêndio, casa mais cara: aluguel sobe 50% e a mobília chega em novembro', async () => {
@@ -285,7 +285,7 @@ describe('POST chooseDilemma', () => {
     expect(prismaMock.character.update.mock.calls[0][0].data).toEqual({ cash: { increment: 0 }, housingCost: 2250 })
     expect(createdEffects()).toEqual([
       expect.objectContaining({ turn: 11, kind: 'notice' }),
-      expect.objectContaining({ turn: 11, kind: 'cash', amount: -2000 }),
+      expect.objectContaining({ turn: 11, kind: 'cash', amount: -3000 }),
     ])
   })
 
@@ -303,15 +303,15 @@ describe('POST chooseDilemma', () => {
     })
     await choose(10, 0)
 
-    expect(cashIncrement()).toBe(-3442.5) // 1275 × 3 × 0,9
+    expect(cashIncrement()).toBe(-3746.25) // 1.387,50 (1.500 com 7,5% de Negociação) × 3 × 0,9
   })
 
-  it('advogado: 40% do que pagou e R$ 5.000 em dezembro', async () => {
+  it('advogado: 40% do que pagou e R$ 7.500 em dezembro', async () => {
     setup({ character: makeChar({ room: { status: 'active', currentTurn: 11 } }), choices: [{ turn: 4, option: 1 }] })
     await choose(11, 0)
 
-    expect(cashIncrement()).toBe(-1448)
-    expect(createdEffects()).toEqual([expect.objectContaining({ turn: 12, kind: 'cash', amount: 5000 })])
+    expect(cashIncrement()).toBe(-2172)
+    expect(createdEffects()).toEqual([expect.objectContaining({ turn: 12, kind: 'cash', amount: 7500 })])
   })
 
   it('tudo acontece numa transação só', async () => {
@@ -350,7 +350,7 @@ describe('POST chooseDilemma', () => {
 
 describe('POST chooseDilemma — erros', () => {
   it('400 se já respondeu', async () => {
-    setup({ answered: { option: 0, amount: 500 } })
+    setup({ answered: { option: 0, amount: 750 } })
     const res = await choose(2, 1)
 
     expect(res.status).toBe(400)
@@ -408,23 +408,23 @@ describe('GET /api/v1/characters/:id/leisure/:turn', () => {
     const res = await request(app).get('/api/v1/characters/char-1/leisure/2').set(authHeader(TOKEN))
 
     expect(res.status).toBe(200)
-    expect(res.body.leisure.price).toBe(300)
+    expect(res.body.leisure.price).toBe(450)
     expect(res.body.leisure.options.map((o) => o.title)).toEqual(['Carnaval de rua', 'Festa de carnaval'])
     expect(res.body.chosen).toBeNull()
   })
 
-  it('Trabalho em Equipe: preço 30% menor e o desconto aparece', async () => {
+  it('Trabalho em Equipe: preço 15% menor e o desconto aparece', async () => {
     setup({ character: makeChar({ unlockedSkills: [skill('communication', 2)] }) })
     const res = await request(app).get('/api/v1/characters/char-1/leisure/12').set(authHeader(TOKEN))
 
-    expect(res.body.leisure).toEqual(expect.objectContaining({ price: 700, basePrice: 1000, discount: 300 }))
+    expect(res.body.leisure).toEqual(expect.objectContaining({ price: 1275, basePrice: 1500, discount: 225 }))
   })
 
   it('mostra o que foi escolhido', async () => {
-    setup({ answered: { option: 1, amount: 300 } })
+    setup({ answered: { option: 1, amount: 450 } })
     const res = await request(app).get('/api/v1/characters/char-1/leisure/2').set(authHeader(TOKEN))
 
-    expect(res.body.chosen).toEqual({ option: 1, title: 'Festa de carnaval', amount: 300 })
+    expect(res.body.chosen).toEqual({ option: 1, title: 'Festa de carnaval', amount: 450 })
   })
 
   it('mês fora do ano não tem lazer', async () => {
@@ -439,30 +439,30 @@ describe('POST chooseLeisure', () => {
     const res = await chooseLeisure(2, 0)
 
     expect(res.status).toBe(200)
-    expect(cashIncrement()).toBe(-300)
-    expect(lastLog()).toEqual({ characterId: 'char-1', turn: 2, cashImpact: -300, description: 'Lazer: Carnaval de rua (-R$ 300.00)' })
+    expect(cashIncrement()).toBe(-450)
+    expect(lastLog()).toEqual({ characterId: 'char-1', turn: 2, cashImpact: -450, description: 'Lazer: Carnaval de rua (-R$ 450.00)' })
   })
 
   it('as duas opções custam igual', async () => {
     setup({ character: openMonth() })
     await chooseLeisure(2, 1)
-    expect(cashIncrement()).toBe(-300)
+    expect(cashIncrement()).toBe(-450)
   })
 
   it('guarda a escolha', async () => {
     setup({ character: openMonth() })
     await chooseLeisure(2, 1)
     expect(prismaMock.characterChoice.create).toHaveBeenCalledWith({
-      data: { characterId: 'char-1', turn: 2, kind: 'leisure', option: 1, amount: 300 },
+      data: { characterId: 'char-1', turn: 2, kind: 'leisure', option: 1, amount: 450 },
     })
   })
 
-  it('Trabalho em Equipe: 30% a menos e o extrato avisa', async () => {
+  it('Trabalho em Equipe: 15% a menos e o extrato avisa', async () => {
     setup({ character: openMonth({ unlockedSkills: [skill('communication', 2)] }) })
     await chooseLeisure(2, 0)
 
-    expect(cashIncrement()).toBe(-210)
-    expect(lastLog().description).toBe('Lazer: Carnaval de rua (-R$ 210.00) com 30% de desconto')
+    expect(cashIncrement()).toBe(-382.5)
+    expect(lastLog().description).toBe('Lazer: Carnaval de rua (-R$ 382.50) com 15% de desconto')
   })
 
   it('lazer não dá ponto de habilidade (o ponto é do dilema)', async () => {
@@ -472,7 +472,7 @@ describe('POST chooseLeisure', () => {
   })
 
   it('400 se já escolheu', async () => {
-    setup({ character: openMonth(), answered: { option: 0, amount: 300 } })
+    setup({ character: openMonth(), answered: { option: 0, amount: 450 } })
     const res = await chooseLeisure(2, 1)
 
     expect(res.status).toBe(400)
@@ -497,7 +497,7 @@ describe('POST chooseLeisure', () => {
   it('dezembro também tem lazer', async () => {
     setup({ character: openMonth({ room: { status: 'active', currentTurn: 12 } }) })
     await chooseLeisure(12, 1)
-    expect(cashIncrement()).toBe(-1000)
+    expect(cashIncrement()).toBe(-1500)
   })
 
   it('mês encerrado: a cidade travou e o lazer não muda mais', async () => {

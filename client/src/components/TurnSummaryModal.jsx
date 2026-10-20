@@ -70,11 +70,14 @@ export default function TurnSummaryModal({ summary, onClose }) {
           </div>
         )}
 
-        {first && <p className="text-center text-[15px] text-[#4A5A42]">O salário de janeiro já caiu e o aluguel já saiu. Agora é pagar as contas do mês, escolher o lazer e guardar o que sobrar.</p>}
+        {first && <p className="text-center text-[15px] text-[#4A5A42]">O salário de janeiro já caiu (líquido, sem o INSS e o IR) e o aluguel já saiu. Agora é pagar as contas do mês, escolher o lazer e guardar o que sobrar.</p>}
 
         {(
           <div className="grid gap-1 rounded-[18px] border-2 border-[#EFE6D3] bg-white p-4">
-            {money.salary !== 0 && <Row label="Salário" value={money.salary} />}
+            {/* holerite: o bruto entra e os descontos saem, linha a linha */}
+            {money.salary !== 0 && <Row label={money.inss || money.ir ? 'Salário (bruto)' : 'Salário'} value={money.salary} />}
+            {Boolean(money.inss) && <Row label="INSS" value={money.inss} />}
+            {Boolean(money.ir) && <Row label="Imposto de Renda na fonte" value={money.ir} />}
             {money.extras !== 0 && <Row label="Freelas e bônus" value={money.extras} />}
             {money.rent !== 0 && <Row label="Aluguel" value={money.rent} />}
             {money.interest !== 0 && <Row label="Juros do cheque especial" value={money.interest} />}

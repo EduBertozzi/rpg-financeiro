@@ -4,29 +4,30 @@
 // as consequências chegam. Fonte: mural de game design.
 //
 // Regras de dinheiro:
-// - `cost` é o gasto imediato da escolha. Trabalho em Equipe deixa 30% mais
+// - `cost` é o gasto imediato da escolha. Trabalho em Equipe deixa 15% mais
 //   barato, exceto quando `noDiscount` (adiantar aluguel).
 // - parcelas: a primeira sai na hora e as outras viram efeitos `installment`
 //   nos meses seguintes. As que passam do fim do jogo contam como dívida.
 // - consequências (efeitos) nunca têm desconto.
+// - valores em dinheiro subiram 50% em 20/10/2026 (equilíbrio com o holerite).
 const { cents, SALARY } = require('./finance')
 const { rentAmount } = require('./skills')
 
-const FRIEND_LOAN = 500
-const FRIEND_PAYBACK = 537
-const MACHINE_CASH = 3620
-const MACHINE_INSTALLMENT = { amount: 335.2, count: 12 }
-const GYM_SEMESTER = 1200
-const GYM_INSTALLMENT = { amount: 239.9, count: 6 }
+const FRIEND_LOAN = 750
+const FRIEND_PAYBACK = 810
+const MACHINE_CASH = 5430
+const MACHINE_INSTALLMENT = { amount: 502.8, count: 12 }
+const GYM_SEMESTER = 1800
+const GYM_INSTALLMENT = { amount: 359.85, count: 6 }
 const LAWYER_SHARE = 0.4
-const LAWSUIT_WIN = 5000
-const NEW_MACHINE = 1528.48
-const RAISE = 0.10
-const RAISE_MISSED_MEETING = 0.05
+const LAWSUIT_WIN = 7500
+const NEW_MACHINE = 2290
+const RAISE = 0.15
+const RAISE_MISSED_MEETING = 0.075
 const FIRE_PREPAY_MONTHS = 3
 const FIRE_PREPAY_DISCOUNT = 0.10
 const FIRE_HOUSE_MULTIPLIER = 1.5
-const FURNITURE = 2000
+const FURNITURE = 3000
 const WALK_LOCK_SECONDS = 120
 
 const A = 0
@@ -49,8 +50,8 @@ const DILEMMAS = {
     title: 'A rotina desandou',
     description: 'Com a correria da vida nova, a comida anda ruim e a casa está cada vez mais bagunçada. Dá para resolver só um dos dois por enquanto.',
     options: [
-      { text: 'Comprar marmitas para comer melhor', cost: 300, result: 'Marmitas na geladeira. A semana ficou mais leve.' },
-      { text: 'Contratar uma faxineira para organizar a casa', cost: 300, result: 'Casa arrumada. Dá até para receber visita.' },
+      { text: 'Comprar marmitas para comer melhor', cost: 450, result: 'Marmitas na geladeira. A semana ficou mais leve.' },
+      { text: 'Contratar uma faxineira para organizar a casa', cost: 450, result: 'Casa arrumada. Dá até para receber visita.' },
     ],
   },
   2: {
@@ -74,9 +75,9 @@ const DILEMMAS = {
         text: 'Deixar para depois',
         cost: 0,
         result: 'A dor passou… por enquanto.',
-        effects: () => [{ turn: 6, kind: 'cash', amount: -500, label: 'Dentista: O dente que ficou para depois virou tratamento de canal' }],
+        effects: () => [{ turn: 6, kind: 'cash', amount: -750, label: 'Dentista: O dente que ficou para depois virou tratamento de canal' }],
       },
-      { text: 'Ir ao dentista e resolver', cost: 250, result: 'Dente tratado. Sem dor.' },
+      { text: 'Ir ao dentista e resolver', cost: 380, result: 'Dente tratado. Sem dor.' },
     ],
   },
   4: {
@@ -99,21 +100,21 @@ const DILEMMAS = {
         text: 'Arrombar a porta e ir à reunião',
         cost: 0,
         result: 'Você chegou a tempo da reunião.',
-        effects: () => [{ turn: 6, kind: 'cash', amount: -300, label: 'Porta: Conserto da porta arrombada' }],
+        effects: () => [{ turn: 6, kind: 'cash', amount: -450, label: 'Porta: Conserto da porta arrombada' }],
       },
-      { text: 'Esperar o chaveiro e perder a reunião', cost: 180, result: 'O chaveiro abriu a porta. A reunião ficou para outra vez.' },
+      { text: 'Esperar o chaveiro e perder a reunião', cost: 270, result: 'O chaveiro abriu a porta. A reunião ficou para outra vez.' },
     ],
   },
   6: {
     title: 'À beira do esgotamento',
     description: 'A rotina ficou pesada e você sente que está perto de um esgotamento. Parar agora pode pesar no bolso.',
     options: [
-      { text: 'Viajar e descansar uns dias', cost: 1000, result: 'Você voltou descansado.' },
+      { text: 'Viajar e descansar uns dias', cost: 1500, result: 'Você voltou descansado.' },
       {
         text: 'Continuar trabalhando normalmente',
         cost: 0,
         result: 'Você seguiu firme no trabalho.',
-        effects: () => [{ turn: 8, kind: 'cash', amount: -2000, label: 'Saúde: Crise de coluna. Foi preciso comprar uma cadeira ergonômica' }],
+        effects: () => [{ turn: 8, kind: 'cash', amount: -3000, label: 'Saúde: Crise de coluna. Foi preciso comprar uma cadeira ergonômica' }],
       },
     ],
   },
@@ -133,7 +134,7 @@ const DILEMMAS = {
     title: 'O ônibus quebrou',
     description: 'O ônibus quebrou no caminho e o trabalho é longe.',
     options: [
-      { text: 'Pagar um carro de aplicativo', cost: 45, result: 'Você chegou no horário.' },
+      { text: 'Pagar um carro de aplicativo', cost: 70, result: 'Você chegou no horário.' },
       { text: 'Ir a pé', cost: 0, result: 'Você chegou atrasado ao trabalho.', lockSeconds: WALK_LOCK_SECONDS },
     ],
   },
@@ -143,12 +144,12 @@ const DILEMMAS = {
     options: [
       {
         text: 'Participar do programa',
-        cost: 800,
+        cost: 1200,
         result: 'Você participou do programa. Muita gente viu.',
         effects: ({ choices }) => {
           const rate = choices[5] === B ? RAISE_MISSED_MEETING : RAISE
           const amount = cents(SALARY * rate)
-          const pct = Math.round(rate * 100)
+          const pct = String(Math.round(rate * 1000) / 10).replace('.', ',')
           return [10, 11, 12].map((turn) => ({
             turn, kind: 'salary_raise', amount, label: `Promoção: Salário ${pct}% maior depois do programa de TV`,
           }))

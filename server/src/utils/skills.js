@@ -7,25 +7,26 @@ const { cents, OVERDRAFT_MONTHLY_RATE, STOCK_EVENTS } = require('./finance')
 const REDUCED_OVERDRAFT_RATE = 0.04 // cheque especial com Planejamento e Produtividade
 
 // Tabela oficial das vantagens (aprovada pelo game design). Valores ajustados
-// em 03/10/2026 com os robôs de teste para os três caminhos valerem o mesmo.
+// em 03/10/2026 com os robôs de teste para os três caminhos valerem o mesmo e
+// cortados pela metade em 20/10/2026 (equilíbrio do dinheiro com o holerite).
 const PERKS = {
   technical: {
-    1: { name: 'Fundamentos e Lógica', perk: '+R$ 200 por mês (trabalhos extras nos finais de semana)', income: { label: 'Freela', amount: 200 } },
-    2: { name: 'Resolução de Problemas', perk: 'Imprevistos de casa custam metade', repairDiscount: 0.5 },
-    3: { name: 'Pensamento Analítico Avançado', perk: 'Salário +R$ 400', salaryBonus: 400 },
-    4: { name: 'Inovação e Otimização', perk: '+R$ 400 por mês (projeto paralelo)', income: { label: 'Projeto paralelo', amount: 400 } },
+    1: { name: 'Fundamentos e Lógica', perk: '+R$ 100 por mês (trabalhos extras nos finais de semana)', income: { label: 'Freela', amount: 100 } },
+    2: { name: 'Resolução de Problemas', perk: 'Imprevistos de casa 25% mais baratos', repairDiscount: 0.25 },
+    3: { name: 'Pensamento Analítico Avançado', perk: 'Salário +R$ 200', salaryBonus: 200 },
+    4: { name: 'Inovação e Otimização', perk: '+R$ 200 por mês (projeto paralelo)', income: { label: 'Projeto paralelo', amount: 200 } },
   },
   communication: {
-    1: { name: 'Comunicação Básica', perk: 'Água/luz e internet 30% mais baratas', utilitiesDiscount: 0.3 },
-    2: { name: 'Trabalho em Equipe', perk: 'Lazer e dilemas 30% mais baratos', leisureDiscount: 0.3 },
-    3: { name: 'Negociação e Liderança', perk: 'Aluguel 15% mais barato', rentDiscount: 0.15 },
-    4: { name: 'Liderança Estratégica', perk: 'Salário +R$ 400', salaryBonus: 400 },
+    1: { name: 'Comunicação Básica', perk: 'Água/luz e internet 15% mais baratas', utilitiesDiscount: 0.15 },
+    2: { name: 'Trabalho em Equipe', perk: 'Lazer e dilemas 15% mais baratos', leisureDiscount: 0.15 },
+    3: { name: 'Negociação e Liderança', perk: 'Aluguel 7,5% mais barato', rentDiscount: 0.075 },
+    4: { name: 'Liderança Estratégica', perk: 'Salário +R$ 200', salaryBonus: 200 },
   },
   management: {
-    1: { name: 'Organização Financeira', perk: 'Mercadinho 15% mais barato', foodDiscount: 0.15 },
-    2: { name: 'Planejamento e Produtividade', perk: 'Cheque especial cai para 4% ao mês e +0,8% ao mês sobre as caixinhas', overdraftRate: REDUCED_OVERDRAFT_RATE, savingsBonusRate: 0.008 },
-    3: { name: 'Visão de Mercado', perk: '+1,3% ao mês sobre as caixinhas e dica das ações do próximo mês', savingsBonusRate: 0.013, stockTips: true },
-    4: { name: 'Estratégia e Empreendedorismo', perk: '+1,7% ao mês sobre as caixinhas', savingsBonusRate: 0.017 },
+    1: { name: 'Organização Financeira', perk: 'Mercadinho 7,5% mais barato', foodDiscount: 0.075 },
+    2: { name: 'Planejamento e Produtividade', perk: 'Cheque especial cai para 4% ao mês e +0,4% ao mês sobre as caixinhas', overdraftRate: REDUCED_OVERDRAFT_RATE, savingsBonusRate: 0.004 },
+    3: { name: 'Visão de Mercado', perk: '+0,65% ao mês sobre as caixinhas e dica das ações do próximo mês', savingsBonusRate: 0.0065, stockTips: true },
+    4: { name: 'Estratégia e Empreendedorismo', perk: '+0,85% ao mês sobre as caixinhas', savingsBonusRate: 0.0085 },
   },
 }
 
@@ -70,7 +71,7 @@ function perksOf(unlocked = []) {
     if (p.stockTips) perks.stockTips = true
   }
 
-  // evita lixo de ponto flutuante (0,006 + 0,009 + 0,012 = 0,027)
+  // evita lixo de ponto flutuante (0,004 + 0,0065 + 0,0085 = 0,019)
   perks.savingsBonusRate = Math.round(perks.savingsBonusRate * 1e6) / 1e6
   return perks
 }
@@ -101,8 +102,8 @@ const dilemmaImpact = (value, perks) => (Number(value) < 0 ? discounted(value, p
 const savingsBonus = (savingsBalance, perks) =>
   perks.savingsBonusRate > 0 && Number(savingsBalance) > 0 ? cents(Number(savingsBalance) * perks.savingsBonusRate) : 0
 
-// "1,5%" — taxa em porcentagem no formato brasileiro.
-const percentLabel = (rate) => `${(Math.round(rate * 1000) / 10).toString().replace('.', ',')}%`
+// "1,5%" ou "0,65%" — taxa em porcentagem no formato brasileiro.
+const percentLabel = (rate) => `${(Math.round(rate * 10000) / 100).toString().replace('.', ',')}%`
 
 // Dica de Visão de Mercado: eventos das ações que acontecem no próximo turno.
 function stockTipsFor(currentTurn, events = STOCK_EVENTS) {

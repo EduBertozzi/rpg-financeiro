@@ -1,6 +1,7 @@
 // __tests__/events.test.js — calendário de imprevistos e lazer do mês
 const { EVENT_CALENDAR, QUIET, QUIET_CHANCE, eventsFor, expectedPositiveEvents } = require('../src/utils/events')
 const { LEISURE, leisureFor, leisurePrice, yearlyLeisureCost } = require('../src/utils/leisure')
+const { payslip } = require('../src/utils/finance')
 
 const fixedRng = (value) => () => value
 
@@ -23,12 +24,29 @@ describe('calendário de eventos', () => {
     expect(EVENT_CALENDAR[1]).toBeUndefined()
   })
 
-  it('dezembro sempre tem 13º (R$ 7.000) e gastos de fim de ano (R$ 550)', () => {
+  it('dezembro sempre tem 13º (líquido de R$ 5.463,74) e gastos de fim de ano (R$ 550)', () => {
     for (const r of [0, 0.1, 0.5, 0.99]) {
       expect(eventsFor(12, fixedRng(r)).map((e) => [e.title, e.cashImpact])).toEqual([
-        ['13º salário', 7000], ['Gastos de fim de ano', -550],
+        ['13º salário', 5463.74], ['Gastos de fim de ano', -550],
       ])
     }
+  })
+
+  it('13º: cai o líquido do holerite de R$ 7.000 (INSS 781,51 e IR 754,75 descontados)', () => {
+    const thirteenth = EVENT_CALENDAR[12].find((e) => e.title === '13º salário')
+    expect(thirteenth.cashImpact).toBe(5463.74)
+    expect(thirteenth.cashImpact).toBe(payslip(7000).net)
+    expect(thirteenth.cashImpact).toBeCloseTo(7000 - 781.51 - 754.75, 2)
+    expect(thirteenth.category).toBe('salary')
+    expect(thirteenth.fixed).toBe(true)
+  })
+
+  it('13º: a descrição mostra o bruto, os descontos e o líquido', () => {
+    const { description } = EVENT_CALENDAR[12].find((e) => e.title === '13º salário')
+    expect(description).toContain('R$ 7.000,00 brutos')
+    expect(description).toContain('INSS (R$ 781,51)')
+    expect(description).toContain('Imposto de Renda (R$ 754,75)')
+    expect(description).toContain('R$ 5.463,74 líquidos')
   })
 
   it('abaixo da chance de mês tranquilo, não acontece nada', () => {
@@ -63,7 +81,7 @@ describe('calendário de eventos', () => {
     expect(quiet / 2000).toBeCloseTo(0.2, 2)
   })
 
-  it('os consertos (metade com o Técnico) são o celular e o notebook', () => {
+  it('os consertos (25% mais baratos com o Técnico) são o celular e o notebook', () => {
     expect(Object.values(EVENT_CALENDAR).flat().filter((e) => e.repair).map((e) => e.cashImpact)).toEqual([-450, -450])
   })
 
@@ -84,22 +102,22 @@ describe('lazer do mês', () => {
     }
   })
 
-  it('preços do mural, mês a mês', () => {
-    expect(Object.values(LEISURE).map((m) => m.price)).toEqual([500, 300, 200, 350, 250, 150, 100, 600, 300, 450, 650, 1000])
+  it('preços do mural (×1,5 desde 20/10/2026), mês a mês', () => {
+    expect(Object.values(LEISURE).map((m) => m.price)).toEqual([750, 450, 300, 530, 380, 230, 150, 900, 450, 680, 980, 1500])
   })
 
-  it('o ano todo custa R$ 4.850', () => {
-    expect(yearlyLeisureCost()).toBe(4850)
+  it('o ano todo custa R$ 7.300', () => {
+    expect(yearlyLeisureCost()).toBe(7300)
   })
 
-  it('Trabalho em Equipe: 30% a menos, em centavos', () => {
-    expect(leisurePrice(1, { leisureDiscount: 0.3 })).toBe(350)
-    expect(leisurePrice(6, { leisureDiscount: 0.3 })).toBe(105)
+  it('Trabalho em Equipe: 15% a menos, em centavos', () => {
+    expect(leisurePrice(1, { leisureDiscount: 0.15 })).toBe(637.5)
+    expect(leisurePrice(6, { leisureDiscount: 0.15 })).toBe(195.5)
   })
 
   it('sem desconto paga o preço cheio', () => {
-    expect(leisurePrice(12)).toBe(1000)
-    expect(leisurePrice(12, { leisureDiscount: 0 })).toBe(1000)
+    expect(leisurePrice(12)).toBe(1500)
+    expect(leisurePrice(12, { leisureDiscount: 0 })).toBe(1500)
   })
 
   it('mês fora do ano não tem lazer', () => {

@@ -16,9 +16,61 @@ const ANNUAL_RATES = {
 const DEBENTURE_TERM_MONTHS = 10
 const EARLY_REDEMPTION_MONTHS = 6
 const OVERDRAFT_MONTHLY_RATE = 0.08 // cheque especial: teto legal de 8% ao mês
-const SALARY = 7000 // salário fixo mensal de todo personagem
+const SALARY = 7000 // salário fixo mensal (bruto) de todo personagem
 
 const cents = (n) => Math.round(n * 100) / 100
+
+// Tabela do INSS 2026 (progressiva): cada faixa paga a sua alíquota só sobre
+// a parte do salário que cai nela. Acima do teto não desconta mais.
+const INSS_BRACKETS = [
+  { upTo: 1621.0, rate: 0.075 },
+  { upTo: 2902.84, rate: 0.09 },
+  { upTo: 4354.27, rate: 0.12 },
+  { upTo: 8475.55, rate: 0.14 },
+]
+
+// Tabela mensal do IR 2026 sobre (bruto − INSS): alíquota e parcela a deduzir.
+const IR_BRACKETS = [
+  { upTo: 2428.8, rate: 0, deduction: 0 },
+  { upTo: 2826.65, rate: 0.075, deduction: 182.16 },
+  { upTo: 3751.05, rate: 0.15, deduction: 394.16 },
+  { upTo: 4664.68, rate: 0.225, deduction: 675.49 },
+  { upTo: Infinity, rate: 0.275, deduction: 908.73 },
+]
+
+// Redutor de 2026: quem ganha até R$ 5.000 brutos não paga IR; entre 5.000 e
+// 7.350 o imposto diminui aos poucos.
+const IR_EXEMPT_UP_TO = 5000
+const IR_REDUCER_UP_TO = 7350
+
+function inssOf(gross) {
+  let total = 0
+  let floor = 0
+  for (const { upTo, rate } of INSS_BRACKETS) {
+    if (gross <= floor) break
+    total += (Math.min(gross, upTo) - floor) * rate
+    floor = upTo
+  }
+  return cents(total)
+}
+
+function irOf(gross, inss) {
+  if (gross <= IR_EXEMPT_UP_TO) return 0
+  const base = gross - inss
+  const bracket = IR_BRACKETS.find((b) => base <= b.upTo)
+  let tax = Math.max(base * bracket.rate - bracket.deduction, 0)
+  if (gross <= IR_REDUCER_UP_TO) tax -= 978.62 - 0.133145 * gross
+  return cents(Math.max(tax, 0))
+}
+
+// Holerite: do salário bruto saem o INSS e o IR na fonte; o líquido é o que
+// cai na conta. Ex.: 7.000 brutos → INSS 781,51, IR 754,75, líquido 5.463,74.
+function payslip(gross) {
+  const g = cents(Math.max(Number(gross) || 0, 0))
+  const inss = inssOf(g)
+  const ir = irOf(g, inss)
+  return { gross: g, inss, ir, net: cents(g - inss - ir) }
+}
 
 const monthlyFromAnnual = (annual) => Math.pow(1 + annual, 1 / 12) - 1
 
@@ -153,6 +205,9 @@ module.exports = {
   EARLY_REDEMPTION_MONTHS,
   OVERDRAFT_MONTHLY_RATE,
   SALARY,
+  INSS_BRACKETS,
+  IR_BRACKETS,
+  payslip,
   cents,
   monthlyFromAnnual,
   getMonthlyRate,

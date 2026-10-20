@@ -206,7 +206,7 @@ export default function CharacterCreation() {
                   <p className="text-[#6B7A62]">Você acabou de se formar e se mudou para uma cidade nova. Agora é cuidar do dinheiro por 12 meses.</p>
                 </div>
                 <dl className="grid gap-2 rounded-[20px] border-2 border-[#EFE6D3] bg-white p-4 text-[15px]">
-                  <Row label="Salário" value="R$ 7.000 por mês" />
+                  <Row label="Salário" value="R$ 7.000 brutos (≈ R$ 5.464 líquidos) por mês" />
                   <Row label="Saldo inicial" value="Salário de janeiro, já com o aluguel pago" />
                   <Row label="Profissão" value={form.course} />
                   <Row label="Dom" value={gift?.name} />

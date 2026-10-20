@@ -328,8 +328,8 @@ describe('GET /api/v1/skills/character/:id — vantagens', () => {
     }))
     const res = await get()
 
-    expect(res.body.unlocked.map(s => s.perk)).toEqual(['+R$ 200 por mês (trabalhos extras nos finais de semana)', 'Aluguel 15% mais barato'])
-    expect(res.body.perks).toMatchObject({ extraIncome: 200, rentDiscount: 0.15 })
+    expect(res.body.unlocked.map(s => s.perk)).toEqual(['+R$ 100 por mês (trabalhos extras nos finais de semana)', 'Aluguel 7,5% mais barato'])
+    expect(res.body.perks).toMatchObject({ extraIncome: 100, rentDiscount: 0.075 })
   })
 
   it('nó desconhecido vem com perk null', async () => {
@@ -339,11 +339,11 @@ describe('GET /api/v1/skills/character/:id — vantagens', () => {
     expect(res.body.unlocked[0].perk).toBeNull()
   })
 
-  it('Gestão até L2 mostra cheque especial a 4% e 0,8% nas caixinhas, sem dicas', async () => {
+  it('Gestão até L2 mostra cheque especial a 4% e 0,4% nas caixinhas, sem dicas', async () => {
     prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ unlockedSkills: [skill('management', 1), skill('management', 2)] }))
     const res = await get()
 
-    expect(res.body.perks).toMatchObject({ overdraftRate: 0.04, savingsBonusRate: 0.008, foodDiscount: 0.15, stockTips: false })
+    expect(res.body.perks).toMatchObject({ overdraftRate: 0.04, savingsBonusRate: 0.004, foodDiscount: 0.075, stockTips: false })
     expect(res.body.tips).toEqual([])
   })
 
@@ -355,7 +355,7 @@ describe('GET /api/v1/skills/character/:id — vantagens', () => {
     const res = await get()
 
     expect(res.body.perks.stockTips).toBe(true)
-    expect(res.body.perks.savingsBonusRate).toBe(0.021)
+    expect(res.body.perks.savingsBonusRate).toBe(0.0105) // 0,4% + 0,65%
     expect(res.body.tips).toEqual([{
       ticker: 'VALE3', turn: 3, direction: 'up', change: 0.4, text: 'VALE3 deve subir cerca de 40% no próximo mês',
     }])
@@ -382,12 +382,12 @@ describe('GET /api/v1/skills/character/:id — vantagens', () => {
     expect(res.body.tips).toEqual([])
   })
 
-  it('Gestão completa soma 3,8%', async () => {
+  it('Gestão completa soma 1,9%', async () => {
     prismaMock.character.findUnique.mockResolvedValue(makeCharacter({
       unlockedSkills: [1, 2, 3, 4].map(l => skill('management', l)),
     }))
     const res = await get()
 
-    expect(res.body.perks.savingsBonusRate).toBe(0.038)
+    expect(res.body.perks.savingsBonusRate).toBe(0.019)
   })
 })

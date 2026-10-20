@@ -29,7 +29,7 @@ const CHAPTERS = [
         <>
           <Chapter n={1} />
           <H2>Bem-vindo à cidade</H2>
-          <p>Você acabou de se formar e começou a trabalhar. Tem <b>R$ 7.000</b> de salário e um ano inteiro pela frente.</p>
+          <p>Você acabou de se formar e começou a trabalhar. Tem <b>R$ 7.000 brutos</b> de salário (≈ <b>R$ 5.464 líquidos</b>, depois do INSS e do Imposto de Renda) e um ano inteiro pela frente.</p>
           <Hand>O objetivo: terminar dezembro com o maior patrimônio da sala.</Hand>
           <H3>O que conta</H3>
           <p>Tudo o que você tem (saldo, caixinhas, ações) menos tudo o que deve (cheque especial, parcelas).</p>
@@ -45,7 +45,7 @@ const CHAPTERS = [
             ))}
           </ul>
           <H3>Quem manda no tempo</H3>
-          <p>O administrador da sala fecha cada mês quando a turma termina. Aí chega o salário, sai o aluguel e acontecem os imprevistos.</p>
+          <p>O administrador da sala fecha cada mês quando a turma termina. Aí chega o salário líquido (já sem INSS e IR), sai o aluguel e acontecem os imprevistos.</p>
         </>
       ),
     ],
