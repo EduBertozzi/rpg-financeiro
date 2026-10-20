@@ -456,6 +456,34 @@ describe('POST /api/v1/characters — cupons escondidos', () => {
     expect(data[2].turn).toBeLessThanOrEqual(12)
   })
 
+  it('o plano é o do personagem (semente com o id), igual ao que a consulta criaria depois', async () => {
+    const { planForCharacter } = require('../src/utils/coupons')
+    await create()
+    const { data } = prismaMock.characterCoupon.createMany.mock.calls[0][0]
+    expect(data.map(({ characterId, ...c }) => c)).toEqual(planForCharacter('char-1', 'test-secret'))
+  })
+
+  it('criar o mesmo personagem de novo daria o mesmo plano (estável)', async () => {
+    await create()
+    prismaMock.character.findUnique.mockResolvedValue(null)
+    await create()
+    const [first, second] = prismaMock.characterCoupon.createMany.mock.calls.map(([args]) => args.data)
+    expect(second).toEqual(first)
+  })
+
+  it('jogadores da mesma sala ganham cupons diferentes', async () => {
+    const plans = []
+    for (let i = 1; i <= 12; i++) {
+      prismaMock.character.findUnique.mockResolvedValue(null)
+      prismaMock.character.create.mockResolvedValue({ id: `char-${i}`, name: `Jogador ${i}` })
+      await create()
+      const { data } = prismaMock.characterCoupon.createMany.mock.calls.at(-1)[0]
+      expect(data.every((c) => c.characterId === `char-${i}`)).toBe(true)
+      plans.push(JSON.stringify(data.map(({ characterId, ...c }) => c)))
+    }
+    expect(new Set(plans).size).toBeGreaterThanOrEqual(10)
+  })
+
   it('o prêmio dos cupons não vai na resposta da criação', async () => {
     const res = await create()
     expect(JSON.stringify(res.body)).not.toMatch(/cashback|food_discount|skill_point/)

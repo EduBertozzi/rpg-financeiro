@@ -7,7 +7,7 @@ const { prismaMock } = require('@prisma/client')
 const { makeToken, authHeader } = require('./helpers/auth')
 const {
   COUPON_PHASES, COUPON_SPOTS, COUPON_REWARDS, REWARD_KINDS, FOOD_COUPON_RATE, FOOD_COUPON_NOTE, CASHBACK_AMOUNT,
-  randomInt, shuffle, planCoupons, seededRandom, seedFrom, isRewardKind,
+  randomInt, shuffle, planCoupons, planForCharacter, seededRandom, seedFrom, isRewardKind,
   foodCouponDiscount, foodBillWithCoupon, combinedDiscount, rewardInfo,
 } = require('../src/utils/coupons')
 const { cents } = require('../src/utils/finance')
@@ -187,6 +187,51 @@ describe('seededRandom / seedFrom', () => {
     const plan = planCoupons(seededRandom(seedFrom('char-1:segredo')))
     expect(planCoupons(seededRandom(seedFrom('char-1:segredo')))).toEqual(plan)
     expect(plan.map(c => c.reward).sort()).toEqual(['cashback', 'food_discount', 'skill_point'])
+  })
+})
+
+describe('planForCharacter — um plano por jogador', () => {
+  const ids = Array.from({ length: 30 }, (_, i) => `char-${i + 1}`)
+  const plans = ids.map((id) => planForCharacter(id, 'segredo'))
+  const key = (plan) => JSON.stringify(plan)
+
+  it('mesmo personagem, mesmo plano (estável entre chamadas)', () => {
+    for (const id of ids) expect(planForCharacter(id, 'segredo')).toEqual(planForCharacter(id, 'segredo'))
+  })
+
+  it('é o plano da semente "id:segredo"', () => {
+    expect(planForCharacter('char-1', 'segredo')).toEqual(planCoupons(seededRandom(seedFrom('char-1:segredo'))))
+  })
+
+  it('numa turma de 30, quase todo mundo tem um plano diferente', () => {
+    expect(new Set(plans.map(key)).size).toBeGreaterThanOrEqual(25)
+  })
+
+  it('o primeiro cupom não cai no mesmo mês nem no mesmo lugar para todos', () => {
+    expect(new Set(plans.map((p) => p[0].turn)).size).toBeGreaterThan(1)
+    expect(new Set(plans.map((p) => p[0].spot)).size).toBeGreaterThan(1)
+    expect(new Set(plans.map((p) => p[0].reward)).size).toBeGreaterThan(1)
+  })
+
+  it('todo plano é válido: 3 cupons, um por fase, prêmios sem repetir', () => {
+    for (const plan of plans) {
+      expect(plan.map((c) => c.reward).sort()).toEqual(['cashback', 'food_discount', 'skill_point'])
+      plan.forEach((c, i) => {
+        expect(c.turn).toBeGreaterThanOrEqual(COUPON_PHASES[i].from)
+        expect(c.turn).toBeLessThanOrEqual(COUPON_PHASES[i].to)
+        expect(COUPON_SPOTS).toContain(c.spot)
+      })
+    }
+  })
+
+  it('o segredo muda o plano (não dá para adivinhar pelo id)', () => {
+    const other = ids.map((id) => key(planForCharacter(id, 'outro')))
+    expect(other.filter((k, i) => k !== key(plans[i])).length).toBeGreaterThan(0)
+  })
+
+  it('sem id do personagem não sorteia (evita um plano igual para todos)', () => {
+    expect(() => planForCharacter(undefined, 'segredo')).toThrow()
+    expect(() => planForCharacter('', 'segredo')).toThrow()
   })
 })
 

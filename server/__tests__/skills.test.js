@@ -328,7 +328,7 @@ describe('GET /api/v1/skills/character/:id — vantagens', () => {
     }))
     const res = await get()
 
-    expect(res.body.unlocked.map(s => s.perk)).toEqual(['+R$ 200 por mês (freela)', 'Aluguel 15% mais barato'])
+    expect(res.body.unlocked.map(s => s.perk)).toEqual(['+R$ 200 por mês (trabalhos extras nos finais de semana)', 'Aluguel 15% mais barato'])
     expect(res.body.perks).toMatchObject({ extraIncome: 200, rentDiscount: 0.15 })
   })
 

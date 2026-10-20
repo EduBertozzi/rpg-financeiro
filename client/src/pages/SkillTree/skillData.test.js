@@ -65,6 +65,22 @@ describe('dados da constelação', () => {
     for (const s of skills) assert.ok(PERKS[`${s.path}-${s.level}`]?.perk, `${s.path} ${s.level}`)
   })
 
+  it('textos das habilidades de nível 1', () => {
+    assert.equal(PERKS['technical-1'].desc, 'Você começa a pegar trabalhos extras nos finais de semana.')
+    assert.equal(PERKS['communication-1'].desc, 'Você liga na operadora e na companhia de luz e consegue um desconto.')
+    assert.equal(PERKS['management-1'].desc, 'Você passa a fazer uma lista de compras e comparar os preços dos supermercados.')
+  })
+
+  it('a árvore não fala mais em "freela"', () => {
+    for (const p of Object.values(PERKS)) assert.doesNotMatch(`${p.desc} ${p.perk} ${p.note ?? ''}`, /freela/i)
+  })
+
+  it('o efeito das habilidades com texto novo não mudou', () => {
+    assert.equal(PERKS['technical-1'].perk, '+R$ 200 por mês')
+    assert.equal(PERKS['communication-1'].perk, 'Água, luz e internet 30% mais baratas')
+    assert.equal(PERKS['management-1'].perk, 'Mercadinho 15% mais barato')
+  })
+
   it('habilidade desconhecida cai na descrição do banco', () => {
     assert.equal(perkOf({ path: 'x', level: 9, description: 'Algo' }).perk, 'Algo')
   })

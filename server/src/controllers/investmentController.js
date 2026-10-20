@@ -19,6 +19,13 @@ const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Jul
 const monthName = (turn) => MONTHS[turn - 1] ?? 'o fim do ano'
 const LOCK_LABEL = { LCI: '6 meses', LCA: '8 meses' }
 
+// Guardar, resgatar e negociar só com a partida rodando: nem na sala de espera
+// nem depois do fim do ano.
+const roomClosed = (room) => {
+  if (room?.status === 'active') return null
+  return room?.status === 'finished' ? 'A partida já acabou' : 'A partida ainda não começou'
+}
+
 // ── RENDA FIXA ────────────────────────────────────────────────────────────────
 
 exports.getFixedIncome = async (req, res) => {
@@ -44,6 +51,7 @@ exports.investFixed = async (req, res) => {
 
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+    if (roomClosed(character.room)) return res.status(400).json({ error: roomClosed(character.room) })
     if (!(amount > 0)) return res.status(400).json({ error: 'Valor inválido' })
     if (Number(character.cash) < amount) return res.status(422).json({ error: 'Saldo insuficiente' })
 
@@ -88,6 +96,7 @@ exports.redeemFixed = async (req, res) => {
     })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+    if (roomClosed(character.room)) return res.status(400).json({ error: roomClosed(character.room) })
 
     const investment = await prisma.fixedIncomeInvestment.findUnique({
       where: { id: req.params.investmentId }
@@ -134,6 +143,7 @@ exports.withdrawFixed = async (req, res) => {
     })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+    if (roomClosed(character.room)) return res.status(400).json({ error: roomClosed(character.room) })
 
     const turn = character.room.currentTurn
     const investments = await prisma.fixedIncomeInvestment.findMany({
@@ -258,6 +268,7 @@ exports.trade = async (req, res) => {
     })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+    if (roomClosed(character.room)) return res.status(400).json({ error: roomClosed(character.room) })
 
     const asset = await prisma.marketAsset.findUnique({ where: { id: assetId } })
     if (!asset) return res.status(404).json({ error: 'Ativo não encontrado' })
@@ -363,6 +374,7 @@ exports.investDebenture = async (req, res) => {
     })
     if (!character) return res.status(404).json({ error: 'Personagem não encontrado' })
     if (character.userId !== req.user.id) return res.status(403).json({ error: 'Sem permissão' })
+    if (roomClosed(character.room)) return res.status(400).json({ error: roomClosed(character.room) })
     if (Number(character.cash) < amount) return res.status(422).json({ error: 'Saldo insuficiente' })
 
     const company = await prisma.company.findUnique({ where: { id: companyId } })

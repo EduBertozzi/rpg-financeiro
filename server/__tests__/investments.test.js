@@ -12,7 +12,7 @@ const TOKEN = makeToken({ id: 'user-1' })
 
 const makeCharacter = (overrides = {}) => ({
   id: 'char-1', cash: 10000, userId: 'user-1', roomId: 'room-1',
-  room: { id: 'room-1', currentTurn: 3, maxTurns: 12 },
+  room: { id: 'room-1', status: 'active', currentTurn: 3, maxTurns: 12 },
   positions: [],
   ...overrides,
 })
@@ -271,7 +271,7 @@ describe('POST /api/v1/investments/fixed/:id/withdraw', () => {
   })
 
   it('cobra 15% de IR no Tesouro depois de 6 meses', async () => {
-    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 8, maxTurns: 12 } }))
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', status: 'active', currentTurn: 8, maxTurns: 12 } }))
     prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([
       { id: 't', type: 'TESOURO_SELIC', amount: 1000 * Math.pow(1.01, 7), monthlyRate: 0.01, investedAt: 1 },
     ])
@@ -295,7 +295,7 @@ describe('POST /api/v1/investments/fixed/:id/withdraw', () => {
   })
 
   it('LCI na carência: 422 dizendo quanto está liberado e quando solta', async () => {
-    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 7, maxTurns: 12 } }))
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', status: 'active', currentTurn: 7, maxTurns: 12 } }))
     prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([
       { id: 'old', type: 'LCI', amount: 1000, monthlyRate: 0.01, investedAt: 1 },
       { id: 'new', type: 'LCI', amount: 1000, monthlyRate: 0.01, investedAt: 4 },
@@ -309,7 +309,7 @@ describe('POST /api/v1/investments/fixed/:id/withdraw', () => {
   })
 
   it('LCA toda presa: não fala em valor liberado', async () => {
-    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 3, maxTurns: 12 } }))
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', status: 'active', currentTurn: 3, maxTurns: 12 } }))
     prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([
       { id: 'a', type: 'LCA', amount: 1000, monthlyRate: 0.01, investedAt: 3 },
     ])
@@ -321,7 +321,7 @@ describe('POST /api/v1/investments/fixed/:id/withdraw', () => {
   })
 
   it('LCI que já passou da carência resgata normal, sem IR', async () => {
-    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 7, maxTurns: 12 } }))
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', status: 'active', currentTurn: 7, maxTurns: 12 } }))
     prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([
       { id: 'old', type: 'LCI', amount: 1000, monthlyRate: 0.01, investedAt: 1 },
     ])
@@ -345,7 +345,7 @@ describe('POST /api/v1/investments/fixed/:id/withdraw', () => {
   })
 
   it('credita o líquido na conta e registra o resgate com IR no extrato', async () => {
-    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 4, maxTurns: 12 } }))
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', status: 'active', currentTurn: 4, maxTurns: 12 } }))
     prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([
       { id: 'c', type: 'CDB', amount: 1030.301, monthlyRate: 0.01, investedAt: 1 },
     ])
@@ -757,7 +757,7 @@ describe('POST /api/v1/investments/debentures/:id', () => {
   })
 
   it('vence em 10 meses, limitado ao fim da partida', async () => {
-    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 1, maxTurns: 12 } }))
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', status: 'active', currentTurn: 1, maxTurns: 12 } }))
     prismaMock.company.findUnique.mockResolvedValue({ id: 'co-1', name: 'Milhas Fácil', annualRate: 0.18 })
     prismaMock.$transaction.mockResolvedValue([{ id: 'deb-1' }, {}, {}])
 
@@ -766,7 +766,7 @@ describe('POST /api/v1/investments/debentures/:id', () => {
       expect.objectContaining({ data: expect.objectContaining({ maturesAt: 11 }) })
     )
 
-    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', currentTurn: 5, maxTurns: 12 } }))
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: { id: 'room-1', status: 'active', currentTurn: 5, maxTurns: 12 } }))
     await request(app).post('/api/v1/investments/debentures/char-1').set(authHeader(TOKEN)).send({ companyId: 'co-1', amount: 1000 })
     expect(prismaMock.debentureInvestment.create).toHaveBeenLastCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ maturesAt: 12 }) })
@@ -801,5 +801,70 @@ describe('POST /api/v1/investments/debentures/:id', () => {
   it('retorna 401 sem token', async () => {
     const res = await request(app).post('/api/v1/investments/debentures/char-1').send({ companyId: 'co-1', amount: 5000 })
     expect(res.status).toBe(401)
+  })
+})
+
+// ─── partida fora do ar: nada de guardar, resgatar ou negociar ────────────────
+
+describe('investimentos só com a partida rodando', () => {
+  const ROUTES = [
+    ['guardar na caixinha', (r) => r.post('/api/v1/investments/fixed/char-1').send({ amount: 1000, type: 'CDB' })],
+    ['resgatar um investimento', (r) => r.delete('/api/v1/investments/fixed/char-1/fi-1')],
+    ['resgatar parte da caixinha', (r) => r.post('/api/v1/investments/fixed/char-1/withdraw').send({ amount: 100, type: 'CDB' })],
+    ['comprar ações', (r) => r.post('/api/v1/investments/trade/char-1').send({ assetId: 'asset-1', operation: 'buy', quantity: 1 })],
+    ['vender ações', (r) => r.post('/api/v1/investments/trade/char-1').send({ assetId: 'asset-1', operation: 'sell', quantity: 1 })],
+    ['guardar na debênture', (r) => r.post('/api/v1/investments/debentures/char-1').send({ companyId: 'co-1', amount: 1000 })],
+  ]
+  const call = (send) => send(request(app)).set(authHeader(TOKEN))
+  const inRoom = (status) => makeCharacter({ room: { id: 'room-1', status, currentTurn: 1, maxTurns: 12 } })
+
+  const expectNothingMoved = () => {
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(prismaMock.character.update).not.toHaveBeenCalled()
+    expect(prismaMock.fixedIncomeInvestment.create).not.toHaveBeenCalled()
+    expect(prismaMock.debentureInvestment.create).not.toHaveBeenCalled()
+    expect(prismaMock.tradeHistory.create).not.toHaveBeenCalled()
+  }
+
+  it.each(ROUTES)('sala esperando: não deixa %s (400, "A partida ainda não começou")', async (_name, send) => {
+    prismaMock.character.findUnique.mockResolvedValue(inRoom('waiting'))
+    const res = await call(send)
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('A partida ainda não começou')
+    expectNothingMoved()
+  })
+
+  it.each(ROUTES)('partida encerrada: não deixa %s (400)', async (_name, send) => {
+    prismaMock.character.findUnique.mockResolvedValue(inRoom('finished'))
+    const res = await call(send)
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('A partida já acabou')
+    expectNothingMoved()
+  })
+
+  it.each(ROUTES)('personagem sem sala: não deixa %s (400)', async (_name, send) => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter({ room: null }))
+    const res = await call(send)
+    expect(res.status).toBe(400)
+    expect(res.body.error).toBe('A partida ainda não começou')
+    expectNothingMoved()
+  })
+
+  it.each(ROUTES)('personagem de outro usuário continua 403 ao tentar %s', async (_name, send) => {
+    prismaMock.character.findUnique.mockResolvedValue({ ...inRoom('waiting'), userId: 'outro-user' })
+    expect((await call(send)).status).toBe(403)
+  })
+
+  it('sala ativa guarda normalmente', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(inRoom('active'))
+    prismaMock.$transaction.mockResolvedValue([{ id: 'fi-1' }, {}, {}])
+    expect((await call(ROUTES[0][1])).status).toBe(201)
+  })
+
+  it('consultar a carteira e as caixinhas continua liberado na sala de espera', async () => {
+    prismaMock.character.findUnique.mockResolvedValue({ ...inRoom('waiting'), positions: [] })
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue([])
+    expect((await request(app).get('/api/v1/investments/portfolio/char-1').set(authHeader(TOKEN))).status).toBe(200)
+    expect((await request(app).get('/api/v1/investments/fixed/char-1').set(authHeader(TOKEN))).status).toBe(200)
   })
 })

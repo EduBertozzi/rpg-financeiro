@@ -62,9 +62,9 @@ function planCoupons(random = Math.random) {
   }))
 }
 
-// Gerador pseudoaleatório com semente (mulberry32). Usado para criar o plano de
-// personagens antigos: o mesmo personagem sempre recebe o mesmo plano, então
-// duas requisições ao mesmo tempo não criam cupons diferentes.
+// Gerador pseudoaleatório com semente (mulberry32). A semente vem do id do
+// personagem (planForCharacter): o mesmo personagem sempre recebe o mesmo
+// plano, então duas requisições ao mesmo tempo não criam cupons diferentes.
 function seededRandom(seed) {
   let a = seed >>> 0
   return () => {
@@ -79,6 +79,14 @@ function seededRandom(seed) {
 // Semente a partir de um texto (id do personagem + segredo do servidor, para o
 // plano não ser adivinhável pelo id).
 const seedFrom = (text) => crypto.createHash('sha256').update(String(text)).digest().readUInt32BE(0)
+
+// Plano de cupons de UM personagem: cada jogador tem o seu (lugar, mês e prêmio
+// próprios), sempre o mesmo para o mesmo personagem. Nada de sala ou de mês na
+// semente, senão a turma toda acharia o mesmo cupom.
+const planForCharacter = (characterId, secret = '') => {
+  if (!characterId) throw new Error('Plano de cupons precisa do id do personagem')
+  return planCoupons(seededRandom(seedFrom(`${characterId}:${secret}`)))
+}
 
 const isRewardKind = (kind) => Object.prototype.hasOwnProperty.call(COUPON_REWARDS, kind)
 
@@ -113,6 +121,7 @@ module.exports = {
   planCoupons,
   seededRandom,
   seedFrom,
+  planForCharacter,
   isRewardKind,
   foodCouponDiscount,
   foodBillWithCoupon,
