@@ -9,7 +9,8 @@ import {
   debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
   shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
-  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, freeBoxValue, nextUnlock, LOCK_MONTHS, unlocksAt,
+  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, freeBoxValue, LOCK_MONTHS,
+  maskAmount, finishAmount, planWithdrawal, tradeTotal, clampQuantity, buyCheck,
 } from './bankMath'
 
 const brl = (n) => Number(n || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -53,7 +54,9 @@ const RISK_STYLE = {
   Alto: 'bg-[#FDE2E5] text-[#9F1D2F]',
 }
 
-export default function Bank() {
+// `embedded`: sem o GameLayout (sem cabeçalho e barra do jogo), ocupando a
+// largura do container, para aparecer ao lado da carta do dilema.
+export default function Bank({ embedded = false }) {
   const { character, room, setCharacter } = useGameStore()
   const [fixed, setFixed] = useState([])
   const [debentures, setDebentures] = useState([])
@@ -158,8 +161,10 @@ export default function Bank() {
       await api.post(`/investments/trade/${character.id}`, { assetId: asset.id, operation, quantity })
       setToast(`${operation === 'buy' ? 'Comprou' : 'Vendeu'} ${quantity} ${asset.ticker}`)
       await refresh()
+      return true
     } catch (err) {
       setToast(err.response?.data?.error || 'Não deu certo. Tente de novo.')
+      return false
     } finally {
       setBusy(false)
     }
@@ -175,9 +180,8 @@ export default function Bank() {
   ])
   const initials = (character?.name ?? '?').split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 
-  return (
-    <GameLayout light>
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8">
+  const content = (
+      <div className={embedded ? 'w-full' : 'mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8'}>
         <div className="relative overflow-hidden rounded-[28px] bg-[#F3F6F6] text-[#10201E] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
           {/* cabeçalho da marca */}
           <div className="flex flex-wrap items-center justify-between gap-4 bg-[#12B5A6] px-6 pb-16 pt-5 text-white sm:px-7">
@@ -337,30 +341,17 @@ export default function Bank() {
                 </span>
               </h3>
               <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
-                {market.map((asset) => {
-                  const position = portfolio.find((p) => p.ticker === asset.ticker)
-                  const qty = position?.quantity ?? 0
-                  return (
-                    <div key={asset.id} className="grid gap-1.5 rounded-2xl border border-[#E3EAE9] p-3.5">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <b className="text-base font-black">{asset.ticker}</b>
-                        <small className="text-[#627673]">{asset.name}</small>
-                      </div>
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-xl font-black tabular-nums">{brl(asset.currentPrice)}</span>
-                        <small className={`tabular-nums ${asset.changePct >= 0 ? 'text-[#0B8A50]' : 'text-[#C4283D]'}`}>
-                          {asset.changePct >= 0 ? '+' : ''}{asset.changePct.toLocaleString('pt-BR')}%
-                        </small>
-                      </div>
-                      <small className="text-[#627673]">Você tem {qty} {qty === 1 ? 'ação' : 'ações'}{qty ? ` · ${money(position.totalValue)}` : ''}</small>
-                      <div className="mt-1 flex gap-1.5">
-                        <button type="button" disabled={busy || !qty} onClick={() => trade(asset, 'sell', 1)} className="flex-1 rounded-[10px] border border-[#E3EAE9] py-1.5 text-[13px] font-extrabold disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">Vender 1</button>
-                        <button type="button" disabled={busy} onClick={() => trade(asset, 'buy', 1)} className="flex-1 rounded-[10px] bg-[#12B5A6] py-1.5 text-[13px] font-extrabold text-white disabled:opacity-40 cursor-pointer">Comprar 1</button>
-                        <button type="button" disabled={busy} onClick={() => trade(asset, 'buy', 10)} className="flex-1 rounded-[10px] bg-[#12B5A6] py-1.5 text-[13px] font-extrabold text-white disabled:opacity-40 cursor-pointer">+10</button>
-                      </div>
-                    </div>
-                  )
-                })}
+                {market.map((asset) => (
+                  <StockCard
+                    key={asset.id}
+                    asset={asset}
+                    position={portfolio.find((p) => p.ticker === asset.ticker)}
+                    cash={cash}
+                    busy={busy}
+                    money={money}
+                    onTrade={trade}
+                  />
+                ))}
               </div>
             </section>
 
@@ -417,7 +408,6 @@ export default function Bank() {
                 value={boxValue(sheet.type)}
                 fixed={fixed}
                 turn={turn}
-                activeDebentures={activeDebentures}
                 companyName={company?.name}
                 busy={busy}
                 onConfirm={confirmMove}
@@ -432,8 +422,9 @@ export default function Bank() {
           )}
         </div>
       </div>
-    </GameLayout>
   )
+
+  return embedded ? content : <GameLayout light>{content}</GameLayout>
 }
 
 function BoxFacts({ box }) {
@@ -452,18 +443,20 @@ const MODE_LOOK = {
   resgatar: { on: 'bg-[#C4283D] text-white', off: 'text-[#C4283D] hover:bg-[#FBE3E6]', confirm: 'bg-[#C4283D] hover:bg-[#A11F31]' },
 }
 
-function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn, activeDebentures, companyName, busy, onConfirm }) {
+function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn, companyName, busy, onConfirm }) {
   const box = boxByType(sheet.type)
   const isDebenture = box.type === 'DEBENTURE'
   const lockMonths = LOCK_MONTHS[box.type]
   const free = lockMonths ? freeBoxValue(fixed, box.type, turn) : value
   const max = sheet.mode === 'guardar' ? cash : free
-  const unlock = lockMonths ? nextUnlock(fixed, box.type, turn) : null
-  const freeFrom = lockMonths ? unlocksAt(box.type, turn) : null
   // LCI e LCA sem nada fora da carência ficam travadas, igual à debênture
   const lockBlocked = sheet.mode === 'resgatar' && lockMonths && free <= 0.005
   const withdrawBlocked = (sheet.mode === 'resgatar' && isDebenture) || lockBlocked
   const earlyTesouro = sheet.mode === 'resgatar' && box.earlyTaxMonths && turn > 0
+  // prévia do resgate: quanto cai na conta e o IR (mesma conta do servidor)
+  const amount = parseAmount(sheet.value)
+  const plan = sheet.mode === 'resgatar' && !withdrawBlocked && amount > 0 ? planWithdrawal(fixed, box.type, amount, turn) : null
+  const preview = plan && !plan.error ? plan : null
   const title = `${sheet.mode === 'guardar' ? 'Guardar em' : 'Resgatar de'} ${isDebenture && companyName ? `Debênture ${companyName}` : box.name}`
 
   return (
@@ -496,13 +489,7 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
         ))}
       </div>
 
-      {lockBlocked ? null : withdrawBlocked ? (
-        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
-          A debênture tem liquidez de 10 meses: o dinheiro volta sozinho para a conta no vencimento
-          {activeDebentures.length > 0 && ` (${activeDebentures.map((d) => MONTHS[d.maturesAt - 1] ?? `mês ${d.maturesAt}`).join(', ')})`}.
-          Se a empresa der calote, o valor é perdido.
-        </p>
-      ) : (
+      {withdrawBlocked ? null : (
         <>
           <label htmlFor="bank-amount" className="text-sm text-[#627673]">
             Quanto você quer {sheet.mode}?
@@ -513,7 +500,8 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
             inputMode="decimal"
             placeholder="R$ 0,00"
             value={sheet.value}
-            onChange={(e) => setSheet({ ...sheet, value: e.target.value, error: '' })}
+            onChange={(e) => setSheet({ ...sheet, value: maskAmount(e.target.value), error: '' })}
+            onBlur={() => setSheet({ ...sheet, value: finishAmount(sheet.value) })}
             onKeyDown={(e) => e.key === 'Enter' && onConfirm()}
             className="w-full border-0 border-b-2 border-[#12B5A6] bg-transparent py-1.5 text-3xl font-black tabular-nums outline-none"
           />
@@ -534,22 +522,15 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
         {box.rate} · {sheet.mode === 'guardar' ? `${brl(cash)} disponível na conta` : `${brl(value)} na caixinha`}
         {sheet.mode === 'resgatar' && lockMonths && value > 0 && ` · ${brl(free)} liberado`}
       </p>
-      {lockMonths && sheet.mode === 'guardar' && (
-        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
-          Cada valor guardado aqui fica preso {lockMonths} meses: o que entrar agora só sai a partir de {MONTHS[freeFrom - 1] ?? 'depois do fim do ano (conta no patrimônio final)'}.
-        </p>
-      )}
-      {lockMonths && sheet.mode === 'resgatar' && unlock && !lockBlocked && (
-        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">
-          {brl(value - free)} ainda está na carência de {lockMonths} meses. O próximo valor solta em {MONTHS[unlock - 1] ?? 'depois do fim do ano'}.
-        </p>
-      )}
       <BoxFacts box={box} />
-      {sheet.mode === 'guardar' && isDebenture && (
-        <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">O dinheiro guardado aqui fica preso por 10 meses (ou até o fim da partida) e pode dar calote.</p>
-      )}
       {earlyTesouro && (
         <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">Resgate antes de 6 meses paga IR de 22,5% sobre o rendimento (depois, 15%).</p>
+      )}
+      {preview && (
+        <p className="rounded-[10px] bg-[#E2F6F3] px-3 py-2 text-sm text-[#063F3A]">
+          Vai cair na conta: <b className="tabular-nums">{brl(preview.net)}</b>{' '}
+          {preview.incomeTax > 0 ? `(IR de ${brl(preview.incomeTax)})` : '(sem IR)'}
+        </p>
       )}
       {sheet.error && <p className="text-sm text-[#C4283D]">{sheet.error}</p>}
       {!withdrawBlocked && (
@@ -562,3 +543,67 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
   )
 }
 
+
+// Card de uma ação: escolhe a quantidade (− / +) e compra ou vende de uma vez.
+function StockCard({ asset, position, cash, busy, money, onTrade }) {
+  const [quantity, setQuantity] = useState(1)
+  const [warning, setWarning] = useState('')
+  const owned = position?.quantity ?? 0
+  const total = tradeTotal(asset.currentPrice, quantity)
+  const canSell = owned > 0 && quantity <= owned
+
+  const change = (n) => {
+    setQuantity(clampQuantity(n))
+    setWarning('')
+  }
+
+  const buy = async () => {
+    const check = buyCheck(cash, asset.currentPrice, quantity)
+    if (!check.ok) return setWarning(`Saldo insuficiente: você tem ${brl(cash)} e precisa de ${brl(check.total)}`)
+    if (await onTrade(asset, 'buy', quantity)) setQuantity(1)
+  }
+
+  const sell = async () => {
+    if (!canSell) return
+    if (await onTrade(asset, 'sell', quantity)) setQuantity(1)
+  }
+
+  return (
+    <div className="grid gap-1.5 rounded-2xl border border-[#E3EAE9] p-3.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <b className="text-base font-black">{asset.ticker}</b>
+        <small className="text-[#627673]">{asset.name}</small>
+      </div>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-xl font-black tabular-nums">{brl(asset.currentPrice)}</span>
+        <small className={`tabular-nums ${asset.changePct >= 0 ? 'text-[#0B8A50]' : 'text-[#C4283D]'}`}>
+          {asset.changePct >= 0 ? '+' : ''}{asset.changePct.toLocaleString('pt-BR')}%
+        </small>
+      </div>
+      <small className="text-[#627673]">Você tem {owned} {owned === 1 ? 'ação' : 'ações'}{owned ? ` · ${money(position.totalValue)}` : ''}</small>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <div className="flex items-center rounded-[10px] border border-[#E3EAE9]">
+          <button type="button" aria-label="Menos uma" disabled={quantity <= 1} onClick={() => change(quantity - 1)} className="h-8 w-8 font-black disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">−</button>
+          <input
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
+            aria-label={`Quantidade de ${asset.ticker}`}
+            value={quantity}
+            onChange={(e) => change(e.target.value)}
+            className="h-8 w-12 border-0 bg-transparent text-center font-black tabular-nums outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <button type="button" aria-label="Mais uma" onClick={() => change(quantity + 1)} className="h-8 w-8 font-black cursor-pointer">+</button>
+        </div>
+        <small className="text-right text-[#627673]">Total <b className="tabular-nums text-[#10201E]">{brl(total)}</b></small>
+      </div>
+      {owned > 0 && quantity > owned && <small className="text-[#627673]">Para vender, você só tem {owned} {owned === 1 ? 'ação' : 'ações'}.</small>}
+      {warning && <small role="alert" className="font-bold text-[#C4283D]">{warning}</small>}
+      <div className="mt-1 flex gap-1.5">
+        <button type="button" disabled={busy || !canSell} onClick={sell} className="flex-1 rounded-[10px] border border-[#E3EAE9] py-1.5 text-[13px] font-extrabold disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">Vender {quantity}</button>
+        <button type="button" disabled={busy} onClick={buy} className="flex-1 rounded-[10px] bg-[#12B5A6] py-1.5 text-[13px] font-extrabold text-white disabled:opacity-40 cursor-pointer">Comprar {quantity}</button>
+      </div>
+    </div>
+  )
+}
