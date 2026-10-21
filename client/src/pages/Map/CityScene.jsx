@@ -537,8 +537,9 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
     <motion.div
       className="relative h-full w-full"
       style={{ transformOrigin: zoomTo?.origin ?? '50% 50%' }}
-      animate={zoomTo ? { scale: 2.2, opacity: 0.4 } : { scale: 1, opacity: 1 }}
-      transition={{ duration: 0.5, ease: [0.65, 0, 0.35, 1] }}
+      // clique num prédio: um zoom curto e nítido nele (sem apagar a cidade)
+      animate={zoomTo ? { scale: 1.35 } : { scale: 1 }}
+      transition={{ duration: 0.38, ease: [0.4, 0, 0.2, 1] }}
       onAnimationComplete={() => {
         if (!zoomTo) return
         const { b } = zoomTo
@@ -678,6 +679,15 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
         {coupon && interactive && <CouponTicket spot={coupon.spot} onClaim={onCoupon} />}
       </svg>
     </motion.div>
+    {/* holofote: escurece em volta do prédio clicado enquanto o zoom acontece */}
+    <motion.div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0"
+      style={{ background: `radial-gradient(circle at ${zoomTo?.origin ?? '50% 50%'}, transparent 0, transparent 160px, rgba(20,30,18,0.45) 420px)` }}
+      initial={false}
+      animate={{ opacity: zoomTo ? 1 : 0 }}
+      transition={{ duration: 0.3 }}
+    />
     <WeatherLayer fx={weather?.fx} />
     </div>
     </WeatherContext.Provider>
