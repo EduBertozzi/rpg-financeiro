@@ -524,7 +524,7 @@ function MobileBar({ items, path, go, character, turn, tasks, clock, isAdmin, so
           const tone = TONES[item.icon] ?? TONES.map
           const active = path === item.path
           return (
-            <button key={item.path} type="button" onClick={() => go(item.path)} aria-current={active ? 'page' : undefined} className={tab(active)}>
+            <button key={item.path} type="button" data-tour-m={{ bank: 'banco', skills: 'arvore' }[item.icon]} onClick={() => go(item.path)} aria-current={active ? 'page' : undefined} className={tab(active)}>
               <span className="relative grid h-9 w-11 place-items-center rounded-xl transition-colors" style={active ? { background: tone.bg, color: '#fff', boxShadow: `0 3px 0 ${tone.edge}` } : { background: tone.soft, color: tone.edge }}>
                 <Icon name={item.icon} className="h-5 w-5" />
                 {item.badge > 0 && <Badge n={item.badge} />}
@@ -539,7 +539,7 @@ function MobileBar({ items, path, go, character, turn, tasks, clock, isAdmin, so
             Admin
           </button>
         )}
-        <button type="button" onClick={() => setOpen(true)} className={tab(open)} aria-label="Você: saldo, mês e opções">
+        <button type="button" data-tour-m="saldo" onClick={() => setOpen(true)} className={tab(open)} aria-label="Você: saldo, mês e opções">
           <span className="grid h-9 w-11 place-items-center"><Avatar id={character.avatarId} size={34} selected /></span>
           <span className={`tabular-nums ${negative ? 'text-[#C4283D]' : 'text-[#2B8C41]'}`}><CompactCash value={character.cash} /></span>
         </button>

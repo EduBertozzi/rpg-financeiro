@@ -497,7 +497,7 @@ export default function Map() {
           </div>
 
           {!isWaiting && (
-            <div className={`pointer-events-auto mt-12 flex flex-col items-end gap-3 ${PANEL} px-5 py-4`}>
+            <div data-tour-m="checklist" className={`pointer-events-auto mt-12 flex flex-col items-end gap-3 ${PANEL} px-5 py-4`}>
               <div className="text-right">
                 <p className="font-toy text-[17px] font-extrabold text-[#24331F]">
                   {monthName ?? 'Mês'} · <span className="text-[#2457C5]">{currentTurn}</span><span className="text-[#A9B19E]"> / 12</span>

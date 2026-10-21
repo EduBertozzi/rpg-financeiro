@@ -24,7 +24,12 @@ export default function Tour({ onDone }) {
   useEffect(() => {
     const measure = () => {
       setView({ width: window.innerWidth, height: window.innerHeight })
-      const el = current.target ? document.querySelector(`[data-tour="${current.target}"]`) : null
+      // no celular, um passo pode apontar para outro lugar (data-tour-m: a barra
+      // de baixo, o painel do mês); senão vale o primeiro alvo que está visível
+      const visible = (sel) => [...document.querySelectorAll(sel)].find((n) => n.getBoundingClientRect().width > 0)
+      const phone = window.matchMedia?.('(max-width: 639px)').matches
+      const el = !current.target ? null
+        : (phone && visible(`[data-tour-m="${current.target}"]`)) || visible(`[data-tour="${current.target}"]`) || null
       const r = el?.getBoundingClientRect()
       setRect(r && r.width > 0 ? { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height } : null)
     }
