@@ -193,12 +193,17 @@ export default function Notebook() {
   // como num livro ('opening') e aí as páginas ficam prontas ('open')
   const [phase, setPhase] = useState('open')
   const [origin, setOrigin] = useState({ x: 0, y: 0 })
+  // fechado, a capa (metade direita) fica no meio da tela; ao abrir, o caderno
+  // desliza de volta para o centro enquanto a capa vira
+  const [shift, setShift] = useState(0)
 
   const openBook = () => {
     sfx.book()
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const r = openerRef.current?.getBoundingClientRect()
     setOrigin(r ? { x: r.left + r.width / 2 - window.innerWidth / 2, y: r.top + r.height / 2 - window.innerHeight / 2 } : { x: 0, y: 0 })
+    const desktop = window.matchMedia?.('(min-width: 768px)').matches
+    setShift(desktop && !reduced ? -Math.min(980, window.innerWidth - 32) / 4 : 0)
     setPhase(reduced ? 'open' : 'flying')
     setOpen(true)
   }
@@ -353,8 +358,8 @@ export default function Notebook() {
             role="dialog"
             aria-label="Caderninho do jogo"
             initial={phase === 'flying' ? { x: origin.x, y: origin.y, scale: 0.12, rotate: -10 } : false}
-            animate={{ x: 0, y: 0, scale: 1, rotate: 0 }}
-            transition={{ type: 'spring', stiffness: 120, damping: 18, mass: 0.9 }}
+            animate={{ x: phase === 'flying' ? shift : 0, y: 0, scale: 1, rotate: 0 }}
+            transition={phase === 'flying' ? { type: 'spring', stiffness: 120, damping: 18, mass: 0.9 } : { duration: 0.85, ease: [0.6, 0.05, 0.3, 1] }}
             onAnimationComplete={landed}
             style={{ perspective: 2400 }}
             className={`relative grid h-[min(640px,calc(100vh-80px))] w-[min(980px,100%)] grid-cols-1 rounded-[18px] p-2.5 text-[#24331F] transition-[background-color,box-shadow] duration-200 md:h-[min(640px,calc(100vh-40px))] md:grid-cols-2 md:p-3.5 ${phase === 'open' ? 'bg-[#2457C5] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)]' : 'bg-transparent md:shadow-none max-md:bg-[#2457C5]'}`}
