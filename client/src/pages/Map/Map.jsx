@@ -472,7 +472,7 @@ export default function Map() {
   return (
     <GameLayout>
       {/* A cidade é o fundo da tela; os painéis flutuam por cima dela. */}
-      <div ref={mapScrollRef} className="fixed inset-y-0 left-20 right-0 z-0 overflow-x-auto overflow-y-hidden">
+      <div ref={mapScrollRef} className="fixed inset-x-0 top-0 bottom-[64px] z-0 overflow-x-auto overflow-y-hidden sm:bottom-0 sm:left-20">
         <div inert={isWaiting || locked} className={`h-full min-w-[760px] transition-[filter,opacity] duration-500 ${isWaiting ? 'pointer-events-none opacity-60 blur-[3px]' : locked ? 'pointer-events-none opacity-75 blur-[2px] saturate-50' : ''}`}>
           <CityScene buildings={sceneBuildings} onSelect={handleBuilding} interactive={!isWaiting} month={sceneMonth} coupon={coupon} onCoupon={handleCoupon} />
         </div>

@@ -315,7 +315,7 @@ export default function Notebook() {
   return (
     <>
       {/* canto de baixo: "Como jogar" (?) e o caderninho, lado a lado */}
-      <div data-tour="caderninho" className="fixed bottom-5 right-5 z-30 flex origin-bottom-right items-end gap-3.5 max-sm:bottom-3 max-sm:right-3 max-sm:scale-[.68]">
+      <div data-tour="caderninho" className="fixed bottom-5 right-5 z-30 flex origin-bottom-right items-end gap-3.5 max-sm:bottom-[76px] max-sm:right-3 max-sm:scale-[.62]">
       <button
         type="button"
         onClick={() => { sfx.pop(); setHelp(true) }}

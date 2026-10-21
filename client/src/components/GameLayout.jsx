@@ -26,7 +26,7 @@ export default function GameLayout({ children, light = false }) {
 
       <GameHeader />
 
-      <main className={`relative z-10 transition-[padding] duration-300 ${sidebarExpanded ? 'pl-80' : 'pl-20'} ${light && clockOn ? 'pt-12 sm:pt-10' : ''}`}>
+      <main className={`relative z-10 transition-[padding] duration-300 max-sm:pb-20 max-sm:pl-0 ${sidebarExpanded ? 'sm:pl-80' : 'sm:pl-20'} ${light && clockOn ? 'pt-12 sm:pt-10' : ''}`}>
         {children}
       </main>
 

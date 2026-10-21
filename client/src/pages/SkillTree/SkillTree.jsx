@@ -79,7 +79,7 @@ export default function SkillTree() {
 
   return (
     <GameLayout>
-      <div className="fixed inset-y-0 left-20 right-0 z-0 overflow-hidden bg-[#E3F5FC] text-[#24331F]">
+      <div className="fixed inset-x-0 top-0 bottom-[64px] z-0 overflow-hidden bg-[#E3F5FC] text-[#24331F] sm:bottom-0 sm:left-20">
         <TreeSky />
 
         {/* em cima sobra espaço para o relógio do mês, fixo no canto */}

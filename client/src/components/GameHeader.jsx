@@ -363,7 +363,7 @@ export default function GameHeader() {
         onMouseEnter={() => !document.body.dataset.tour && setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
         className={[
-          'fixed left-0 top-0 z-40 h-screen overflow-hidden bg-[#FFFDF7] text-[#24331F]',
+          'fixed left-0 top-0 z-40 h-screen overflow-hidden bg-[#FFFDF7] text-[#24331F] max-sm:hidden',
           'shadow-[6px_0_0_#E2D6BE,12px_0_40px_rgba(36,51,31,0.18)] transition-[width] duration-300 ease-out',
           sidebarExpanded ? 'w-80' : 'w-20',
         ].join(' ')}
@@ -491,6 +491,87 @@ export default function GameHeader() {
           </div>
         </div>
       </aside>
+
+      {/* celular: a barra lateral vira uma barra de navegação embaixo */}
+      <MobileBar
+        items={navItems}
+        path={path}
+        go={go}
+        character={character}
+        turn={turn}
+        tasks={tasks}
+        clock={clock}
+        isAdmin={user?.role === 'admin'}
+        soundOn={soundOn}
+        onSound={toggleSound}
+        onLogout={handleLogout}
+        onChart={() => setChartOpen(true)}
+      />
+    </>
+  )
+}
+
+// Barra de navegação do celular: Mapa, Inabank, Árvore e "Você" (saldo); o
+// "Você" abre uma gaveta com o patrimônio, o mês, o som e o sair.
+function MobileBar({ items, path, go, character, turn, tasks, clock, isAdmin, soundOn, onSound, onLogout, onChart }) {
+  const [open, setOpen] = useState(false)
+  const negative = Number(character.cash) < 0
+  const tab = (active) => `relative grid flex-1 justify-items-center gap-0.5 rounded-2xl py-1.5 font-toy text-[11px] font-extrabold transition-colors cursor-pointer ${active ? 'text-[#24331F]' : 'text-[#8A9680]'}`
+  return (
+    <>
+      <nav aria-label="Navegação" className="fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t-2 border-[#EFE6D3] bg-[#FFFDF7] px-2 pb-[max(6px,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgba(36,51,31,0.12)] sm:hidden">
+        {items.map((item) => {
+          const tone = TONES[item.icon] ?? TONES.map
+          const active = path === item.path
+          return (
+            <button key={item.path} type="button" onClick={() => go(item.path)} aria-current={active ? 'page' : undefined} className={tab(active)}>
+              <span className="relative grid h-9 w-11 place-items-center rounded-xl transition-colors" style={active ? { background: tone.bg, color: '#fff', boxShadow: `0 3px 0 ${tone.edge}` } : { background: tone.soft, color: tone.edge }}>
+                <Icon name={item.icon} className="h-5 w-5" />
+                {item.badge > 0 && <Badge n={item.badge} />}
+              </span>
+              {item.icon === 'skills' ? 'Árvore' : item.label}
+            </button>
+          )
+        })}
+        {isAdmin && (
+          <button type="button" onClick={() => go('/admin')} className={tab(path === '/admin')}>
+            <span className="grid h-9 w-11 place-items-center rounded-xl bg-[#FFF3C4] text-[#C98A12]"><Icon name="admin" className="h-5 w-5" /></span>
+            Admin
+          </button>
+        )}
+        <button type="button" onClick={() => setOpen(true)} className={tab(open)} aria-label="Você: saldo, mês e opções">
+          <span className="grid h-9 w-11 place-items-center"><Avatar id={character.avatarId} size={34} selected /></span>
+          <span className={`tabular-nums ${negative ? 'text-[#C4283D]' : 'text-[#2B8C41]'}`}><CompactCash value={character.cash} /></span>
+        </button>
+      </nav>
+
+      {open && (
+        <div className="fixed inset-0 z-[45] flex items-end bg-[#24331F]/45 sm:hidden" onClick={(e) => e.target === e.currentTarget && setOpen(false)}>
+          <div role="dialog" aria-label="Você" className="turn-pop max-h-[85vh] w-full overflow-y-auto rounded-t-[28px] bg-[#FFFDF7] p-4 pb-[max(16px,env(safe-area-inset-bottom))] text-[#24331F] shadow-[0_-10px_30px_rgba(0,0,0,0.25)]">
+            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-[#E2D6BE]" />
+            <div className="mb-3 flex items-center gap-3">
+              <Avatar id={character.avatarId} size={48} selected />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-toy text-[20px] font-extrabold leading-tight">{character.name}</p>
+                <p className="truncate text-xs text-[#6B7A62]">{character.course}</p>
+              </div>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Fechar" className="grid h-9 w-9 place-items-center rounded-full bg-[#F1EBDD] text-[#6B7A62] cursor-pointer"><Icon name="close" className="h-4 w-4" /></button>
+            </div>
+            <div className="grid gap-3">
+              <WorthCard character={character} onExpand={() => { setOpen(false); onChart() }} />
+              {turn > 0 && <MonthCard turn={turn} tasks={tasks} clock={clock} />}
+              <div className="flex gap-2">
+                <button type="button" onClick={onSound} aria-pressed={soundOn} className="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-[#EFE6D3] bg-white px-3 py-2.5 font-toy text-[15px] font-extrabold text-[#6B7A62] cursor-pointer">
+                  <Icon name={soundOn ? 'soundOn' : 'soundOff'} className="h-5 w-5" />{soundOn ? 'Som ligado' : 'Som desligado'}
+                </button>
+                <button type="button" onClick={onLogout} className="flex items-center justify-center gap-2 rounded-2xl bg-[#FDE2E5] px-4 py-2.5 font-toy text-[15px] font-extrabold text-[#9F1D2F] shadow-[0_4px_0_#F5B8C0] cursor-pointer">
+                  <Icon name="logout" className="h-5 w-5" />Sair
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
