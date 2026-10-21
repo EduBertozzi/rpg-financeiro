@@ -45,7 +45,7 @@ function eventTitles(turn) {
 function turnSummary({ turn, logs = [], effectLabels = [] }) {
   const t = Number(turn)
   const titles = eventTitles(t)
-  const summary = { turn: t, events: [], consequences: [], investments: [], late: [], money: { salary: 0, inss: 0, ir: 0, extras: 0, rent: 0, interest: 0 }, net: 0 }
+  const summary = { turn: t, events: [], consequences: [], investments: [], late: [], perks: [], money: { salary: 0, inss: 0, ir: 0, extras: 0, rent: 0, interest: 0 }, net: 0 }
   const amount = (l) => cents(Number(l.cashImpact ?? 0))
 
   for (const l of logs.filter((x) => Number(x.turn) === t)) {
@@ -67,6 +67,9 @@ function turnSummary({ turn, logs = [], effectLabels = [] }) {
     }
     const kind = Object.keys(MONEY).find((k) => MONEY[k].some((prefix) => d.startsWith(prefix)))
     if (kind) summary.money[kind] = cents(summary.money[kind] + amount(l))
+    // as vantagens (dom e habilidades) também vão uma a uma, com o nome, para o
+    // cartão mostrar separadas do salário (o total segue em money.extras)
+    if (kind === 'extras') summary.perks.push({ description: d.replace(/ \([+-]R\$ [\d.,]+\)$/, ''), amount: amount(l) })
   }
   // o que ficou em aberto no mês que fechou é registrado naquele mês
   for (const l of logs.filter((x) => Number(x.turn) === t - 1 && LATE(x.description))) {

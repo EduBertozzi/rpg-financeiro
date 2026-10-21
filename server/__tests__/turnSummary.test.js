@@ -45,6 +45,18 @@ describe('turnSummary', () => {
     expect(s.money).toEqual({ salary: 7000, inss: 0, ir: 0, extras: 200, rent: -1500, interest: 0 })
   })
 
+  it('vantagens (dom e habilidades) uma a uma, com o nome, sem o valor no texto', () => {
+    expect(s.perks).toEqual([{ description: 'Freela: Fundamentos e Lógica', amount: 200 }])
+    const more = turnSummary({ turn: 2, logs: [
+      log(2, 'Trabalho extra: Desenrolado (+R$ 120.00)', 120),
+      log(2, 'Bônus salarial: Pensamento Analítico Avançado (+R$ 200.00)', 200),
+      log(2, 'Gestão: Bônus sobre as caixinhas (+R$ 8.40)', 8.4),
+    ] })
+    expect(more.perks.map((p) => p.description)).toEqual(['Trabalho extra: Desenrolado', 'Bônus salarial: Pensamento Analítico Avançado', 'Gestão: Bônus sobre as caixinhas'])
+    expect(more.money.extras).toBe(328.4)
+    expect(more.net).toBe(328.4) // a lista não conta duas vezes
+  })
+
   it('saldo da virada soma tudo, sem as ações do jogador no mês', () => {
     expect(s.net).toBe(7000 + 200 + 537 - 335.2 - 1500 - 450 - 257.5)
   })

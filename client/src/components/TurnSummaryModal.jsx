@@ -37,7 +37,7 @@ function Row({ label, value, strong }) {
 // Cartão da virada do mês: abre no começo de cada mês, antes do dilema.
 export default function TurnSummaryModal({ summary, onClose }) {
   if (!summary) return null
-  const { turn, events, consequences, investments = [], late, money, net } = summary
+  const { turn, events, consequences, investments = [], late, perks = [], money, net } = summary
   const first = turn === 1
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -72,13 +72,21 @@ export default function TurnSummaryModal({ summary, onClose }) {
 
         {first && <p className="text-center text-[15px] text-[#4A5A42]">O salário de janeiro já caiu (líquido, sem o INSS e o IR) e o aluguel já saiu. Agora é pagar as contas do mês, escolher o lazer e guardar o que sobrar.</p>}
 
+        {perks?.length > 0 && (
+          <div className="grid gap-1.5 rounded-[18px] border-2 border-[#D9CBFB] bg-[#F1ECFE] p-4">
+            <p className="font-toy text-[17px] font-extrabold text-[#6538C9]">Suas vantagens (dom e habilidades)</p>
+            {perks.map((p, i) => <Row key={i} label={p.description} value={p.amount} />)}
+          </div>
+        )}
+
         {(
           <div className="grid gap-1 rounded-[18px] border-2 border-[#EFE6D3] bg-white p-4">
             {/* holerite: o bruto entra e os descontos saem, linha a linha */}
             {money.salary !== 0 && <Row label={money.inss || money.ir ? 'Salário (bruto)' : 'Salário'} value={money.salary} />}
             {Boolean(money.inss) && <Row label="INSS" value={money.inss} />}
             {Boolean(money.ir) && <Row label="Imposto de Renda na fonte" value={money.ir} />}
-            {money.extras !== 0 && <Row label="Trabalhos extras e bônus" value={money.extras} />}
+            {/* servidor antigo, sem a lista de vantagens: uma linha só */}
+            {money.extras !== 0 && !perks?.length && <Row label="Vantagens (dom e habilidades)" value={money.extras} />}
             {money.rent !== 0 && <Row label="Aluguel" value={money.rent} />}
             {money.interest !== 0 && <Row label="Juros do cheque especial" value={money.interest} />}
             <div className="mt-1 border-t-2 border-dashed border-[#EFE6D3] pt-2"><Row label="Saldo da virada" value={net} strong /></div>
