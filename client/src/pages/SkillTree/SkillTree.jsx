@@ -20,7 +20,8 @@ const readIntro = () => {
 }
 
 export default function SkillTree() {
-  const { character, setCharacter } = useGameStore()
+  const { character, room, setCharacter } = useGameStore()
+  const open = room?.status === 'active' // antes de começar (e depois do fim), só olhar
   const [skills, setSkills] = useState([])
   const [mine, setMine] = useState({ totalPoints: 0, usedPoints: 0, maxPoints: 8, unlocked: [] })
   const [selected, setSelected] = useState(null)
@@ -51,7 +52,7 @@ export default function SkillTree() {
   const free = mine.totalPoints - mine.usedPoints
 
   const unlock = async () => {
-    if (!current || statusOf(current) !== 'ready') return
+    if (!open || !current || statusOf(current) !== 'ready') return
     setBusy(true)
     setError('')
     try {
@@ -127,7 +128,8 @@ export default function SkillTree() {
               unlocked={skills.filter((s) => unlockedIds.includes(s.id))}
               tips={mine.tips}
               busy={busy}
-              error={error}
+              error={error || (open ? '' : 'A árvore abre quando a partida começar.')}
+              closed={!open}
               onUnlock={unlock}
             />
           )}
@@ -419,7 +421,7 @@ function Legend() {
   )
 }
 
-function Detail({ skill, status, cost, unlocked, tips, busy, error, onUnlock }) {
+function Detail({ skill, status, cost, unlocked, tips, busy, error, closed, onUnlock }) {
   const path = PATHS[skill.path]
   const perk = perkOf(skill)
   return (
@@ -441,7 +443,7 @@ function Detail({ skill, status, cost, unlocked, tips, busy, error, onUnlock }) 
       <button
         type="button"
         onClick={onUnlock}
-        disabled={status !== 'ready' || busy}
+        disabled={closed || status !== 'ready' || busy}
         className="rounded-[18px] bg-[#3DBE5A] px-4 py-3.5 font-toy text-[18px] font-extrabold text-white shadow-[0_6px_0_#2B8C41] transition hover:brightness-105 active:translate-y-1 active:shadow-[0_2px_0_#2B8C41] disabled:cursor-not-allowed disabled:bg-[#EFE6D3] disabled:text-[#8A9680] disabled:shadow-none cursor-pointer"
       >
         {status === 'on' ? 'Desbloqueada' : busy ? 'Desbloqueando…' : `Desbloquear por ${cost} ${cost > 1 ? 'pontos' : 'ponto'}`}

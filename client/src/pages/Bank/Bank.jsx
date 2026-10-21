@@ -123,7 +123,9 @@ export default function Bank({ embedded = false }) {
     .reduce((best, t) => (boxValue(t) > boxValue(best) ? t : best), 'POUPANCA')
 
   // ── ações ──────────────────────────────────────────────────────────────
-  const openMove = (type, mode = 'guardar') => setSheet({ kind: 'move', type, mode, value: '', error: '' })
+  // antes de o professor começar (e depois do fim) o banco só mostra, não mexe
+  const open = room?.status === 'active'
+  const openMove = (type, mode = 'guardar') => open && setSheet({ kind: 'move', type, mode, value: '', error: '' })
 
   const confirmMove = async () => {
     const box = boxByType(sheet.type)
@@ -210,6 +212,12 @@ export default function Bank({ embedded = false }) {
           </div>
 
           <div className="-mt-11 grid gap-4 px-4 pb-6 sm:px-7">
+            {!open && (
+              <section role="status" className="rounded-[20px] border border-[#F2D27A] bg-[#FFF3C4] p-5 text-[#5A3D00] shadow-sm sm:p-6">
+                <p className="font-extrabold">{room?.status === 'finished' ? 'A partida acabou.' : 'O banco abre quando a partida começar.'}</p>
+                <p className="mt-1 text-sm">{room?.status === 'finished' ? 'Dá para ver o que você tem, mas não dá mais para guardar, resgatar ou negociar ações.' : 'Assim que o professor iniciar a sala, você pode guardar, resgatar e negociar ações.'}</p>
+              </section>
+            )}
             {cash < 0 && (
               <section role="alert" className="flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-[#F5B8C0] bg-[#FDE2E5] p-5 text-[#7A1626] shadow-sm sm:p-6">
                 <div className="min-w-[14rem] flex-1">
@@ -347,7 +355,7 @@ export default function Bank({ embedded = false }) {
                     asset={asset}
                     position={portfolio.find((p) => p.ticker === asset.ticker)}
                     cash={cash}
-                    busy={busy}
+                    busy={busy || !open}
                     money={money}
                     onTrade={trade}
                   />
@@ -397,7 +405,7 @@ export default function Bank({ embedded = false }) {
 
           {sheet && (
             <div
-              className="absolute inset-0 z-10 flex items-center justify-center bg-[#041E1C]/45 p-4"
+              className="fixed inset-0 z-[80] flex items-center justify-center bg-[#041E1C]/45 p-4"
               onClick={(e) => e.target === e.currentTarget && setSheet(null)}
             >
               <MoveSheet

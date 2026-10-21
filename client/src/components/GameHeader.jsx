@@ -153,7 +153,7 @@ const TONES = {
   admin: { bg: '#F2B53A', edge: '#C98A12', soft: '#FDF1D6' },
 }
 
-function MenuItem({ active, icon, label, description, onClick, expanded, badge = 0 }) {
+function MenuItem({ active, icon, label, description, onClick, expanded, badge = 0, locked = false }) {
   const tone = TONES[icon] ?? TONES.map
   const tile = active
     ? { background: tone.bg, color: '#fff', boxShadow: `0 4px 0 ${tone.edge}` }
@@ -164,11 +164,12 @@ function MenuItem({ active, icon, label, description, onClick, expanded, badge =
       <button
         type="button"
         onClick={onClick}
-        title={label}
+        disabled={locked}
+        title={locked ? `${label}: abre quando a partida começar` : label}
         aria-label={label}
         aria-current={active ? 'page' : undefined}
         style={tile}
-        className="relative grid h-12 w-12 place-items-center rounded-2xl transition-transform hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
+        className="relative grid h-12 w-12 place-items-center rounded-2xl transition-transform hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale disabled:hover:translate-y-0"
       >
         <Icon name={icon} className="h-5 w-5" />
         {badge > 0 && <Badge n={badge} />}
@@ -180,9 +181,11 @@ function MenuItem({ active, icon, label, description, onClick, expanded, badge =
     <button
       type="button"
       onClick={onClick}
+      disabled={locked}
+      title={locked ? 'Abre quando a partida começar' : undefined}
       aria-current={active ? 'page' : undefined}
       className={[
-        'flex w-full items-center gap-3 rounded-[20px] border-2 px-2.5 py-2 text-left transition-transform hover:-translate-y-0.5 cursor-pointer',
+        'flex w-full items-center gap-3 rounded-[20px] border-2 px-2.5 py-2 text-left transition-transform hover:-translate-y-0.5 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 disabled:grayscale disabled:hover:translate-y-0',
         active ? 'bg-white' : 'border-transparent hover:bg-white/70',
       ].join(' ')}
       style={active ? { borderColor: tone.bg, boxShadow: `0 4px 0 ${tone.bg}` } : undefined}
@@ -417,6 +420,7 @@ export default function GameHeader() {
                         badge={item.badge}
                         active={path === item.path}
                         expanded={sidebarExpanded}
+                        locked={!playing && item.path !== '/map'}
                         onClick={() => go(item.path)}
                       />
                     </div>
