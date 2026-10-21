@@ -317,8 +317,8 @@ export default function GameHeader() {
 
   const navItems = [
     { label: 'Mapa', path: '/map', icon: 'map', description: 'Cidade e tarefas do mês' },
-    { label: 'Inabank', path: '/bank', icon: 'bank', description: 'Conta, caixinhas e ações', tour: 'banco' },
-    { label: 'Árvore de habilidades', path: '/skills', icon: 'skills', tour: 'arvore', description: points ? `${points} ${points === 1 ? 'ponto' : 'pontos'} para gastar` : 'Pontos viram vantagens', badge: points },
+    { label: 'Inabank', path: '/bank', icon: 'bank', description: 'Conta, caixinhas e ações' },
+    { label: 'Árvore de habilidades', path: '/skills', icon: 'skills', description: points ? `${points} ${points === 1 ? 'ponto' : 'pontos'} para gastar` : 'Pontos viram vantagens', badge: points },
   ]
 
   function handleLogout() {
@@ -348,7 +348,8 @@ export default function GameHeader() {
       {/* o relógio do mês fica fixo no canto de cima, em todas as telas */}
       {user?.role !== 'admin' && <ClockBadge clock={clock} onDilemma={() => openTask('dilemma')} />}
       <aside
-        onMouseEnter={() => setSidebarExpanded(true)}
+        // durante o tour a barra não abre (cobriria o cartão do tour)
+        onMouseEnter={() => !document.body.dataset.tour && setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
         className={[
           'fixed left-0 top-0 z-40 h-screen bg-[#FFFDF7] text-[#24331F]',
@@ -412,7 +413,7 @@ export default function GameHeader() {
                 {sidebarExpanded && <p className={`mb-2 ${LABEL}`}>Lugares</p>}
                 <div className={sidebarExpanded ? 'space-y-1.5' : 'flex flex-col items-center gap-3'}>
                   {navItems.map((item) => (
-                    <div key={item.path} data-tour={item.tour}>
+                    <div key={item.path}>
                       <MenuItem
                         icon={item.icon}
                         label={item.label}

@@ -260,6 +260,9 @@ function CloudShadow({ x0, y, duration, still }) {
   )
 }
 
+// prédios que o tour aponta (data-tour)
+const TOUR_TARGET = { bank: 'banco', university: 'arvore' }
+
 function Building({ b, hovered, setHovered, onSelect, interactive }) {
   const [i, j] = PLOTS[b.id]
   const [x, y] = iso(...plotCenter(i, j))
@@ -271,6 +274,7 @@ function Building({ b, hovered, setHovered, onSelect, interactive }) {
 
   return (
     <motion.g
+      data-tour={TOUR_TARGET[b.id]}
       // fora de jogo (sala esperando) a casinha nem recebe foco: senão o clique
       // desenhava o contorno cinza do navegador em volta dela
       role={interactive ? 'button' : undefined}

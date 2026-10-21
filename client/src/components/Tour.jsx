@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { cardPosition, TOUR_STEPS } from '../pages/Map/tourSteps'
+import useGameStore from '../store/gameStore'
 
 const PAD = 8
 
@@ -10,6 +12,13 @@ export default function Tour({ onDone }) {
   const [view, setView] = useState({ width: window.innerWidth, height: window.innerHeight })
   const current = TOUR_STEPS[step]
   const last = step === TOUR_STEPS.length - 1
+
+  // enquanto o tour roda, a barra lateral fica fechada (senão cobre o cartão)
+  useEffect(() => {
+    document.body.dataset.tour = 'on'
+    useGameStore.getState().setSidebarExpanded(false)
+    return () => { delete document.body.dataset.tour }
+  }, [])
 
   // mede o alvo do passo (e de novo se a janela mudar de tamanho)
   useEffect(() => {
@@ -39,7 +48,8 @@ export default function Tour({ onDone }) {
 
   const pos = cardPosition(rect, view)
 
-  return (
+  // no body, por cima da barra lateral e do relógio
+  return createPortal(
     <div className="fixed inset-0 z-[70]" role="dialog" aria-label={`Tour: ${current.title}`}>
       {rect ? (
         <div
@@ -75,6 +85,7 @@ export default function Tour({ onDone }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
