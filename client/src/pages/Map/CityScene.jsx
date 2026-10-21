@@ -47,8 +47,8 @@ const PLOTS = {
 
 const SKIES = {
   day: { top: '#5EB8F2', bottom: '#DDF2FF', hillFar: '#A7D9A0', treeline: '#86BE82', overlay: 0 },
-  dusk: { top: '#6D4AA8', bottom: '#FDBA74', hillFar: '#9DB98F', treeline: '#7FA57C', overlay: 0.18 },
-  night: { top: '#050B24', bottom: '#1E2D64', hillFar: '#5F8A69', treeline: '#4E7A5B', overlay: 0.42 },
+  dusk: { top: '#6D4AA8', bottom: '#FDBA74', hillFar: '#9DB98F', treeline: '#7FA57C', overlay: 0.12 },
+  night: { top: '#050B24', bottom: '#1E2D64', hillFar: '#5F8A69', treeline: '#4E7A5B', overlay: 0.28 },
 }
 
 const STARS = Array.from({ length: 34 }, (_, i) => [
@@ -341,20 +341,32 @@ function Building({ b, hovered, setHovered, onSelect, interactive }) {
       <polygon points={pts(plotRect(i, j))} fill="transparent" pointerEvents="all" />
       <rect x={x - size * 0.32} y={imgY + size * 0.12} width={size * 0.64} height={size * 0.6} fill="transparent" pointerEvents="all" />
 
-      {(pending || b.done) && (
-        <motion.g
-          animate={pending ? { y: [0, -10, 0] } : undefined}
-          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          <g transform={`translate(${x} ${imgY + size * 0.15})`}>
-            <path d="M0 18 -8 6 8 6z" fill={pending ? '#F59E0B' : '#16A34A'} />
-            <circle r="18" fill={pending ? '#FBBF24' : '#22C55E'} stroke="white" strokeWidth="3" />
-            {pending
-              ? <text y="8" textAnchor="middle" fontSize="24" fontWeight="900" fill="#78350F">!</text>
-              : <path d="m-8 0 5 5 10-10" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />}
-          </g>
-        </motion.g>
-      )}
+    </motion.g>
+  )
+}
+
+// "!" (falta fazer) ou "✓" (feito) em cima do prédio. Fica numa camada por
+// cima da noite e da chuva (como as plaquinhas), para não ficar apagado.
+function StatusBadge({ b }) {
+  const pending = b.required && !b.done
+  if (!pending && !b.done) return null
+  const [i, j] = PLOTS[b.id]
+  const [x, y] = iso(...plotCenter(i, j))
+  const top = y - artSize(b.id) * anchorOf(b.id) + artSize(b.id) * 0.13
+  return (
+    <motion.g
+      pointerEvents="none"
+      animate={pending ? { y: [0, -10, 0] } : undefined}
+      transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+    >
+      <g transform={`translate(${x} ${top})`}>
+        {pending && <circle r="34" fill="#FFD43B" opacity=".28" />}
+        <path d="M0 26 -10 10 10 10z" fill={pending ? '#E67700' : '#2B8A3E'} />
+        <circle r="24" fill={pending ? '#FFC21A' : '#2FB344'} stroke="#FFFFFF" strokeWidth="4" />
+        {pending
+          ? <text y="10" textAnchor="middle" fontSize="32" fontWeight="900" fill="#5C2A00" fontFamily="'Baloo 2', Outfit, sans-serif">!</text>
+          : <path d="m-10 0 6 6 13-13" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />}
+      </g>
     </motion.g>
   )
 }
@@ -532,6 +544,11 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
             <stop offset="0.6" stopColor="#C084FC" stopOpacity="0.25" />
             <stop offset="1" stopColor="#C084FC" stopOpacity="0" />
           </radialGradient>
+          <radialGradient id="shop-glow">
+            <stop offset="0" stopColor="#FFD98A" stopOpacity="0.55" />
+            <stop offset="0.55" stopColor="#FFC56B" stopOpacity="0.22" />
+            <stop offset="1" stopColor="#FFC56B" stopOpacity="0" />
+          </radialGradient>
           <radialGradient id="lamp-glow">
             <stop offset="0" stopColor="#FEF08A" stopOpacity="0.85" />
             <stop offset="1" stopColor="#FEF08A" stopOpacity="0" />
@@ -611,11 +628,17 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
         {weather?.tint && <rect x={-FAR} y={-FAR} width={VB_W + 2 * FAR} height={VB_H + 2 * FAR} fill={weather.tint} pointerEvents="none" />}
         {sky.overlay > 0 && <rect x={-FAR} y={-FAR} width={VB_W + 2 * FAR} height={VB_H + 2 * FAR} fill="#0B1638" opacity={sky.overlay} pointerEvents="none" />}
         {lit && lamps.map(([u, v]) => <LampGlow key={`g${u}-${v}`} u={u} v={v} />)}
+        {/* de noite os prédios do jogo ficam acesos: luz quente das janelas */}
+        {lit && buildings.filter((b) => PLOTS[b.id]).map((b) => {
+          const [bx, by] = iso(...plotCenter(...PLOTS[b.id]))
+          return <ellipse key={`l${b.id}`} cx={bx} cy={by - artSize(b.id) * 0.18} rx={artSize(b.id) * 0.52} ry={artSize(b.id) * 0.42} fill="url(#shop-glow)" style={{ mixBlendMode: 'screen' }} pointerEvents="none" />
+        })}
 
         {/* etiqueta em destaque por último, para ficar por cima das outras */}
         {buildings.filter((b) => PLOTS[b.id])
           .sort((a, b) => (a.id === hovered) - (b.id === hovered))
           .map((b) => <NameTag key={`n${b.id}`} b={b} hovered={hovered === b.id} />)}
+        {buildings.filter((b) => PLOTS[b.id]).map((b) => <StatusBadge key={`s${b.id}`} b={b} />)}
 
         {/* o cupom fica por cima de tudo, até do clima */}
         {coupon && interactive && <CouponTicket spot={coupon.spot} onClaim={onCoupon} />}
