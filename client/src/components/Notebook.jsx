@@ -362,7 +362,7 @@ export default function Notebook() {
             transition={phase === 'flying' ? { type: 'spring', stiffness: 120, damping: 18, mass: 0.9 } : { duration: 0.85, ease: [0.6, 0.05, 0.3, 1] }}
             onAnimationComplete={landed}
             style={{ perspective: 2400 }}
-            className={`relative grid h-[min(640px,calc(100vh-80px))] w-[min(980px,100%)] grid-cols-1 rounded-[18px] p-2.5 text-[#24331F] transition-[background-color,box-shadow] duration-200 md:h-[min(640px,calc(100vh-40px))] md:grid-cols-2 md:p-3.5 ${phase === 'open' ? 'bg-[#2457C5] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)]' : 'bg-transparent md:shadow-none max-md:bg-[#2457C5]'}`}
+            className={`relative grid h-[min(640px,calc(100vh-80px))] w-[min(980px,100%)] grid-cols-1 rounded-[18px] p-2.5 text-[#24331F] transition-[background-color,box-shadow] duration-200 md:h-[min(640px,calc(100vh-40px))] md:grid-cols-2 md:p-3.5 ${phase === 'flying' ? 'bg-transparent md:shadow-none max-md:bg-[#2457C5]' : 'bg-[#2457C5] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)]'}`}
           >
             {/* capa: cobre a metade direita e gira para a esquerda como um livro */}
             {phase !== 'open' && (
@@ -382,7 +382,7 @@ export default function Notebook() {
                   </div>
                   <span className="absolute bottom-0 right-10 h-16 w-5 bg-[#EC4899] [clip-path:polygon(0_0,100%_0,100%_100%,50%_78%,0_100%)]" />
                 </div>
-                <div className="notebook-page !absolute inset-0 rounded-l-lg [backface-visibility:hidden] [transform:rotateY(180deg)]" />
+                <div className="notebook-page !absolute bottom-3.5 left-0 right-3.5 top-3.5 rounded-l-lg [backface-visibility:hidden] [transform:rotateY(180deg)]" />
               </div>
             )}
             <button ref={closeRef} type="button" onClick={close} aria-label="Fechar o caderninho"
