@@ -242,6 +242,7 @@ async function checkDebentures(character, turn) {
     include: { company: true }
   })
 
+  let paid = 0 // dinheiro que entrou na conta com as debêntures que venceram
   for (const deb of debentures) {
     const rolled = Math.random()
     const defaulted = rolled < Number(deb.company.defaultProbability)
@@ -261,6 +262,7 @@ async function checkDebentures(character, turn) {
       })
     } else {
       const rounded = debentureReturn(deb.amount, deb.annualRate, deb.maturesAt - deb.investedAt)
+      paid = cents(paid + rounded)
 
       await prisma.$transaction([
         prisma.debentureInvestment.update({
@@ -282,6 +284,7 @@ async function checkDebentures(character, turn) {
       })
     }
   }
+  return paid
 }
 
 // Patrimônio na virada: saldo, caixinhas, debêntures e ações (pelo preço do
@@ -349,16 +352,18 @@ async function processTurn(roomId) {
         data: { appliedAt: new Date() }
       })
     }
-    const { totalReturns: returns, balance } = await applyFixedIncomeReturns(character, nextTurn)
+    // o rendimento fica dentro das caixinhas: não entra no saldo
+    const { balance } = await applyFixedIncomeReturns(character, nextTurn)
     const bonus = await applySavingsBonus(character, nextTurn, balance, perks)
     const eventResult = final ? { events: [], cashImpact: 0 } : await applyEvents(character, nextTurn, perks)
-    await checkDebentures(character, nextTurn)
+    const debenturesPaid = await checkDebentures(character, nextTurn)
     const snapshot = await saveSnapshot(character, nextTurn, priceMap)
 
     return {
       characterId: character.id,
       characterName: character.name,
-      cashDelta: cents(settled + costs.salary - costs.totalCosts + costs.effectsCash + returns + bonus + eventResult.cashImpact),
+      // quanto o saldo mudou na virada (o rendimento das caixinhas fica nelas)
+      cashDelta: cents(settled + costs.salary - costs.totalCosts + costs.effectsCash + bonus + eventResult.cashImpact + debenturesPaid),
       event: eventResult.events[0] ?? null,
       events: eventResult.events,
       netWorth: snapshot.netWorth

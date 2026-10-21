@@ -386,6 +386,56 @@ describe('rendimentos de renda fixa', () => {
   })
 })
 
+// ─── cashDelta: quanto o saldo mudou na virada ────────────────────────────────
+
+// auditoria do dinheiro (scripts/audit): o cashDelta somava o rendimento das
+// caixinhas (que fica dentro delas, não no saldo) e esquecia o dinheiro das
+// debêntures que venceram
+describe('cashDelta da virada', () => {
+  const setup = ({ currentTurn, investments = [], debentures = [] }) => {
+    prismaMock.room.findUnique.mockResolvedValueOnce({
+      id: 'room-1', currentTurn, maxTurns: 12, status: 'active', characters: [makeCharacter()],
+    })
+    prismaMock.marketAsset.findMany.mockResolvedValue([])
+    prismaMock.fixedIncomeInvestment.findMany.mockResolvedValue(investments)
+    prismaMock.fixedIncomeInvestment.update.mockResolvedValue({})
+    prismaMock.debentureInvestment.findMany.mockResolvedValue(debentures)
+    prismaMock.debentureInvestment.update.mockResolvedValue({})
+    prismaMock.$transaction.mockResolvedValue([])
+    prismaMock.characterEventLog.create.mockResolvedValue({})
+    prismaMock.character.update.mockResolvedValue({})
+    prismaMock.character.findUnique.mockResolvedValue({
+      ...makeCharacter(), fixedInvestments: [], positions: [], debentures: [],
+    })
+    prismaMock.financialSnapshot.upsert.mockResolvedValue({})
+    prismaMock.room.update.mockResolvedValue({ currentTurn: currentTurn + 1, status: 'active' })
+  }
+  afterEach(() => jest.spyOn(Math, 'random').mockRestore())
+
+  it('o rendimento das caixinhas não entra no cashDelta (fica no investimento)', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(QUIET_RANDOM) // março sem imprevisto
+    setup({ currentTurn: 2, investments: [{ id: 'fi-1', amount: 10000, monthlyRate: 0.01 }] })
+
+    const { results } = await processTurn('room-1')
+
+    // salário líquido − aluguel; os R$ 100 de rendimento ficam na caixinha
+    expect(results[0].cashDelta).toBeCloseTo(NET - 1000, 2)
+  })
+
+  it('a debênture que vence entra no cashDelta', async () => {
+    jest.spyOn(Math, 'random').mockReturnValue(QUIET_RANDOM) // não dá calote e junho sem imprevisto
+    setup({
+      currentTurn: 5,
+      debentures: [{ id: 'deb-1', amount: 5000, status: 'active', maturesAt: 6, investedAt: 3, annualRate: 0.12, company: { name: 'TechCorp', defaultProbability: 0.05 } }],
+    })
+
+    const { results } = await processTurn('room-1')
+
+    // 3 meses a 12% a.a. em juros compostos mensais: 5000 × 1,12^(3/12)
+    expect(results[0].cashDelta).toBeCloseTo(cents2(NET - 1000 + cents2(5000 * 1.12 ** 0.25)), 2)
+  })
+})
+
 // ─── buildLeaderboard ─────────────────────────────────────────────────────────
 
 describe('buildLeaderboard', () => {
@@ -788,7 +838,8 @@ describe('habilidades na virada do mês', () => {
     expect(logStarting('Gestão')).toEqual([
       expect.objectContaining({ cashImpact: 286.9, description: 'Gestão: Bônus de 1,9% sobre as caixinhas (+R$ 286.90)' }),
     ])
-    expect(results[0].cashDelta).toBeCloseTo(NET - 1000 + 100 + 286.9, 2)
+    // o bônus cai na conta; os R$ 100 de rendimento ficam na caixinha
+    expect(results[0].cashDelta).toBeCloseTo(NET - 1000 + 286.9, 2)
   })
 
   it('L2 + L3 pagam 1,05% (rótulo com duas casas)', async () => {

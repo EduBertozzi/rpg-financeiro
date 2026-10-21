@@ -119,6 +119,15 @@ exports.redeemFixed = async (req, res) => {
       prisma.character.update({
         where: { id: character.id },
         data: { cash: { increment: rounded } }
+      }),
+      // o resgate entra no extrato, como no resgate parcial (withdrawFixed)
+      prisma.characterEventLog.create({
+        data: {
+          characterId: character.id,
+          turn: character.room.currentTurn,
+          cashImpact: rounded,
+          description: `Caixinha: Resgate de ${TYPE_LABELS[investment.type] ?? investment.type}${incomeTax > 0 ? ` (IR de R$ ${incomeTax.toFixed(2)})` : ''}`
+        }
       })
     ])
 
