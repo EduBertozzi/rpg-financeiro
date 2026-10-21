@@ -27,7 +27,10 @@ const anchorOf = (id) => ANCHOR[id] ?? ART_ANCHOR
 // onde o desenho de cada PNG termina (fração da altura, medido pelo alfa);
 // a etiqueta fica logo abaixo disso, à mesma distância em todos os prédios
 const ART_BOTTOM = { bank: 0.884, leisure: 0.802, university: 0.93, mercadinho: 0.759, utilities: 0.798, internet: 0.786 }
-const labelY = (id, y) => y + artSize(id) * ((ART_BOTTOM[id] ?? 0.8) - anchorOf(id)) + 30
+// a plaquinha com o nome fica presa na frente da base do prédio (não solta no meio da rua)
+const plaqueY = (id, y) => y + artSize(id) * ((ART_BOTTOM[id] ?? 0.8) - anchorOf(id)) - 4
+// cor da borda da plaquinha de cada prédio
+const TAG_COLOR = { bank: '#2457C5', mercadinho: '#2B8C41', utilities: '#C98A12', internet: '#0E8FA6', leisure: '#D63F8C', university: '#2B8C41' }
 // Área enquadrada na tela: bem fechada nos 6 prédios do jogo; céu e chão vão
 // além dela (overflow visível) e o anel de casas aparece cortado nas bordas.
 const VIEW = { x: 150, y: 60, w: 1300, h: 870 }
@@ -364,7 +367,7 @@ function NameTag({ b, hovered }) {
   // (abaixo do prédio), para não cobrir o prédio de trás
   if (hovered) {
     const dw = Math.max(b.name.length * 13, b.desc.length * 9) + 40
-    const top = labelY(b.id, y) - 26
+    const top = plaqueY(b.id, y) - 17
     return (
       <g pointerEvents="none">
         <rect x={x - dw / 2} y={top + 6} width={dw} height="62" rx="18" fill="#E2D6BE" />
@@ -375,20 +378,14 @@ function NameTag({ b, hovered }) {
     )
   }
 
+  const color = TAG_COLOR[b.id] ?? '#24331F'
+  const w = Math.round(b.name.length * 10.6 + 34)
+  const top = plaqueY(b.id, y) - 17
   return (
     <g pointerEvents="none">
-      <text
-        x={x}
-        y={labelY(b.id, y)}
-        textAnchor="middle"
-        fontSize="19"
-        fontWeight="900"
-        fill="white"
-        stroke="rgba(7,17,31,0.85)"
-        strokeWidth="5"
-        strokeLinejoin="round"
-        paintOrder="stroke"
-      >
+      <rect x={x - w / 2} y={top + 4} width={w} height="34" rx="17" fill={color} />
+      <rect x={x - w / 2} y={top} width={w} height="34" rx="17" fill="#FFFDF7" stroke={color} strokeWidth="3" />
+      <text x={x} y={top + 23} textAnchor="middle" fontSize="18" fontWeight="800" fill="#24331F" fontFamily="'Baloo 2', Outfit, sans-serif">
         {b.name}
       </text>
     </g>
