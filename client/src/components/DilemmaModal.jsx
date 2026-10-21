@@ -85,8 +85,9 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
         : 'fixed inset-0 z-[70] flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm'}
       onClick={(e) => e.target === e.currentTarget && canDismiss && handleClose()}
     >
-      {side && <div className="order-2 min-w-0 lg:order-1 lg:h-full lg:overflow-y-auto lg:rounded-[28px]">{side}</div>}
-      <div className={side ? 'order-1 min-w-0 lg:order-2 lg:h-full lg:overflow-y-auto' : 'contents'}>
+      {side && <div className="order-2 min-w-0 lg:order-1 lg:h-full lg:overflow-y-auto lg:rounded-[28px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{side}</div>}
+      {/* a carta no meio da coluna, com espaço em cima para o envelope que sai dela */}
+      <div className={side ? 'order-1 flex min-w-0 flex-col pt-14 lg:order-2 lg:h-full lg:overflow-y-auto lg:pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : 'contents'}>
       <div role="dialog" aria-label="Dilema do mês" className={`w-full max-w-xl ${side ? 'mx-auto lg:my-auto' : ''} ${TOY_CARD} px-6 pb-7 pt-3 sm:px-8 animate-fade-in-up`}>
         <Letter />
         {!result && timeLeft != null && (
