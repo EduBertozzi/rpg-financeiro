@@ -349,7 +349,7 @@ describe('choicesTimeline', () => {
     const [machine] = choicesTimeline([{ kind: 'dilemma', turn: 4, option: 0, amount: 502.8 }], rows)
 
     expect(machine.consequences).toEqual([
-      { label: 'Parcela: Máquina de lavar', turn: 5, amount: -4022.4, count: 11, applied: 8 },
+      { label: 'Parcela: Máquina de lavar', turn: 5, amount: -4022.4, pending: -1508.4, count: 11, applied: 8 },
     ])
   })
 
@@ -358,7 +358,7 @@ describe('choicesTimeline', () => {
       [{ kind: 'dilemma', turn: 2, option: 0, amount: 750 }],
       [{ sourceTurn: 2, turn: 5, kind: 'cash', amount: 810, label: 'Empréstimo: Devolvido', appliedAt: null }]
     )
-    expect(loan.consequences).toEqual([{ label: 'Empréstimo: Devolvido', turn: 5, amount: 0, count: 1, applied: 0 }])
+    expect(loan.consequences).toEqual([{ label: 'Empréstimo: Devolvido', turn: 5, amount: 0, pending: 810, count: 1, applied: 0 }])
   })
 })
 

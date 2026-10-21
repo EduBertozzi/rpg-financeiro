@@ -308,7 +308,8 @@ const installmentDebt = (effects = []) =>
 
 // Linha do tempo das escolhas para a tela de fim de ano: cada dilema
 // respondido com o que custou na hora e as consequências que deixou.
-// Parcelas viram uma linha só, com quantas foram pagas.
+// Parcelas viram uma linha só, com quantas foram pagas. `pending` é o que
+// ainda não caiu (parcelas depois de dezembro viram dívida).
 function choicesTimeline(choices = [], effects = []) {
   return choices
     .filter((c) => c.kind === 'dilemma' && dilemmaFor(c.turn))
@@ -319,8 +320,9 @@ function choicesTimeline(choices = [], effects = []) {
       const grouped = new Map()
       for (const e of effects.filter((x) => x.sourceTurn === c.turn)) {
         const key = e.label.replace(/\s\(\d+\/\d+\)$/, '')
-        const g = grouped.get(key) ?? { label: key, turn: e.turn, amount: 0, count: 0, applied: 0 }
+        const g = grouped.get(key) ?? { label: key, turn: e.turn, amount: 0, pending: 0, count: 0, applied: 0 }
         g.amount = cents(g.amount + (e.appliedAt ? Number(e.amount) : 0))
+        if (!e.appliedAt) g.pending = cents(g.pending + Number(e.amount ?? 0))
         g.count += 1
         if (e.appliedAt) g.applied += 1
         g.turn = Math.min(g.turn, e.turn)
