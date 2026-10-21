@@ -308,8 +308,22 @@ describe('GET /api/v1/characters/:id/year-summary — linha do tempo das escolha
     expect(res.body.timeline).toEqual([
       expect.objectContaining({
         turn: 2, title: 'Empréstimo para o amigo', label: 'A', amount: 500,
-        consequences: [{ label: 'Empréstimo: Devolvido', turn: 5, amount: 537, count: 1, applied: 1 }],
+        consequences: [{ label: 'Empréstimo: Devolvido', turn: 5, amount: 537, pending: 0, count: 1, applied: 1 }],
       }),
+    ])
+  })
+
+  it('consequências mostram o que ainda não caiu (parcelas depois de dezembro)', async () => {
+    setup(makeSelf({
+      choices: [{ kind: 'dilemma', turn: 7, option: 1, amount: 359.85 }],
+      effects: [
+        { sourceTurn: 7, turn: 12, kind: 'installment', amount: -359.85, label: 'Parcela: Academia (6/6)', appliedAt: new Date() },
+        { sourceTurn: 7, turn: 13, kind: 'installment', amount: -359.85, label: 'Parcela: Academia (7/6)', appliedAt: null },
+      ],
+    }))
+    const res = await summary()
+    expect(res.body.timeline[0].consequences).toEqual([
+      { label: 'Parcela: Academia', turn: 12, amount: -359.85, pending: -359.85, count: 2, applied: 1 },
     ])
   })
 
