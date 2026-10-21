@@ -161,9 +161,15 @@ export default function Map() {
   const mapScrollRef = useRef(null)
 
   // no celular o mapa rola na horizontal; começa centralizado na cidade
+  // (de novo um pouco depois: a cidade termina de montar depois do primeiro quadro)
   useEffect(() => {
-    const el = mapScrollRef.current
-    if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
+    const center = () => {
+      const el = mapScrollRef.current
+      if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
+    }
+    center()
+    const ids = [requestAnimationFrame(center), setTimeout(center, 250), setTimeout(center, 900)]
+    return () => { cancelAnimationFrame(ids[0]); clearTimeout(ids[1]); clearTimeout(ids[2]) }
   }, [])
 
   useEffect(() => {
@@ -476,11 +482,11 @@ export default function Map() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex w-full max-w-xs flex-col gap-3">
             {fold.info ? (
-              <button type="button" onClick={() => toggleFold('info')} className={`pointer-events-auto self-start ${PANEL} flex items-center gap-2 px-4 py-2 font-toy text-[17px] font-extrabold text-[#2457C5] cursor-pointer`} aria-label="Mostrar o painel da cidade">
+              <button type="button" onClick={() => toggleFold('info')} className={`pointer-events-auto hidden self-start sm:flex ${PANEL} items-center gap-2 px-4 py-2 font-toy text-[17px] font-extrabold text-[#2457C5] cursor-pointer`} aria-label="Mostrar o painel da cidade">
                 A cidade <Chevron down />
               </button>
             ) : (
-              <div className={`pointer-events-auto relative ${PANEL} px-5 py-4`}>
+              <div className={`pointer-events-auto relative hidden sm:block ${PANEL} px-5 py-4`}>
                 <FoldButton onClick={() => toggleFold('info')} label="Recolher o painel da cidade" />
                 <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">Mapa</p>
                 <h2 className="font-toy text-[26px] font-extrabold leading-tight text-[#2457C5]">A cidade</h2>
@@ -491,7 +497,7 @@ export default function Map() {
           </div>
 
           {!isWaiting && (
-            <div className={`pointer-events-auto flex flex-col items-end gap-3 sm:mt-12 ${PANEL} px-5 py-4`}>
+            <div className={`pointer-events-auto mt-12 flex flex-col items-end gap-3 ${PANEL} px-5 py-4`}>
               <div className="text-right">
                 <p className="font-toy text-[17px] font-extrabold text-[#24331F]">
                   {monthName ?? 'Mês'} · <span className="text-[#2457C5]">{currentTurn}</span><span className="text-[#A9B19E]"> / 12</span>
