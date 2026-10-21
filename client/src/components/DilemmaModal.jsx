@@ -133,7 +133,7 @@ export default function DilemmaModal({ onClose, onComplete, onAnswered, timeLeft
                 </div>
                 {error && <p className={TOY_ERROR}>{error}</p>}
                 {onBank && (
-                  <button type="button" onClick={onBank} className="justify-self-center rounded-full border-2 border-[#CFE3E0] bg-[#EAF6F4] px-4 py-1.5 text-sm font-extrabold text-[#0A7F75] hover:bg-[#DDF1EE] cursor-pointer">
+                  <button type="button" onClick={onBank} className="justify-self-center rounded-full border-2 border-[#C9D8F2] bg-[#EAF1FC] px-4 py-1.5 text-sm font-extrabold text-[#1F5FB8] hover:bg-[#DCE7FA] cursor-pointer">
                     {side ? 'Fechar o banco' : 'Acessar o banco'}
                   </button>
                 )}

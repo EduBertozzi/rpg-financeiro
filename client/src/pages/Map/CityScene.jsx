@@ -7,6 +7,8 @@ import { motion } from 'framer-motion'
 import { Balloon, Birds, Mountains, Plane, Skyline, WindTurbine } from './Scenery'
 import { BlockContent, BlockGrounds, GridRoads, IsoBox, Tree } from './CityBlocks'
 import { BLOCKS, CAR_COLORS } from './cityData'
+import ShopArt, { ShopDefs } from './Shops'
+import { shopFront, shopTop } from './shopLayout'
 import {
   FAR, GRASS, HORIZON, L, PLOT, ROAD, ROAD_FRONT, VB_H, VB_W,
   iso, plotCenter, plotRect, plotStart, pts, roadBack, roadStart,
@@ -14,21 +16,13 @@ import {
 
 // Cena isométrica da cidade: os 6 prédios do jogo no centro, cercados por
 // quarteirões decorativos (CityBlocks) e pela paisagem (Scenery).
-const ART = 270
-const ART_ANCHOR = 0.66
-// prédio central (a Árvore) com aura. O PNG da árvore tem a base maior e mais
-// baixa que os outros (medido pelo alfa): desenho um pouco menor e o centro da
-// base em 0,698 da altura, para a plataforma caber no quarteirão
+// prédio central (a Árvore), com aura e partículas
 const FEATURED = 'university'
-const ART_SCALE = { university: 0.92 }
-const ANCHOR = { university: 0.698 }
-const artSize = (id) => ART * (ART_SCALE[id] ?? 1)
-const anchorOf = (id) => ANCHOR[id] ?? ART_ANCHOR
-// onde o desenho de cada PNG termina (fração da altura, medido pelo alfa);
-// a etiqueta fica logo abaixo disso, à mesma distância em todos os prédios
-const ART_BOTTOM = { bank: 0.884, leisure: 0.802, university: 0.93, mercadinho: 0.759, utilities: 0.798, internet: 0.786 }
-// a plaquinha com o nome fica presa na frente da base do prédio (não solta no meio da rua)
-const plaqueY = (id, y) => y + artSize(id) * ((ART_BOTTOM[id] ?? 0.8) - anchorOf(id)) - 4
+// a plaquinha com o nome fica presa na frente da base do prédio
+const plaqueY = (id) => {
+  const [i, j] = PLOTS[id]
+  return shopFront(plotStart(i), plotStart(j))[1] - 6
+}
 // cor da borda da plaquinha de cada prédio
 const TAG_COLOR = { bank: '#2457C5', mercadinho: '#2B8C41', utilities: '#C98A12', internet: '#0E8FA6', leisure: '#D63F8C', university: '#2B8C41' }
 // Área enquadrada na tela: bem fechada nos 6 prédios do jogo; céu e chão vão
@@ -271,11 +265,10 @@ function CloudShadow({ x0, y, duration, still }) {
 // prédios que o tour aponta (data-tour)
 const TOUR_TARGET = { bank: 'banco', university: 'arvore' }
 
-function Building({ b, hovered, setHovered, onSelect, interactive }) {
+function Building({ b, hovered, setHovered, onSelect, interactive, lit, month }) {
   const [i, j] = PLOTS[b.id]
   const [x, y] = iso(...plotCenter(i, j))
-  const size = artSize(b.id)
-  const imgY = y - size * anchorOf(b.id)
+  const top = y - shopTop(b.id)
   const pending = b.required && !b.done
 
   const select = () => interactive && onSelect(b)
@@ -315,31 +308,31 @@ function Building({ b, hovered, setHovered, onSelect, interactive }) {
       {b.id === FEATURED && (
         <motion.ellipse
           cx={x}
-          cy={imgY + size * 0.4}
-          rx={size * 0.5}
-          ry={size * 0.42}
+          cy={y - 110}
+          rx="105"
+          ry="92"
           fill="url(#aura)"
           initial={{ opacity: 0.5, scale: 1 }}
-          animate={{ opacity: [0.45, 0.85, 0.45], scale: [0.96, 1.04, 0.96] }}
+          animate={{ opacity: [0.4, 0.75, 0.4], scale: [0.96, 1.04, 0.96] }}
           transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
           pointerEvents="none"
         />
       )}
-      <image href={b.art} x={x - size / 2} y={imgY} width={size} height={size} pointerEvents="none" />
-      {b.id === FEATURED && [-70, -40, -12, 18, 46, 74, -55, 60].map((dx, k) => (
+      <ShopArt id={b.id} pu={plotStart(i)} pv={plotStart(j)} lit={lit} month={month} />
+      {b.id === FEATURED && [-60, -36, -12, 14, 38, 62, -48, 52].map((dx, k) => (
         <motion.circle
           key={k}
           cx={x + dx}
-          r={k % 3 === 0 ? 4 : 2.6}
+          r={k % 3 === 0 ? 3.6 : 2.4}
           fill="#FDE68A"
-          initial={{ cy: imgY + size * 0.62, opacity: 0 }}
-          animate={{ cy: [imgY + size * 0.62, imgY + size * 0.05], opacity: [0, 1, 0] }}
+          initial={{ cy: y - 60, opacity: 0 }}
+          animate={{ cy: [y - 60, y - 200], opacity: [0, 1, 0] }}
           transition={{ duration: 2.8, delay: k * 0.37, repeat: Infinity, ease: 'easeOut' }}
           pointerEvents="none"
         />
       ))}
       <polygon points={pts(plotRect(i, j))} fill="transparent" pointerEvents="all" />
-      <rect x={x - size * 0.32} y={imgY + size * 0.12} width={size * 0.64} height={size * 0.6} fill="transparent" pointerEvents="all" />
+      <rect x={x - 70} y={top} width="140" height={y - top} fill="transparent" pointerEvents="all" />
 
     </motion.g>
   )
@@ -352,14 +345,16 @@ function StatusBadge({ b }) {
   if (!pending && !b.done) return null
   const [i, j] = PLOTS[b.id]
   const [x, y] = iso(...plotCenter(i, j))
-  const top = y - artSize(b.id) * anchorOf(b.id) + artSize(b.id) * 0.13
+  // à direita e um pouco abaixo do topo: não cobre o nome do prédio de trás
+  const bx = x + 64
+  const top = y - shopTop(b.id) * 0.72
   return (
     <motion.g
       pointerEvents="none"
       animate={pending ? { y: [0, -10, 0] } : undefined}
       transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
     >
-      <g transform={`translate(${x} ${top})`}>
+      <g transform={`translate(${bx} ${top})`}>
         {pending && <circle r="34" fill="#FFD43B" opacity=".28" />}
         <path d="M0 26 -10 10 10 10z" fill={pending ? '#E67700' : '#2B8A3E'} />
         <circle r="24" fill={pending ? '#FFC21A' : '#2FB344'} stroke="#FFFFFF" strokeWidth="4" />
@@ -373,13 +368,13 @@ function StatusBadge({ b }) {
 
 function NameTag({ b, hovered }) {
   const [i, j] = PLOTS[b.id]
-  const [x, y] = iso(...plotCenter(i, j))
+  const [x] = iso(...plotCenter(i, j))
 
   // no hover a etiqueta vira um balão com a descrição, no mesmo lugar
   // (abaixo do prédio), para não cobrir o prédio de trás
   if (hovered) {
     const dw = Math.max(b.name.length * 13, b.desc.length * 9) + 40
-    const top = plaqueY(b.id, y) - 17
+    const top = plaqueY(b.id) - 17
     return (
       <g pointerEvents="none">
         <rect x={x - dw / 2} y={top + 6} width={dw} height="62" rx="18" fill="#E2D6BE" />
@@ -392,7 +387,7 @@ function NameTag({ b, hovered }) {
 
   const color = TAG_COLOR[b.id] ?? '#24331F'
   const w = Math.round(b.name.length * 10.6 + 34)
-  const top = plaqueY(b.id, y) - 17
+  const top = plaqueY(b.id) - 17
   return (
     <g pointerEvents="none">
       <rect x={x - w / 2} y={top + 4} width={w} height="34" rx="17" fill={color} />
@@ -450,7 +445,7 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
     const scale = Math.min(width / VIEW.w, height / VIEW.h)
     const [x, y] = iso(...plotCenter(...PLOTS[b.id]))
     const ox = width / 2 + (x - (VIEW.x + VIEW.w / 2)) * scale
-    const oy = height / 2 + (y - artSize(b.id) * 0.3 - (VIEW.y + VIEW.h / 2)) * scale
+    const oy = height / 2 + (y - 70 - (VIEW.y + VIEW.h / 2)) * scale
     setHovered(null)
     setZoomTo({ b, origin: `${ox}px ${oy}px` })
   }
@@ -499,6 +494,8 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
           setHovered={interactive ? setHovered : () => {}}
           onSelect={handleSelect}
           interactive={interactive}
+          lit={lit}
+          month={month}
         />
       ),
     })),
@@ -544,7 +541,8 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
             <stop offset="0.6" stopColor="#C084FC" stopOpacity="0.25" />
             <stop offset="1" stopColor="#C084FC" stopOpacity="0" />
           </radialGradient>
-          <radialGradient id="shop-glow">
+          <ShopDefs />
+          <radialGradient id="window-glow">
             <stop offset="0" stopColor="#FFD98A" stopOpacity="0.55" />
             <stop offset="0.55" stopColor="#FFC56B" stopOpacity="0.22" />
             <stop offset="1" stopColor="#FFC56B" stopOpacity="0" />
@@ -631,7 +629,7 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
         {/* de noite os prédios do jogo ficam acesos: luz quente das janelas */}
         {lit && buildings.filter((b) => PLOTS[b.id]).map((b) => {
           const [bx, by] = iso(...plotCenter(...PLOTS[b.id]))
-          return <ellipse key={`l${b.id}`} cx={bx} cy={by - artSize(b.id) * 0.18} rx={artSize(b.id) * 0.52} ry={artSize(b.id) * 0.42} fill="url(#shop-glow)" style={{ mixBlendMode: 'screen' }} pointerEvents="none" />
+          return <ellipse key={`l${b.id}`} cx={bx} cy={by - 50} rx="130" ry="100" fill="url(#window-glow)" style={{ mixBlendMode: 'screen' }} pointerEvents="none" />
         })}
 
         {/* etiqueta em destaque por último, para ficar por cima das outras */}

@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import HowToPlay from './HowToPlay'
 import { sfx } from '../services/sound'
 import { COMPANIES } from '../data/companies'
-import { GLOSSARY, GUIDE_EVENT, PRODUCTS, overdraftAfter, searchGlossary, termOf, yearlyNet } from '../data/guide'
+import { GLOSSARY, GUIDE_EVENT, overdraftAfter, searchGlossary, termOf } from '../data/guide'
 
 const brl = (v) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const TERM_LINK = 'font-extrabold text-[#2457C5] underline decoration-dotted underline-offset-[3px] cursor-pointer'
@@ -89,32 +89,10 @@ const CHAPTERS = [
   {
     id: 'money', label: 'Dinheiro', color: 'bg-[#EC4899] text-white',
     pages: [
-      ({ go }) => {
-        const max = Math.max(...PRODUCTS.map((p) => yearlyNet(p)))
-        return (
-          <>
-            <Chapter n={3} />
-            <H2>Quanto rende R$ 1.000 em um ano</H2>
-            <p>Já descontado o imposto, com as taxas do jogo.</p>
-            <table className="mt-2 w-full border-collapse text-sm">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-[0.1em] text-[#A9B19E]"><th className="py-1">Caixinha</th><th /><th className="py-1 text-right">Ganho</th></tr>
-              </thead>
-              <tbody>
-                {PRODUCTS.map((p) => (
-                  <tr key={p.term} className="border-b border-dashed border-[#D8E6F2]">
-                    <td className="py-1"><button type="button" onClick={() => go(p.term)} className={TERM_LINK}>{p.term}</button></td>
-                    <td className="w-[38%] py-1"><div className="h-2 rounded bg-[#3DBE5A]" style={{ width: `${(yearlyNet(p) / max) * 100}%` }} /></td>
-                    <td className="py-1 text-right font-extrabold tabular-nums">{brl(yearlyNet(p))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </>
-        )
-      },
       ({ go }) => (
         <>
+          <Chapter n={3} />
+          <H2>Dinheiro rende, dívida cresce</H2>
           <H3>Ganhar mais tem um preço</H3>
           <p>Quem rende mais costuma <b>prender o dinheiro</b> por mais tempo ou ter <b>mais risco</b>. A debênture rende <b>R$ 180</b>, mas fica 10 meses presa e pode dar calote.</p>
           <H3>E a dívida?</H3>
@@ -143,6 +121,18 @@ function TermPage({ term, onBack }) {
             <div key={k} className="contents"><dt className="text-[#6B7A62]">{k}</dt><dd className="m-0 font-extrabold">{v}</dd></div>
           ))}
         </dl>
+      )}
+      {g.ratings && (
+        <table className="my-1.5 w-full border-collapse text-sm">
+          <tbody>
+            {g.ratings.map(([grade, meaning, color]) => (
+              <tr key={grade} className="border-b border-dashed border-[#D8E6F2]">
+                <td className="w-16 py-0.5"><span className="inline-block min-w-[44px] rounded-md px-1.5 text-center font-toy font-extrabold text-white" style={{ background: color }}>{grade}</span></td>
+                <td className="py-0.5 font-bold">{meaning}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
       {onBack && <button type="button" onClick={onBack} className={`${TERM_LINK} justify-self-start text-sm`}>← voltar para a lista</button>}
     </div>

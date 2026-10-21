@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   activeDebentures, debentureValue, debentureYield, fixedBoxValue, fixedBoxYield, monthlyBills,
-  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, maskAmount, finishAmount, incomeTaxRate, principalOf, planWithdrawal, tradeTotal, clampQuantity, buyCheck, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, stocksValue, freeBoxValue, nextUnlock, unlocksAt,
+  monthlyFromAnnual, nextMaturity, OVERDRAFT_MONTHLY_RATE, maskAmount, finishAmount, incomeTaxRate, principalOf, planWithdrawal, tradeTotal, clampQuantity, buyCheck, overdraftInterest, overdraftRateFor, parseAmount, ratePercent, paymentPreview, reserveGoal, reserveMonths, shares, statementByMonth, statementLabel, filterStatement, entryTime, stocksValue, freeBoxValue, nextUnlock, unlocksAt,
 } from './bankMath.js'
 
 const close = (actual, expected, digits = 2) =>
@@ -409,5 +409,31 @@ describe('ações: quantidade e total', () => {
     assert.deepEqual(buyCheck(100, 25, 4), { total: 100, ok: true })
     assert.deepEqual(buyCheck(99.99, 25, 4), { total: 100, ok: false })
     assert.deepEqual(buyCheck('-10', 1, 1), { total: 1, ok: false })
+  })
+})
+
+describe('extrato: texto, filtro e hora', () => {
+  it('tira o valor repetido entre parênteses', () => {
+    assert.equal(statementLabel('Aluguel: Casa — Pago (-R$ 2100)'), 'Aluguel: Casa — Pago')
+    assert.equal(statementLabel('Salário (bruto): Depósito do mês (+R$ 7000.00)'), 'Salário (bruto): Depósito do mês')
+    assert.equal(statementLabel('Lazer: Ano Novo na praia (-R$ 750.00) — o mês fechou sem lazer escolhido'), 'Lazer: Ano Novo na praia — o mês fechou sem lazer escolhido')
+    assert.equal(statementLabel('Caixinha: Guardado em CDB'), 'Caixinha: Guardado em CDB')
+  })
+  const months = statementByMonth([
+    { id: 1, turn: 1, cashImpact: 7000, description: 'Salário', loggedAt: '2026-01-01T10:00:00Z' },
+    { id: 2, turn: 1, cashImpact: -2100, description: 'Aluguel', loggedAt: '2026-01-01T10:01:00Z' },
+    { id: 3, turn: 2, cashImpact: -300, description: 'Conta', loggedAt: '2026-01-01T11:00:00Z' },
+  ])
+  it('só entradas: refaz o total e tira o mês que ficou vazio', () => {
+    const only = filterStatement(months, 'in')
+    assert.deepEqual(only.map((m) => [m.turn, m.total, m.entries.length]), [[1, 7000, 1]])
+  })
+  it('só saídas', () => {
+    assert.deepEqual(filterStatement(months, 'out').map((m) => [m.turn, m.total]), [[2, -300], [1, -2100]])
+  })
+  it('tudo: igual ao original', () => assert.equal(filterStatement(months, 'all'), months))
+  it('hora com dois dígitos; data inválida vira vazio', () => {
+    assert.match(entryTime('2026-01-01T10:05:00Z'), /^\d{2}:\d{2}$/)
+    assert.equal(entryTime('xx'), '')
   })
 })

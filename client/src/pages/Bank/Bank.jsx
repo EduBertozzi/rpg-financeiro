@@ -3,13 +3,13 @@ import api from '../../services/api'
 import useGameStore from '../../store/gameStore'
 import GameLayout from '../../components/GameLayout'
 import { BOXES, MONTHS, boxByType } from './bankData'
-import MareLogo from './MareLogo'
+import InabankLogo from './InabankLogo'
 import { BOX_TERM, openGuide } from '../../data/guide'
 import {
-  debentureValue as debentureValueOf, debentureYield as debentureYieldOf, fixedBoxValue, fixedBoxYield,
+  debentureValue as debentureValueOf, fixedBoxValue,
   nextMaturity as nextMaturityOf, parseAmount, reserveGoal as reserveGoalOf,
   shares, stocksValue as stocksValueOf, activeDebentures as activeDebenturesOf,
-  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, freeBoxValue, LOCK_MONTHS,
+  overdraftRateFor, ratePercent, overdraftInterest, statementByMonth, statementLabel, filterStatement, entryTime, freeBoxValue, LOCK_MONTHS,
   maskAmount, finishAmount, planWithdrawal, tradeTotal, clampQuantity, buyCheck,
 } from './bankMath'
 
@@ -68,6 +68,7 @@ export default function Bank({ embedded = false }) {
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState('')
   const [allMonths, setAllMonths] = useState(false)
+  const [flow, setFlow] = useState('all') // extrato: tudo, entradas ou saídas
 
   const turn = room?.currentTurn ?? 0
   const money = (n) => (hide ? 'R$ ••••' : brl(n))
@@ -106,7 +107,6 @@ export default function Bank({ embedded = false }) {
   const activeDebentures = activeDebenturesOf(debentures)
   const nextMaturity = nextMaturityOf(debentures)
   const boxValue = (type) => (type === 'DEBENTURE' ? debentureValueOf(debentures, turn) : fixedBoxValue(fixed, type))
-  const boxYield = (type) => (type === 'DEBENTURE' ? debentureYieldOf(debentures, turn) : fixedBoxYield(fixed, type))
 
   // todas as caixinhas ficam à vista, mesmo vazias
   const activeTypes = BOXES.map((b) => b.type)
@@ -172,7 +172,7 @@ export default function Bank({ embedded = false }) {
     }
   }
 
-  const extrato = statementByMonth(character?.eventLog ?? [])
+  const extrato = filterStatement(statementByMonth(character?.eventLog ?? []), flow)
   const shownMonths = allMonths ? extrato : extrato.slice(0, 2)
 
   const parts = shares([
@@ -186,9 +186,9 @@ export default function Bank({ embedded = false }) {
       <div className={embedded ? 'w-full' : 'mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8'}>
         <div className="relative overflow-hidden rounded-[28px] bg-[#F3F6F6] text-[#10201E] shadow-[0_24px_60px_rgba(0,0,0,0.45)]">
           {/* cabeçalho da marca */}
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-[#12B5A6] px-6 pb-16 pt-5 text-white sm:px-7">
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-[#1F5FB8] px-6 pb-16 pt-5 text-white sm:px-7">
             <div className="flex items-center gap-3">
-              <MareLogo size={42} />
+              <InabankLogo size={42} />
               <div>
                 <p className="text-2xl font-black leading-none tracking-tight">Inabank</p>
                 <p className="mt-1 text-xs opacity-90">O seu dinheiro rendendo.</p>
@@ -253,7 +253,7 @@ export default function Bank({ embedded = false }) {
                     { label: 'Extrato', icon: Icon.list, onClick: () => document.getElementById('extrato')?.scrollIntoView({ behavior: 'smooth' }) },
                   ].map((a) => (
                     <button key={a.label} type="button" onClick={a.onClick} className="group grid w-[76px] justify-items-center gap-2 text-xs font-bold cursor-pointer">
-                      <span className={`grid h-14 w-14 place-items-center rounded-full bg-[#E2F6F3] text-[#063F3A] transition-colors ${a.hover ?? 'group-hover:bg-[#CBEFE9]'}`}>
+                      <span className={`grid h-14 w-14 place-items-center rounded-full bg-[#E3ECFA] text-[#0F2F63] transition-colors ${a.hover ?? 'group-hover:bg-[#CCDCF6]'}`}>
                         <Svg d={a.icon} className="h-6 w-6" />
                       </span>
                       <span className="text-center leading-tight">{a.label}</span>
@@ -295,7 +295,7 @@ export default function Bank({ embedded = false }) {
                 <span>O que é cada uma?</span>
                 {BOXES.map((b) => (
                   <button key={b.type} type="button" onClick={() => openGuide(BOX_TERM[b.type])}
-                    className="font-bold text-[#0A7F75] underline decoration-dotted underline-offset-2 cursor-pointer">
+                    className="font-bold text-[#174A96] underline decoration-dotted underline-offset-2 cursor-pointer">
                     {BOX_TERM[b.type]}
                   </button>
                 ))}
@@ -310,7 +310,7 @@ export default function Bank({ embedded = false }) {
                       key={type}
                       type="button"
                       onClick={() => openMove(type)}
-                      className="grid content-start gap-2 rounded-[18px] border border-[#E3EAE9] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#12B5A6] cursor-pointer"
+                      className="grid content-start gap-2 rounded-[18px] border border-[#E3EAE9] p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#1F5FB8] cursor-pointer"
                     >
                       <span className="flex items-center justify-between">
                         <span className="grid h-9 w-9 place-items-center rounded-xl text-white" style={{ background: box.color }}><Svg d={Icon.box} /></span>
@@ -318,7 +318,7 @@ export default function Bank({ embedded = false }) {
                       </span>
                       <b className="text-sm">{type === 'DEBENTURE' && company ? `Debênture ${company.name}` : box.name}</b>
                       <span className="text-[22px] font-black tabular-nums">{money(value)}</span>
-                      <small className="text-xs text-[#627673]">{box.rate} · rende {money(boxYield(type))} este mês</small>
+                      <small className="text-xs text-[#627673]">{box.rate}</small>
                       <BoxFacts box={box} />
                       {box.type === 'POUPANCA' && reserveGoal > 0 && (
                         <>
@@ -345,7 +345,7 @@ export default function Bank({ embedded = false }) {
                 Ações
                 <span className="text-sm font-medium text-[#627673]">
                   Renda variável · liquidez diária · isento de IR · o preço muda todo mês ·{' '}
-                  <button type="button" onClick={() => openGuide('Ações')} className="font-bold text-[#0A7F75] underline decoration-dotted underline-offset-2 cursor-pointer">o que são ações?</button>
+                  <button type="button" onClick={() => openGuide('Ações')} className="font-bold text-[#174A96] underline decoration-dotted underline-offset-2 cursor-pointer">o que são ações?</button>
                 </span>
               </h3>
               <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
@@ -366,8 +366,18 @@ export default function Bank({ embedded = false }) {
             {/* extrato */}
             <div className="grid gap-4">
               <section id="extrato" className="rounded-[20px] bg-white p-5 shadow-sm sm:p-6">
-                <h3 className="mb-2 font-extrabold">Extrato</h3>
-                {extrato.length === 0 && <p className="text-sm text-[#627673]">Nenhuma movimentação ainda.</p>}
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-extrabold">Extrato</h3>
+                  <div className="flex rounded-xl bg-[#F3F6F6] p-1" role="tablist" aria-label="O que mostrar no extrato">
+                    {[['all', 'Tudo'], ['in', 'Entradas'], ['out', 'Saídas']].map(([k, label]) => (
+                      <button key={k} type="button" role="tab" aria-selected={flow === k} onClick={() => setFlow(k)}
+                        className={`rounded-[9px] px-3 py-1.5 text-sm font-extrabold transition-colors cursor-pointer ${flow === k ? (k === 'out' ? 'bg-[#C4283D] text-white' : k === 'in' ? 'bg-[#0B8A50] text-white' : 'bg-[#1F5FB8] text-white') : 'text-[#627673] hover:bg-white'}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {extrato.length === 0 && <p className="text-sm text-[#627673]">{flow === 'all' ? 'Nenhuma movimentação ainda.' : flow === 'in' ? 'Nenhuma entrada ainda.' : 'Nenhuma saída ainda.'}</p>}
                 {shownMonths.map((m) => (
                   <div key={m.turn} className="mt-3 first:mt-0">
                     <div className="flex items-baseline justify-between gap-3 rounded-lg bg-[#F3F6F6] px-3 py-1.5 text-xs font-extrabold uppercase tracking-wider text-[#627673]">
@@ -376,15 +386,19 @@ export default function Bank({ embedded = false }) {
                         {hide ? '••••' : `${m.total >= 0 ? '+' : '−'}${brl(Math.abs(m.total))} no mês`}
                       </span>
                     </div>
+                    {/* no mês, na ordem em que aconteceu (a mais recente em cima) */}
                     {m.entries.map((e) => {
                       const v = Number(e.cashImpact)
                       return (
                         <div key={e.id} className="flex items-center justify-between gap-3 border-t border-[#E3EAE9] py-2.5 text-sm first:border-t-0">
                           <span className="flex min-w-0 items-center gap-3">
-                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#E2F6F3] text-[#063F3A]">
+                            <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${v >= 0 ? 'bg-[#E0F5EA] text-[#0B8A50]' : 'bg-[#FDE2E5] text-[#C4283D]'}`}>
                               <Svg d={v >= 0 ? Icon.in : Icon.out} className="h-4 w-4" />
                             </span>
-                            <span className="min-w-0 break-words">{e.description}</span>
+                            <span className="grid min-w-0">
+                              <span className="break-words">{statementLabel(e.description)}</span>
+                              <small className="text-xs tabular-nums text-[#627673]">{entryTime(e.loggedAt)}</small>
+                            </span>
                           </span>
                           <b className={`shrink-0 tabular-nums ${v >= 0 ? 'text-[#0B8A50]' : 'text-[#C4283D]'}`}>
                             {hide ? '••••' : `${v >= 0 ? '+' : '−'}${brl(Math.abs(v))}`}
@@ -395,7 +409,7 @@ export default function Bank({ embedded = false }) {
                   </div>
                 ))}
                 {extrato.length > 2 && (
-                  <button type="button" onClick={() => setAllMonths((v) => !v)} className="mt-3 w-full rounded-[14px] border-2 border-[#E3EAE9] py-2 text-sm font-extrabold text-[#0B6E66] hover:bg-[#F3F6F6] cursor-pointer">
+                  <button type="button" onClick={() => setAllMonths((v) => !v)} className="mt-3 w-full rounded-[14px] border-2 border-[#E3EAE9] py-2 text-sm font-extrabold text-[#174A96] hover:bg-[#F3F6F6] cursor-pointer">
                     {allMonths ? 'Mostrar só os últimos meses' : `Ver mais (${extrato.length - 2} ${extrato.length - 2 === 1 ? 'mês' : 'meses'} antes)`}
                   </button>
                 )}
@@ -424,7 +438,7 @@ export default function Bank({ embedded = false }) {
           )}
 
           {toast && (
-            <div role="status" className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-xl bg-[#063F3A] px-4 py-2.5 text-sm font-bold text-white shadow-lg">
+            <div role="status" className="absolute bottom-5 left-1/2 z-20 -translate-x-1/2 rounded-xl bg-[#0F2F63] px-4 py-2.5 text-sm font-bold text-white shadow-lg">
               {toast}
             </div>
           )}
@@ -477,7 +491,7 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
             type="button"
             aria-pressed={t === sheet.type}
             onClick={() => setSheet({ ...sheet, type: t, error: '' })}
-            className={`flex-1 rounded-[9px] px-2 py-2 text-sm font-extrabold cursor-pointer ${t === sheet.type ? 'bg-[#12B5A6] text-white' : ''}`}
+            className={`flex-1 rounded-[9px] px-2 py-2 text-sm font-extrabold cursor-pointer ${t === sheet.type ? 'bg-[#1F5FB8] text-white' : ''}`}
           >
             {boxByType(t).short}
           </button>
@@ -511,7 +525,7 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
             onChange={(e) => setSheet({ ...sheet, value: maskAmount(e.target.value), error: '' })}
             onBlur={() => setSheet({ ...sheet, value: finishAmount(sheet.value) })}
             onKeyDown={(e) => e.key === 'Enter' && onConfirm()}
-            className="w-full border-0 border-b-2 border-[#12B5A6] bg-transparent py-1.5 text-3xl font-black tabular-nums outline-none"
+            className="w-full border-0 border-b-2 border-[#1F5FB8] bg-transparent py-1.5 text-3xl font-black tabular-nums outline-none"
           />
           <div className="flex flex-wrap gap-2">
             {[100, 500, 1000].map((v) => (
@@ -535,7 +549,7 @@ function MoveSheet({ sheet, setSheet, activeTypes, cash, value, fixed = [], turn
         <p className="rounded-[10px] bg-[#FDF1D6] px-3 py-2 text-sm text-[#7A4F00]">Resgate antes de 6 meses paga IR de 22,5% sobre o rendimento (depois, 15%).</p>
       )}
       {preview && (
-        <p className="rounded-[10px] bg-[#E2F6F3] px-3 py-2 text-sm text-[#063F3A]">
+        <p className="rounded-[10px] bg-[#E3ECFA] px-3 py-2 text-sm text-[#0F2F63]">
           Vai cair na conta: <b className="tabular-nums">{brl(preview.net)}</b>{' '}
           {preview.incomeTax > 0 ? `(IR de ${brl(preview.incomeTax)})` : '(sem IR)'}
         </p>
@@ -588,7 +602,7 @@ function StockCard({ asset, position, cash, busy, money, onTrade }) {
           {asset.changePct >= 0 ? '+' : ''}{asset.changePct.toLocaleString('pt-BR')}%
         </small>
       </div>
-      <small className="text-[#627673]">Você tem {owned} {owned === 1 ? 'ação' : 'ações'}{owned ? ` · ${money(position.totalValue)}` : ''}</small>
+      <p className="m-0 text-[15px] font-bold text-[#24331F]">Você tem {owned} {owned === 1 ? 'ação' : 'ações'}{owned ? ` · ${money(position.totalValue)}` : ''}</p>
       <div className="mt-1 flex items-center justify-between gap-2">
         <div className="flex items-center rounded-[10px] border border-[#E3EAE9]">
           <button type="button" aria-label="Menos uma" disabled={quantity <= 1} onClick={() => change(quantity - 1)} className="h-8 w-8 font-black disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">−</button>
@@ -610,7 +624,7 @@ function StockCard({ asset, position, cash, busy, money, onTrade }) {
       {warning && <small role="alert" className="font-bold text-[#C4283D]">{warning}</small>}
       <div className="mt-1 flex gap-1.5">
         <button type="button" disabled={busy || !canSell} onClick={sell} className="flex-1 rounded-[10px] border border-[#E3EAE9] py-1.5 text-[13px] font-extrabold disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed">Vender {quantity}</button>
-        <button type="button" disabled={busy} onClick={buy} className="flex-1 rounded-[10px] bg-[#12B5A6] py-1.5 text-[13px] font-extrabold text-white disabled:opacity-40 cursor-pointer">Comprar {quantity}</button>
+        <button type="button" disabled={busy} onClick={buy} className="flex-1 rounded-[10px] bg-[#1F5FB8] py-1.5 text-[13px] font-extrabold text-white disabled:opacity-40 cursor-pointer">Comprar {quantity}</button>
       </div>
     </div>
   )

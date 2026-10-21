@@ -21,18 +21,12 @@ function Sheet({ turn, stamped }) {
 
 // Pop-up de "encerrar o mês": avisa o que ainda está em aberto e o que vem
 // depois (a cidade trava e chega o dilema; o banco continua aberto).
-export function FinishMonthModal({ turn, missing = [], hasDilemma, timeLeft = null, busy, onConfirm, onCancel }) {
+export function FinishMonthModal({ turn, missing = [], timeLeft = null, busy, onConfirm, onCancel }) {
   return createPortal(
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#24331F]/55 p-4 backdrop-blur-sm" onClick={(e) => e.target === e.currentTarget && !busy && onCancel()}>
       <div role="dialog" aria-label={`Encerrar ${MONTHS[turn - 1]}`} className={`turn-pop grid w-full max-w-md gap-4 ${TOY_CARD} px-6 pb-6 pt-3 text-center`}>
         <Sheet turn={turn} />
-        <div>
-          <h2 className="font-toy text-[30px] font-extrabold leading-tight">Encerrar {MONTHS[turn - 1]?.toLowerCase()}?</h2>
-          <p className="mt-1 text-[15px] text-[#4A5A42]">
-            Depois de encerrar, a cidade fecha: contas e lazer não mudam mais.
-            {hasDilemma ? ' Aí chega a carta com o dilema do mês.' : ''} O banco continua aberto até a virada.
-          </p>
-        </div>
+        <h2 className="font-toy text-[30px] font-extrabold leading-tight">Encerrar {MONTHS[turn - 1]?.toLowerCase()}?</h2>
 
         {missing.length > 0 ? (
           <div className="grid gap-1.5 rounded-[18px] border-2 border-[#F5B8C0] bg-[#FDE2E5] p-4 text-left">

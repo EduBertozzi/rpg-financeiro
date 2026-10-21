@@ -148,7 +148,7 @@ function Badge({ n }) {
 // Cor de cada lugar da cidade, igual aos prédios do mapa.
 const TONES = {
   map: { bg: '#3DBE5A', edge: '#2B8C41', soft: '#E2F4E5' },
-  bank: { bg: '#12B5A6', edge: '#0A7F75', soft: '#DDF4F1' },
+  bank: { bg: '#1F5FB8', edge: '#174A96', soft: '#E3ECFA' },
   skills: { bg: '#3DBE5A', edge: '#2B8C41', soft: '#E2F4E5' },
   admin: { bg: '#F2B53A', edge: '#C98A12', soft: '#FDF1D6' },
 }

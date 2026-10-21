@@ -54,7 +54,12 @@ export const GLOSSARY = [
   { term: 'Parcelamento', kind: 'Dívida', text: 'Pagar uma compra aos poucos. Quase sempre o total parcelado sai mais caro do que à vista, porque tem juros embutidos.', facts: [['Máquina de lavar', '12× R$ 502,80 = R$ 6.033,60'], ['À vista', 'R$ 5.430 (11% mais barato)']] },
   { term: 'Patrimônio líquido', kind: 'Ideia', text: 'Tudo o que você tem menos tudo o que você deve. É o número que decide o ranking.', facts: [['Conta', 'Saldo + caixinhas + ações − dívidas']] },
   { term: 'Poupança', kind: 'Renda fixa', text: 'O investimento mais simples do Brasil. Rende pouco, mas não paga imposto e pode tirar quando quiser.', facts: [['Rende', '6,5% ao ano'], ['Imposto', 'Isenta'], ['Resgate', 'Quando quiser']] },
-  { term: 'Rating', kind: 'Ideia', text: 'Uma nota que diz o risco de uma empresa não pagar o que deve. AAA é muito seguro; C é bem arriscado.', facts: [] },
+  { term: 'Rating', kind: 'Ideia', text: 'Uma nota que diz o risco de uma empresa não pagar o que deve. Quanto mais perto de AAA, mais seguro; quanto mais perto de D, mais arriscado. A debênture MilhasFácil tem nota C.', facts: [],
+    ratings: [
+      ['AAA', 'Risco mínimo', '#2B8C41'], ['AA', 'Risco muito baixo', '#3DA350'], ['A', 'Risco baixo', '#6BB33A'],
+      ['BBB', 'Risco moderado', '#C9A512'], ['BB', 'Risco alto', '#E0891B'], ['B', 'Risco muito alto', '#E06B1B'],
+      ['CCC', 'Risco altíssimo', '#D4482B'], ['C', 'Perto do calote', '#C4283D'], ['D', 'Já deu calote', '#8F1D2C'],
+    ] },
   { term: 'Reserva de emergência', kind: 'Ideia', text: 'Dinheiro guardado só para imprevistos, num lugar seguro e com liquidez. O ideal é ter pelo menos 3 meses de contas.', facts: [['Meta', '3 × (mercado + água e luz + internet)']] },
   { term: 'Salário bruto e líquido', kind: 'Renda', text: 'Bruto é o salário combinado com a empresa. Líquido é o que cai na conta, depois de descontar o INSS e o Imposto de Renda.', facts: [['Bruto', 'R$ 7.000'], ['Descontos', 'INSS R$ 781,51 + IR R$ 754,75'], ['Líquido', 'R$ 5.463,74']] },
   { term: 'Selic', kind: 'Taxa', text: 'A taxa básica de juros do Brasil, definida pelo Banco Central. Quando ela sobe, investir rende mais e pegar empréstimo fica mais caro.', facts: [['Taxa', `${pct(SELIC)} ao ano`]] },

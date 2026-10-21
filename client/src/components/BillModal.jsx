@@ -3,7 +3,7 @@ import { sfx } from '../services/sound'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import useGameStore from '../store/gameStore'
-import MareLogo from '../pages/Bank/MareLogo'
+import InabankLogo from '../pages/Bank/InabankLogo'
 import { MONTHS } from '../pages/Bank/bankData'
 import { overdraftRateFor, ratePercent, overdraftInterest, paymentPreview } from '../pages/Bank/bankMath'
 import mercadinhoArt from '../assets/buildings/mercadinho.png'
@@ -74,9 +74,9 @@ export default function BillModal({ type, label, onClose, onComplete }) {
       onClick={(e) => e.target === e.currentTarget && finish()}
     >
       <div role="dialog" aria-label={`Pagar ${label} com o Inabank`} className="w-full max-w-md overflow-hidden rounded-[26px] bg-[#F3F6F6] text-[#10201E] shadow-2xl animate-fade-in-up">
-        <div className="flex items-center justify-between gap-3 bg-[#12B5A6] px-5 py-4 text-white">
+        <div className="flex items-center justify-between gap-3 bg-[#1F5FB8] px-5 py-4 text-white">
           <div className="flex items-center gap-3">
-            <MareLogo size={34} />
+            <InabankLogo size={34} />
             <div>
               <p className="text-lg font-black leading-none">Inabank</p>
               <p className="mt-1 text-xs opacity-90">{receipt ? 'Comprovante' : 'Pagamento de conta'}</p>
@@ -102,7 +102,7 @@ export default function BillModal({ type, label, onClose, onComplete }) {
               <p className="text-sm text-[#627673]">Valor</p>
               <p className="text-4xl font-black tracking-tight tabular-nums">{bill ? brl(amount) : '…'}</p>
               {discount > 0 && (
-                <p className="text-xs font-bold text-[#0A7F75]">
+                <p className="text-xs font-bold text-[#174A96]">
                   <s className="font-normal text-[#627673]">{brl(bill.baseAmount)}</s> · {Math.round(discount * 100)}% de desconto {bill.coupon ? (discount > 0.2 + 1e-9 ? 'pelas habilidades e pelo cupom' : 'pelo cupom') : 'pelas suas habilidades'}
                 </p>
               )}
@@ -132,7 +132,7 @@ export default function BillModal({ type, label, onClose, onComplete }) {
               type="button"
               onClick={handlePay}
               disabled={loading || !bill}
-              className="rounded-[14px] bg-[#12B5A6] py-3.5 font-extrabold text-white transition-colors hover:bg-[#0A7F75] disabled:opacity-60 cursor-pointer"
+              className="rounded-[14px] bg-[#1F5FB8] py-3.5 font-extrabold text-white transition-colors hover:bg-[#174A96] disabled:opacity-60 cursor-pointer"
             >
               {loading ? 'Pagando…' : bill ? `Pagar ${brl(amount)}` : 'Carregando…'}
             </button>
@@ -141,7 +141,7 @@ export default function BillModal({ type, label, onClose, onComplete }) {
         ) : (
           <div className="grid gap-4 p-5">
             <div className="grid justify-items-center gap-2 rounded-[18px] bg-white p-5 text-center shadow-sm">
-              <span className="grid h-14 w-14 place-items-center rounded-full bg-[#E2F6F3] text-[#0A7F75]">
+              <span className="grid h-14 w-14 place-items-center rounded-full bg-[#E3ECFA] text-[#174A96]">
                 <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m5 13 4 4L19 7" /></svg>
               </span>
               <p className="text-lg font-black">{receipt.alreadyPaid ? 'Essa conta já está paga' : 'Pagamento feito'}</p>
@@ -158,10 +158,10 @@ export default function BillModal({ type, label, onClose, onComplete }) {
                 </div>
               )}
             </div>
-            <button type="button" onClick={finish} className="rounded-[14px] bg-[#12B5A6] py-3.5 font-extrabold text-white transition-colors hover:bg-[#0A7F75] cursor-pointer">
+            <button type="button" onClick={finish} className="rounded-[14px] bg-[#1F5FB8] py-3.5 font-extrabold text-white transition-colors hover:bg-[#174A96] cursor-pointer">
               Concluir
             </button>
-            <button type="button" onClick={() => navigate('/bank')} className="font-bold text-[#0A7F75] cursor-pointer">
+            <button type="button" onClick={() => navigate('/bank')} className="font-bold text-[#174A96] cursor-pointer">
               Ver no extrato do Inabank
             </button>
           </div>

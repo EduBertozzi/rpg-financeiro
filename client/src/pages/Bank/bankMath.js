@@ -196,3 +196,29 @@ export function statementByMonth(eventLog = []) {
   const byTime = (a, b) => new Date(b.loggedAt) - new Date(a.loggedAt)
   return [...months.values()].sort((a, b) => b.turn - a.turn).map((m) => ({ ...m, entries: m.entries.sort(byTime) }))
 }
+
+// Texto da linha do extrato sem o valor repetido entre parênteses (o valor
+// já aparece à direita): "Aluguel: Casa — Pago (-R$ 2100)" → "Aluguel: Casa — Pago".
+export const statementLabel = (description = '') =>
+  String(description).replace(/\s*\([+-−]?R\$ ?[\d.,]+\)/g, '').replace(/\s+—\s*$/, '').trim()
+
+// Só as entradas ('in'), só as saídas ('out') ou tudo ('all'), com o total de
+// cada mês refeito; meses que ficam vazios saem.
+export function filterStatement(months = [], kind = 'all') {
+  if (kind === 'all') return months
+  const keep = (e) => (kind === 'in' ? Number(e.cashImpact) > 0 : Number(e.cashImpact) < 0)
+  return months
+    .map((m) => {
+      const entries = m.entries.filter(keep)
+      const total = Math.round(entries.reduce((sum, e) => sum + Number(e.cashImpact), 0) * 100) / 100
+      return { ...m, entries, total }
+    })
+    .filter((m) => m.entries.length > 0)
+}
+
+// Hora em que a linha entrou no extrato ("14:05"), no fuso de quem joga.
+export function entryTime(loggedAt) {
+  const d = new Date(loggedAt)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
