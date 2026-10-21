@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import useGameStore from '../store/gameStore'
 import { Avatar } from './Avatars'
+import WorthChartModal from './WorthChartModal'
 import { TASK_EVENT, dilemmaAnswered, monthTasks, worthSeries, worthNow, sparkPoints, pointsLeft } from './sidebarData'
 import { useRolling, useMonthClock } from './hudHooks'
 import ClockBadge from './ClockBadge'
@@ -222,7 +224,7 @@ function Spark({ series }) {
 }
 
 // Patrimônio com o gráfico do ano e o saldo da conta embaixo.
-function WorthCard({ character }) {
+function WorthCard({ character, onExpand }) {
   const series = worthSeries(character.snapshots)
   const now = worthNow(series, character.cash)
   const worth = useRolling(now.value)
@@ -239,7 +241,10 @@ function WorthCard({ character }) {
           </span>
         )}
       </div>
-      {series.length > 1 ? <Spark series={series} /> : <p className="mt-1 text-[11px] font-semibold text-[#A9B19E]">O gráfico começa na primeira virada.</p>}
+      <button type="button" onClick={onExpand} className="group mt-1 block w-full rounded-xl text-left transition-colors hover:bg-[#F7F2E6] cursor-pointer" aria-label="Ver o gráfico do patrimônio em detalhes">
+        {series.length > 1 ? <Spark series={series} /> : <p className="text-[11px] font-semibold text-[#A9B19E]">O gráfico começa na primeira virada.</p>}
+        <span className="block text-right text-[11px] font-extrabold text-[#8A9680] group-hover:text-[#24331F]">⤢ ver em detalhes</span>
+      </button>
       <div className="mt-2 flex items-baseline justify-between border-t-2 border-dashed border-[#EFE6D3] pt-2 text-[13px] text-[#6B7A62]">
         <span>{negative ? 'Cheque especial' : 'Saldo na conta'}</span>
         <b data-hud="cash" className={`tabular-nums ${negative ? 'text-[#C4283D]' : 'text-[#24331F]'}`}>{brl(cash)}</b>
@@ -300,6 +305,7 @@ export default function GameHeader() {
   const navigate = useNavigate()
   const location = useLocation()
   const { character, room, user, logout, sidebarExpanded, setSidebarExpanded } = useGameStore()
+  const [chartOpen, setChartOpen] = useState(false) // gráfico grande do patrimônio
   const soundOn = useSoundOn()
   const playing = room?.status === 'active'
   const turn = playing ? Math.min(room?.currentTurn ?? 0, 12) : 0
@@ -347,6 +353,11 @@ export default function GameHeader() {
     <>
       {/* o relógio do mês fica fixo no canto de cima, em todas as telas */}
       {user?.role !== 'admin' && <ClockBadge clock={clock} onDilemma={() => openTask('dilemma')} />}
+      {chartOpen && (() => {
+        const series = worthSeries(character.snapshots)
+        const now = worthNow(series, character.cash)
+        return <WorthChartModal series={series} now={{ value: now.value, cash: Number(character.cash) }} turn={turn} onClose={() => setChartOpen(false)} />
+      })()}
       <aside
         // durante o tour a barra não abre (cobriria o cartão do tour)
         onMouseEnter={() => !document.body.dataset.tour && setSidebarExpanded(true)}
@@ -391,7 +402,7 @@ export default function GameHeader() {
             <div className="space-y-4 pb-3">
               {sidebarExpanded ? (
                 <>
-                  <WorthCard character={character} />
+                  <WorthCard character={character} onExpand={() => { setChartOpen(true); setSidebarExpanded(false) }} />
                   {turn > 0 && <MonthCard turn={turn} tasks={tasks} clock={clock} />}
                 </>
               ) : (
