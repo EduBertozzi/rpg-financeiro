@@ -194,6 +194,45 @@ describe('DELETE /api/v1/investments/fixed/:id/:investmentId', () => {
     expect(res.body.redeemedValue).toBeCloseTo(5061.83, 2)
   })
 
+  // auditoria do dinheiro (scripts/audit): o resgate total mexia no saldo sem
+  // deixar linha no extrato, e a soma do extrato deixava de bater com o saldo
+  it('registra o resgate total no extrato com o líquido que entrou na conta', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
+    prismaMock.fixedIncomeInvestment.findUnique.mockResolvedValue({
+      id: 'fi-1', characterId: 'char-1', type: 'CDB', amount: 5075, redeemedAt: null, monthlyRate: 0.0075, investedAt: 1,
+    })
+    prismaMock.$transaction.mockResolvedValue([])
+
+    const res = await request(app).delete('/api/v1/investments/fixed/char-1/fi-1').set(authHeader(TOKEN))
+
+    expect(res.status).toBe(200)
+    expect(prismaMock.characterEventLog.create).toHaveBeenCalledTimes(1)
+    const { data } = prismaMock.characterEventLog.create.mock.calls[0][0]
+    expect(data).toEqual(expect.objectContaining({ characterId: 'char-1', turn: 3, cashImpact: res.body.redeemedValue }))
+    expect(data.description).toBe(`Caixinha: Resgate de CDB (IR de R$ ${res.body.incomeTax.toFixed(2)})`)
+  })
+
+  it('resgate total isento entra no extrato sem falar de IR', async () => {
+    prismaMock.character.findUnique.mockResolvedValue(makeCharacter())
+    prismaMock.fixedIncomeInvestment.findUnique.mockResolvedValue({
+      id: 'fi-1', characterId: 'char-1', type: 'LCI', amount: 1061.52, redeemedAt: null, monthlyRate: 0.01, investedAt: 1,
+    })
+    prismaMock.$transaction.mockResolvedValue([])
+
+    const res = await request(app).delete('/api/v1/investments/fixed/char-1/fi-1').set(authHeader(TOKEN))
+
+    // LCI de janeiro, resgatada em março: ainda na carência de 6 meses
+    expect(res.status).toBe(400)
+    prismaMock.fixedIncomeInvestment.findUnique.mockResolvedValue({
+      id: 'fi-1', characterId: 'char-1', type: 'POUPANCA', amount: 1061.52, redeemedAt: null, monthlyRate: 0.01, investedAt: 1,
+    })
+    const ok = await request(app).delete('/api/v1/investments/fixed/char-1/fi-1').set(authHeader(TOKEN))
+    expect(ok.body.redeemedValue).toBe(1061.52)
+    expect(prismaMock.characterEventLog.create).toHaveBeenCalledWith({
+      data: { characterId: 'char-1', turn: 3, cashImpact: 1061.52, description: 'Caixinha: Resgate de Poupança' },
+    })
+  })
+
   it('retorna 404 se personagem não existe', async () => {
     prismaMock.character.findUnique.mockResolvedValue(null)
     const res = await request(app).delete('/api/v1/investments/fixed/char-1/fi-1').set(authHeader(TOKEN))
