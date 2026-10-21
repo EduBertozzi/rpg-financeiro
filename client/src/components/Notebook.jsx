@@ -357,18 +357,18 @@ export default function Notebook() {
             transition={{ type: 'spring', stiffness: 120, damping: 18, mass: 0.9 }}
             onAnimationComplete={landed}
             style={{ perspective: 2400 }}
-            className={`relative grid h-[min(640px,calc(100vh-80px))] w-[min(980px,100%)] grid-cols-1 rounded-[18px] p-2.5 text-[#24331F] transition-[background-color,box-shadow] duration-200 md:h-[min(640px,calc(100vh-40px))] md:grid-cols-2 md:p-3.5 ${phase === 'flying' ? 'bg-transparent md:shadow-none' : 'bg-[#2457C5] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)]'} ${phase === 'flying' ? 'max-md:bg-[#2457C5]' : ''}`}
+            className={`relative grid h-[min(640px,calc(100vh-80px))] w-[min(980px,100%)] grid-cols-1 rounded-[18px] p-2.5 text-[#24331F] transition-[background-color,box-shadow] duration-200 md:h-[min(640px,calc(100vh-40px))] md:grid-cols-2 md:p-3.5 ${phase === 'open' ? 'bg-[#2457C5] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)]' : 'bg-transparent md:shadow-none max-md:bg-[#2457C5]'}`}
           >
             {/* capa: cobre a metade direita e gira para a esquerda como um livro */}
             {phase !== 'open' && (
-              <motion.div
+              // a capa gira com animação CSS (mais confiável que esperar o aviso do
+              // framer-motion); terminou ou clicou nela, o caderno abre
+              <div
                 aria-hidden="true"
-                className="absolute bottom-0 left-1/2 right-0 top-0 z-20 hidden md:block"
+                onClick={() => setPhase('open')}
+                onAnimationEnd={() => setPhase('open')}
+                className={`nb-cover absolute bottom-0 left-1/2 right-0 top-0 z-20 hidden cursor-pointer md:block ${phase === 'opening' ? 'nb-cover-open' : ''}`}
                 style={{ transformOrigin: 'left center', transformStyle: 'preserve-3d' }}
-                initial={{ rotateY: 0 }}
-                animate={{ rotateY: phase === 'opening' ? -180 : 0 }}
-                transition={{ duration: 0.85, ease: [0.6, 0.05, 0.3, 1] }}
-                onAnimationComplete={() => phase === 'opening' && setPhase('open')}
               >
                 <div className="absolute inset-0 grid place-items-center rounded-r-[18px] bg-[linear-gradient(90deg,#173A8A_0_22px,#2457C5_22px)] shadow-[0_10px_0_#173A8A,0_30px_60px_rgba(0,0,0,0.35)] [backface-visibility:hidden]">
                   <div className="grid justify-items-center gap-2 rounded-2xl bg-[#FFFDF5] px-10 py-6 text-center">
@@ -378,7 +378,7 @@ export default function Notebook() {
                   <span className="absolute bottom-0 right-10 h-16 w-5 bg-[#EC4899] [clip-path:polygon(0_0,100%_0,100%_100%,50%_78%,0_100%)]" />
                 </div>
                 <div className="notebook-page !absolute inset-0 rounded-l-lg [backface-visibility:hidden] [transform:rotateY(180deg)]" />
-              </motion.div>
+              </div>
             )}
             <button ref={closeRef} type="button" onClick={close} aria-label="Fechar o caderninho"
               className={`absolute -right-3.5 -top-3.5 z-30 grid h-10 w-10 place-items-center rounded-full bg-[#FFFDF5] text-xl font-extrabold shadow-[0_4px_0_#E2D6BE] transition-opacity cursor-pointer ${phase === 'open' ? '' : 'opacity-0'}`}>×</button>
@@ -393,9 +393,10 @@ export default function Notebook() {
               ))}
             </div>
 
-            {/* página da esquerda (só no desktop): o papel já está lá enquanto a capa
-                gira (senão aparece o azul do fundo), e o texto surge quando ela pousa */}
-            <section className={`notebook-page hidden rounded-l-lg md:block ${phase === 'flying' ? 'opacity-0' : ''} ${phase === 'open' ? '' : '[&>*]:opacity-0'} [&>*]:transition-opacity [&>*]:duration-200`}>
+            {/* fechado, só a capa aparece: a página da esquerda (e a moldura azul)
+                só surgem quando a capa terminou de virar; enquanto ela gira, o verso
+                dela faz o papel dessa página */}
+            <section className={`notebook-page hidden rounded-l-lg md:block ${phase === 'open' ? '' : 'opacity-0 [&>*]:opacity-0'} [&>*]:transition-opacity [&>*]:duration-200`}>
               {leftOf(baseLeft)}
             </section>
 

@@ -91,7 +91,8 @@ body {
 .notebook-pop { animation: notebook-pop .35s cubic-bezier(.2,.9,.3,1.2); }
 /* no celular a página gira de leve; no desktop quem vira é a folha inteira */
 @media (max-width: 767px) { .notebook-flip { transform-origin: left center; animation: notebook-flip .45s ease; } }
-@media (prefers-reduced-motion: reduce) { .notebook-pop, .notebook-flip { animation: none; } }
+@keyframes nb-cover-open { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+.nb-cover-open { animation: nb-cover-open .85s cubic-bezier(.6,.05,.3,1) forwards; }
 
 /* resumo da virada: o cartão entra e o imprevisto chega logo depois */
 @keyframes turn-pop { from { transform: translateY(24px) scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
@@ -118,8 +119,14 @@ body {
 .turn-sheet-top { display: grid; place-items: center; background: var(--theme-primary); color: #fff; font-family: "Baloo 2", sans-serif; font-size: 22px; font-weight: 800; letter-spacing: .06em; }
 .turn-sheet-day { display: grid; place-items: center; align-content: center; font-family: "Baloo 2", sans-serif; font-size: 96px; font-weight: 800; line-height: 1; color: #24331F; }
 .turn-sheet-day small { font-family: Outfit, sans-serif; font-size: 14px; font-weight: 700; color: #6B7A62; }
-@keyframes turn-tear { 0% { transform: none; } 20% { transform: rotate(-6deg); } 100% { transform: translate(-160px, 520px) rotate(-38deg); opacity: 0; } }
-.turn-tear { transform-origin: 20% 0; animation: turn-tear 1s cubic-bezier(.5,0,.75,0) forwards; }
+/* a folha velha: puxada (um tranco), arrancada e jogada para cima e para fora, inteira */
+@keyframes turn-tear { 0% { transform: none; } 18% { transform: translateY(8px) rotate(-3deg); } 100% { transform: translate(340px, -620px) rotate(34deg); } }
+.turn-tear { transform-origin: 0 0; animation: turn-tear .85s cubic-bezier(.55,0,.8,.35) forwards; z-index: 2; }
+.turn-sheet-under { box-shadow: 0 6px 0 #F3ECDD, 0 11px 0 #E2D6BE, 0 18px 30px rgba(0,0,0,.28); }
+.turn-sheet-top-old { background: #8A9680; }
+.turn-ring { position: absolute; top: -16px; z-index: 5; width: 14px; height: 32px; border-radius: 7px; background: linear-gradient(90deg, #6B7280, #D1D5DB 45%, #6B7280); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+@keyframes turn-stamp { from { transform: translate(-50%, -50%) rotate(-14deg) scale(2.4); opacity: 0; } to { transform: translate(-50%, -50%) rotate(-14deg) scale(1); opacity: 1; } }
+.turn-stamp { position: absolute; left: 50%; top: 80%; padding: 0 12px; border: 4px solid #C4283D; border-radius: 10px; background: rgba(255,255,255,.9); color: #C4283D; font: 800 22px "Baloo 2", sans-serif; letter-spacing: .08em; white-space: nowrap; animation: turn-stamp .4s cubic-bezier(.2,1.6,.4,1) both; }
 .turn-coin { position: fixed; left: 0; top: 0; z-index: 80; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #B07A0C; background: radial-gradient(circle at 35% 35%, #FFF1B0, #F4C430 45%, #C8920A); color: #7A5200; font: 800 13px "Baloo 2", sans-serif; pointer-events: none; }
 
 /* carregando: a logo (calendário com check) perdendo uma folha por mês */

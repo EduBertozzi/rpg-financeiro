@@ -44,7 +44,7 @@ function flyCoins(from, n = 12) {
 // amanhece e o saldo da virada voa para a conta. Clique ou Esc pula.
 // turn = mês que começou; net = saldo da virada; cash = saldo agora.
 export default function TurnScene({ turn, net = 0, onDone }) {
-  const [stage, setStage] = useState('night') // night → tear → dawn → money → out
+  const [stage, setStage] = useState('night') // night → stamp → tear → dawn → money → out
   const [counter, setCounter] = useState(0)
   const shown = useRolling(counter, 1000)
   const doneRef = useRef(onDone)
@@ -59,7 +59,8 @@ export default function TurnScene({ turn, net = 0, onDone }) {
   useEffect(() => {
     sfx.whoosh()
     const steps = [
-      [1300, () => { setStage('tear'); sfx.rip() }],
+      [650, () => { setStage('stamp'); sfx.pop() }],
+      [1500, () => { setStage('tear'); sfx.rip() }],
       [2200, () => { setStage('dawn'); sfx.bell() }],
       [2900, () => { setStage('money'); setCounter(net); if (net > 0) flyCoins(calRef.current) }],
       [4700, () => setStage('out')],
@@ -75,7 +76,8 @@ export default function TurnScene({ turn, net = 0, onDone }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const night = stage === 'night' || stage === 'tear'
+  const night = stage === 'night' || stage === 'stamp' || stage === 'tear'
+  const oldPage = night
   const dawn = stage === 'dawn' || stage === 'money'
 
   // no body: por cima da barra lateral e do caderninho, que ficam fora do mapa
@@ -93,21 +95,25 @@ export default function TurnScene({ turn, net = 0, onDone }) {
       </div>
       <div className={`turn-dawn absolute inset-0 transition-opacity duration-1000 ${dawn ? 'opacity-100' : 'opacity-0'}`} />
 
-      <div ref={calRef} className="turn-cal absolute left-1/2 top-1/2 grid w-[220px] -translate-x-1/2 -translate-y-1/2 justify-items-center gap-4">
-        <div className="relative h-[250px] w-[220px]">
-          <div className="turn-sheet absolute inset-0">
+      <div ref={calRef} className="turn-cal absolute left-1/2 top-1/2 grid w-[230px] -translate-x-1/2 -translate-y-1/2 justify-items-center gap-6">
+        {/* bloco de calendário: argolas em cima e folhas empilhadas embaixo */}
+        <div className="relative h-[260px] w-[230px]">
+          <span className="turn-ring left-[26%]" />
+          <span className="turn-ring right-[26%]" />
+          <div className="turn-sheet turn-sheet-under absolute inset-0">
             <div className="turn-sheet-top">{to.toUpperCase()}</div>
-            <div className="turn-sheet-day">1<small>{net >= 0 ? 'o salário caiu' : 'mês novo'}</small></div>
+            <div className="turn-sheet-day">1<small>mês novo</small></div>
           </div>
-          {stage === 'night' || stage === 'tear' ? (
+          {oldPage && (
             <div className={`turn-sheet absolute inset-0 ${stage === 'tear' ? 'turn-tear' : ''}`}>
-              <div className="turn-sheet-top">{from.toUpperCase()}</div>
+              <div className="turn-sheet-top turn-sheet-top-old">{from.toUpperCase()}</div>
               <div className="turn-sheet-day">{LAST_DAY[turn - 2]}<small>fim do mês</small></div>
+              {(stage === 'stamp' || stage === 'tear') && <span className="turn-stamp">FECHADO</span>}
             </div>
-          ) : null}
+          )}
         </div>
-        <div className={`rounded-[18px] bg-[#FFFDF7] px-5 py-2.5 text-center shadow-[0_6px_0_#E2D6BE] transition-all duration-500 ${stage === 'money' ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}>
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#8A9680]">Saldo da virada</p>
+        <div className={`whitespace-nowrap rounded-[18px] bg-[#FFFDF7] px-5 py-2.5 text-center shadow-[0_6px_0_#E2D6BE] transition-all duration-500 ${stage === 'money' ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'}`}>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#8A9680]">{net >= 0 ? 'O salário caiu · saldo da virada' : 'Saldo da virada'}</p>
           <p className={`font-toy text-[28px] font-extrabold leading-tight tabular-nums ${net >= 0 ? 'text-[#2B8C41]' : 'text-[#C4283D]'}`}>
             {net >= 0 ? '+' : '−'} {brl(shown)}
           </p>
