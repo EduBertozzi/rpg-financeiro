@@ -169,14 +169,27 @@ function Awning({ u, at, d, zTop, color }) {
 
 // ── símbolos do telhado (em pixels, a partir do centro do telhado) ──────────
 
-function Coin({ x, y }) {
+// moeda do banco; `spin` = você tem dinheiro investido, ela gira
+function Coin({ x, y, spin = false }) {
   return (
     <g transform={`translate(${x} ${y - 30})`}>
-      <circle r="40" fill="url(#shop-glow)" />
-      <circle r="22" fill="url(#shop-gold)" stroke="#C98A12" strokeWidth="3" />
-      <circle r="16" fill="none" stroke="#FFE38A" strokeWidth="2" />
-      <path d="M6 -8 C2 -12 -7 -11 -7 -5 C-7 2 7 -1 7 6 C7 12 -3 13 -8 8 M0 -15 V15" stroke="#8A5A0B" strokeWidth="3.4" fill="none" strokeLinecap="round" />
-      <ellipse cx="-8" cy="-11" rx="6" ry="3.5" transform="rotate(-30 -8 -11)" fill="#FFFFFF" opacity=".75" />
+      <circle r={spin ? 46 : 40} fill="url(#shop-glow)" />
+      <g className={spin ? 'coin-spin' : undefined}>
+        <circle r="22" fill="url(#shop-gold)" stroke="#C98A12" strokeWidth="3" />
+        <circle r="16" fill="none" stroke="#FFE38A" strokeWidth="2" />
+        <path d="M6 -8 C2 -12 -7 -11 -7 -5 C-7 2 7 -1 7 6 C7 12 -3 13 -8 8 M0 -15 V15" stroke="#8A5A0B" strokeWidth="3.4" fill="none" strokeLinecap="round" />
+        <ellipse cx="-8" cy="-11" rx="6" ry="3.5" transform="rotate(-30 -8 -11)" fill="#FFFFFF" opacity=".75" />
+      </g>
+    </g>
+  )
+}
+
+// faixa verde "PAGO" na fachada das contas já pagas no mês
+function PaidRibbon({ x, y }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(-12)`} className="paid-pop">
+      <rect x="-27" y="-11" width="54" height="22" rx="5" fill="#2FB344" stroke="#FFFFFF" strokeWidth="2.5" />
+      <text y="6" textAnchor="middle" fontSize="14" fontWeight="900" fill="#FFFFFF" fontFamily="'Baloo 2', Outfit, sans-serif" letterSpacing="1">PAGO</text>
     </g>
   )
 }
@@ -344,7 +357,7 @@ function Cylinder({ x, y, r, h, body, top, stripes }) {
 
 // Inabank: banco clássico — escadaria larga, colunas grossas, frontão com a
 // moeda, porta de cofre, letreiro azul e um caixa eletrônico do lado
-function BankShop({ pu, pv, lit }) {
+function BankShop({ pu, pv, lit, invested }) {
   const t = THEME.bank
   const { a, b } = plinthOf(pu, pv)
   const z = BASE_Z
@@ -395,7 +408,7 @@ function BankShop({ pu, pv, lit }) {
       <polygon points={poly([u - 5, front + 5, zt + 8], [side + 5, front + 5, zt + 8], [u + du / 2, front + 5, zt + 32])} fill="#FBF8F2" stroke={t.roof[1]} strokeWidth="2.5" strokeLinejoin="round" />
       <circle cx={px} cy={py} r="9" fill="url(#shop-gold)" stroke="#C98A12" strokeWidth="1.8" />
       <path d={`M${px + 2.6} ${py - 3.5} C${px + 1} ${py - 5} ${px - 3} ${py - 4.5} ${px - 3} ${py - 2} C${px - 3} ${py + 1} ${px + 3} ${py - 0.5} ${px + 3} ${py + 2.5} C${px + 3} ${py + 5} ${px - 1} ${py + 5.5} ${px - 3.4} ${py + 3.5} M${px} ${py - 6.5} V${py + 6.5}`} stroke="#8A5A0B" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-      <Coin x={cx} y={cy - 6} />
+      <Coin x={cx} y={cy - 6} spin={invested} />
       {/* caixa eletrônico do lado da escadaria */}
       {(() => {
         const au = side + 10
@@ -414,7 +427,7 @@ function BankShop({ pu, pv, lit }) {
 }
 
 // Mercadinho: loja baixa e larga, toldo grande, placa com maçã e banquinhas de fruta
-function MarketShop({ pu, pv, lit }) {
+function MarketShop({ pu, pv, lit, paid }) {
   const t = THEME.mercadinho
   const { a, b, s } = plinthOf(pu, pv)
   const z = BASE_Z
@@ -456,12 +469,13 @@ function MarketShop({ pu, pv, lit }) {
       {crate(a + 22, b + s - 14, 0)}
       {crate(a + 50, b + s - 10, 1)}
       <Signpost pu={pu} pv={pv} icon="cart" />
+      {paid && <PaidRibbon x={P(u + du * 0.62, front, z + H * 0.62)[0]} y={P(u + du * 0.62, front, z + H * 0.62)[1]} />}
     </g>
   )
 }
 
 // Água e Luz: escritório pequeno, caixa-d'água e um poste com a lâmpada acesa
-function UtilityShop({ pu, pv, lit }) {
+function UtilityShop({ pu, pv, lit, paid }) {
   const t = THEME.utilities
   const { a, b } = plinthOf(pu, pv)
   const z = BASE_Z
@@ -507,12 +521,13 @@ function UtilityShop({ pu, pv, lit }) {
         return <path d={`M${x + 2} ${y - 8} L${x - 5} ${y + 1} H${x} L${x - 2} ${y + 8} L${x + 6} ${y - 1} H${x + 1} Z`} fill="#F2A812" stroke="#C98A12" strokeWidth="1" />
       })()}
       <Signpost pu={pu} pv={pv} icon="bolt" />
+      {paid && <PaidRibbon x={P(u + du * 0.5, front, z + H * 0.5)[0]} y={P(u + du * 0.5, front, z + H * 0.5)[1]} />}
     </g>
   )
 }
 
 // Internet e Celular: loja com parabólica e uma torre de celular ao lado
-function TelecomShop({ pu, pv, lit }) {
+function TelecomShop({ pu, pv, lit, paid }) {
   const t = THEME.internet
   const { a, b } = plinthOf(pu, pv)
   const z = BASE_Z
@@ -557,6 +572,7 @@ function TelecomShop({ pu, pv, lit }) {
       <ellipse cx={dx + 2} cy={dy - 22} rx="15" ry="10" transform={`rotate(-30 ${dx + 2} ${dy - 22})`} fill="#F4F7FA" {...STROKE} />
       <circle cx={dx + 6} cy={dy - 25} r="2.5" fill="#9AA3AE" />
       <Signpost pu={pu} pv={pv} icon="wifi" />
+      {paid && <PaidRibbon x={P(u + du * 0.5, front, z + H * 0.5)[0]} y={P(u + du * 0.5, front, z + H * 0.5)[1]} />}
     </g>
   )
 }
@@ -619,10 +635,14 @@ function LeisureShop({ pu, pv, lit, month }) {
 }
 
 // A Árvore de habilidades no centro: mesma base, tronco, copa e frutos de ouro.
-function SkillTreeShop({ pu, pv, lit }) {
+// a árvore cresce com as habilidades: copa um pouco maior e um fruto a mais por habilidade
+const ALL_FRUITS = [[-24, -100], [18, -114], [30, -86], [-6, -82], [-34, -78], [4, -132], [12, -96], [-14, -124], [36, -108], [-40, -96], [24, -70], [-22, -70], [0, -108], [-30, -116], [42, -90]]
+function SkillTreeShop({ pu, pv, lit, skills = 0 }) {
   const [cx, cy] = P(pu + PLOT / 2, pv + PLOT / 2, BASE_Z)
+  const grow = 0.86 + Math.min(skills, 12) * 0.025
   const canopy = [[0, -104, 44], [-34, -88, 34], [34, -88, 34], [-20, -124, 30], [22, -126, 30], [0, -74, 32]]
-  const fruits = [[-24, -100], [18, -114], [30, -86], [-6, -82], [-34, -78], [4, -132], [12, -96]]
+    .map(([dx, dy, r]) => [dx * grow, -62 + (dy + 62) * grow, r * grow])
+  const fruits = ALL_FRUITS.slice(0, 3 + Math.min(skills, 12)).map(([dx, dy]) => [dx * grow, -62 + (dy + 62) * grow])
   return (
     <g pointerEvents="none">
       <Plinth pu={pu} pv={pv} />
@@ -631,7 +651,7 @@ function SkillTreeShop({ pu, pv, lit }) {
       <path d={`M${cx - 4} ${cy - 10} q-2 -20 1 -40 M${cx + 4} ${cy - 16} q2 -18 -1 -34`} stroke="#4A2C16" strokeOpacity=".35" strokeWidth="2" fill="none" strokeLinecap="round" />
       <g>{canopy.map(([dx, dy, r], k) => <circle key={k} cx={cx + dx} cy={cy + dy + 8} r={r} fill="#3E8A39" />)}</g>
       <g>{canopy.map(([dx, dy, r], k) => <circle key={k} cx={cx + dx} cy={cy + dy} r={r} fill="url(#shop-leaf)" />)}</g>
-      <circle cx={cx - 12} cy={cy - 124} r="17" fill="#F2FDE2" opacity=".18" />
+      <circle cx={cx - 12 * grow} cy={cy - 62 - 62 * grow} r={17 * grow} fill="#F2FDE2" opacity=".18" />
       {fruits.map(([dx, dy], k) => (
         <g key={k}>
           <circle cx={cx + dx} cy={cy + dy} r="13" fill="url(#shop-glow)" opacity={lit ? 1 : 0.7} />
@@ -646,12 +666,13 @@ function SkillTreeShop({ pu, pv, lit }) {
 }
 
 // O desenho do prédio `id` no lote que começa em (pu, pv).
-export default function ShopArt({ id, pu, pv, lit = false, month = 0 }) {
-  if (id === 'university') return <SkillTreeShop pu={pu} pv={pv} lit={lit} />
-  if (id === 'bank') return <BankShop pu={pu} pv={pv} lit={lit} />
-  if (id === 'mercadinho') return <MarketShop pu={pu} pv={pv} lit={lit} />
-  if (id === 'utilities') return <UtilityShop pu={pu} pv={pv} lit={lit} />
-  if (id === 'internet') return <TelecomShop pu={pu} pv={pv} lit={lit} />
+// state: { paid, invested, skills } — o que o jogador já fez, para o prédio reagir
+export default function ShopArt({ id, pu, pv, lit = false, month = 0, state = {} }) {
+  if (id === 'university') return <SkillTreeShop pu={pu} pv={pv} lit={lit} skills={state.skills ?? 0} />
+  if (id === 'bank') return <BankShop pu={pu} pv={pv} lit={lit} invested={Boolean(state.invested)} />
+  if (id === 'mercadinho') return <MarketShop pu={pu} pv={pv} lit={lit} paid={Boolean(state.paid)} />
+  if (id === 'utilities') return <UtilityShop pu={pu} pv={pv} lit={lit} paid={Boolean(state.paid)} />
+  if (id === 'internet') return <TelecomShop pu={pu} pv={pv} lit={lit} paid={Boolean(state.paid)} />
   if (id === 'leisure') return <LeisureShop pu={pu} pv={pv} lit={lit} month={month} />
   return null
 }

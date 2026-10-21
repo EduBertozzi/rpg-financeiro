@@ -6,14 +6,17 @@ import { BLOCKS, GRID_ROADS, MAIN_ROADS, RING_END, RING_START, pick, rng } from 
 
 // Desenho do anel de quarteirões calmos (casas, praças, matas) e das ruas.
 
-// Cores apagadas de propósito: o anel é cenário, quem chama atenção são os
-// 6 prédios do jogo. [topo, face +v (clara), face +u (sombra)]
+// Casas do bairro no mesmo estilo dos prédios do jogo, um pouco mais suaves
+// (são cenário). [frente clara, lado na sombra] e telhado [claro, escuro].
 const WALLS = [
-  ['#F1EEE8', '#E7E2D9', '#C2BBAE'],
-  ['#EFE8D6', '#E4DAC1', '#BFB294'],
-  ['#E6EAEE', '#D8DEE4', '#AEB7C1'],
+  ['#FFF3DC', '#E7D3A9'],
+  ['#EAF4FB', '#C3DDEB'],
+  ['#FFEAF0', '#F0C8D4'],
+  ['#F1F7E6', '#D2E3BC'],
+  ['#FFF7E8', '#EBD9B8'],
 ]
-const ROOFS = [['#C98A7E', '#A8706A'], ['#8EA3B8', '#73879B'], ['#9DB59A', '#7F977C'], ['#C9AE84', '#A88F68']]
+const ROOFS = [['#E8735A', '#B8503B'], ['#5B8EEB', '#2F5FC4'], ['#7DCB55', '#4B9A2C'], ['#F5BC42', '#C98A12'], ['#B07CE8', '#7D4FC2']]
+const LINE = { stroke: '#24331F', strokeOpacity: 0.14, strokeWidth: 1.2, strokeLinejoin: 'round' }
 const RING_GRASS = '#A3CF95'
 const PATH = '#E4DFD3'
 const FIELDS = [['#C9D6A3', '#B8C78F'], ['#D8D2A6', '#C7BF8E'], ['#B7CF9C', '#A5BF89']]
@@ -31,18 +34,30 @@ export function IsoBox({ du, dv, h, z = 0, top, left, right }) {
   )
 }
 
-function House({ u, v, du, dv, h, rh = 14, wall, roof, lit }) {
-  const m = v + dv / 2
+// Casinha: paredes de dois tons, telhado de duas águas com beiral, porta,
+// janelas (umas acesas de noite, outras não) e às vezes uma chaminé.
+function House({ u, v, du, dv, h, wall, roof, lit, lights = [true, false], chimney = false }) {
   const face = (list) => list.map(([uu, vv, z]) => isoAt(uu, vv, z)).join(' ')
+  const rh = 15
+  const o = 3
+  const m = v + dv / 2
+  const win = (on) => (lit && on ? '#FFE08A' : '#CFEAF6')
+  const front = v + dv
+  const side = u + du
   return (
     <g>
-      <polygon points={face([[u, v + dv, 0], [u + du, v + dv, 0], [u + du, v + dv, h], [u, v + dv, h]])} fill={wall[1]} />
-      <polygon points={face([[u + du, v, 0], [u + du, v + dv, 0], [u + du, v + dv, h], [u + du, v, h]])} fill={wall[2]} />
-      <polygon points={face([[u, v, h], [u + du, v, h], [u + du, m, h + rh], [u, m, h + rh]])} fill={roof[1]} />
-      <polygon points={face([[u + du, v, h], [u + du, v + dv, h], [u + du, m, h + rh]])} fill={wall[2]} />
-      <polygon points={face([[u, v + dv, h], [u + du, v + dv, h], [u + du, m, h + rh], [u, m, h + rh]])} fill={roof[0]} />
-      <polygon points={face([[u + du * 0.4, v + dv, 0], [u + du * 0.6, v + dv, 0], [u + du * 0.6, v + dv, h * 0.55], [u + du * 0.4, v + dv, h * 0.55]])} fill="#92400E" />
-      <polygon points={face([[u + du, v + dv * 0.3, h * 0.35], [u + du, v + dv * 0.6, h * 0.35], [u + du, v + dv * 0.6, h * 0.75], [u + du, v + dv * 0.3, h * 0.75]])} fill={lit ? '#FDE68A' : '#BAE6FD'} />
+      <polygon points={face([[u, front, 0], [side, front, 0], [side, front, h], [u, front, h]])} fill={wall[0]} {...LINE} />
+      <polygon points={face([[side, v, 0], [side, front, 0], [side, front, h], [side, v, h]])} fill={wall[1]} {...LINE} />
+      {/* porta e janela na frente, janela no lado */}
+      <polygon points={face([[u + du * 0.58, front, 0], [u + du * 0.8, front, 0], [u + du * 0.8, front, h * 0.62], [u + du * 0.58, front, h * 0.62]])} fill="#A9693A" {...LINE} />
+      <polygon points={face([[u + du * 0.14, front, h * 0.3], [u + du * 0.42, front, h * 0.3], [u + du * 0.42, front, h * 0.72], [u + du * 0.14, front, h * 0.72]])} fill={win(lights[0])} stroke="#FFFFFF" strokeWidth="1.6" />
+      <polygon points={face([[side, v + dv * 0.3, h * 0.3], [side, v + dv * 0.7, h * 0.3], [side, v + dv * 0.7, h * 0.72], [side, v + dv * 0.3, h * 0.72]])} fill={win(lights[1])} stroke="#FFFFFF" strokeWidth="1.6" />
+      {/* telhado: água de trás, oitão do lado, água da frente */}
+      <polygon points={face([[u - o, v - o, h], [side + o, v - o, h], [side + o, m, h + rh], [u - o, m, h + rh]])} fill={roof[1]} {...LINE} />
+      <polygon points={face([[side, v, h], [side, front, h], [side, m, h + rh]])} fill={wall[1]} {...LINE} />
+      {chimney && <polygon points={face([[u + du * 0.2, v + 4, h + rh * 0.5], [u + du * 0.32, v + 4, h + rh * 0.5], [u + du * 0.32, v + 4, h + rh + 9], [u + du * 0.2, v + 4, h + rh + 9]])} fill="#B8503B" {...LINE} />}
+      <polygon points={face([[u - o, front + o, h - 2], [side + o, front + o, h - 2], [side + o, m, h + rh], [u - o, m, h + rh]])} fill={roof[0]} {...LINE} />
+      <polygon points={face([[u + 2, front - 3, h + rh * 0.25], [u + du * 0.5, front - 3, h + rh * 0.25], [u + du * 0.5, m + 3, h + rh - 2], [u + 2, m + 3, h + rh - 2]])} fill="#FFFFFF" opacity=".18" />
     </g>
   )
 }
@@ -123,7 +138,7 @@ export function BlockContent({ i, j, type, seed, lit }) {
       }
       items.push({
         d: ou + ov,
-        el: <House key={k} u={pu + ou} v={pv + ov} du={50} dv={50} h={15 + Math.round(r() * 7)} wall={pick(r, WALLS)} roof={pick(r, ROOFS)} lit={lit} />,
+        el: <House key={k} u={pu + ou} v={pv + ov} du={50} dv={50} h={22 + Math.round(r() * 8)} wall={pick(r, WALLS)} roof={pick(r, ROOFS)} lit={lit} lights={[r() < 0.6, r() < 0.45]} chimney={r() < 0.4} />,
       })
     })
   }

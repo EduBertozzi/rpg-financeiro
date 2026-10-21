@@ -8,6 +8,7 @@ import { Balloon, Birds, Mountains, Plane, Skyline, WindTurbine } from './Scener
 import { BlockContent, BlockGrounds, GridRoads, IsoBox, Tree } from './CityBlocks'
 import { BLOCKS, CAR_COLORS } from './cityData'
 import ShopArt, { ShopDefs } from './Shops'
+import { Bench, Bus, BusStop, Cyclist, Fireworks, Newsstand, PlazaMonth, Walker } from './CityLife'
 import { shopFront, shopTop } from './shopLayout'
 import {
   FAR, GRASS, HORIZON, L, PLOT, ROAD, ROAD_FRONT, VB_H, VB_W,
@@ -155,19 +156,29 @@ function Dog({ from, to, duration, delay, still }) {
   )
 }
 
+// poste: haste, braço e a luminária; de noite acende forte
 function Lamp({ u, v, lit }) {
   const [x, y] = iso(u, v)
   return (
     <g transform={`translate(${x} ${y})`}>
-      <rect x="-1.5" y="-46" width="3" height="46" fill="#334155" />
-      <circle cx="0" cy="-48" r="5" fill={lit ? '#FEF08A' : '#CBD5E1'} />
+      <ellipse cx="0" cy="1" rx="5" ry="2.5" fill="rgba(0,0,0,0.2)" />
+      <rect x="-2" y="-50" width="4" height="50" rx="1.5" fill="#3B4A5E" />
+      <path d="M0 -50 q0 -6 7 -6" stroke="#3B4A5E" strokeWidth="3" fill="none" strokeLinecap="round" />
+      <path d="M3 -58 h9 l-2 5 h-5 z" fill="#3B4A5E" />
+      <ellipse cx="7.5" cy="-52.5" rx="3.5" ry="2" fill={lit ? '#FFF3B0' : '#CBD5E1'} />
     </g>
   )
 }
 
+// a luz do poste: brilho em volta da lâmpada e uma poça de luz no chão
 function LampGlow({ u, v }) {
   const [x, y] = iso(u, v)
-  return <circle cx={x} cy={y - 48} r="26" fill="url(#lamp-glow)" opacity="0.8" />
+  return (
+    <g pointerEvents="none" style={{ mixBlendMode: 'screen' }}>
+      <ellipse cx={x + 6} cy={y + 4} rx="46" ry="20" fill="url(#lamp-glow)" opacity="0.55" />
+      <circle cx={x + 7.5} cy={y - 52} r="40" fill="url(#lamp-glow)" />
+    </g>
+  )
 }
 
 function Fountain({ still }) {
@@ -318,7 +329,7 @@ function Building({ b, hovered, setHovered, onSelect, interactive, lit, month })
           pointerEvents="none"
         />
       )}
-      <ShopArt id={b.id} pu={plotStart(i)} pv={plotStart(j)} lit={lit} month={month} />
+      <ShopArt id={b.id} pu={plotStart(i)} pv={plotStart(j)} lit={lit} month={month} state={{ paid: b.required && b.done, invested: b.invested, skills: b.skills }} />
       {b.id === FEATURED && [-60, -36, -12, 14, 38, 62, -48, 52].map((dx, k) => (
         <motion.circle
           key={k}
@@ -496,6 +507,12 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
     ...trees.map(([u, v, s]) => ({ depth: u + v, key: `t${u}-${v}`, el: <Tree u={u} v={v} scale={s} /> })),
     ...lamps.map(([u, v]) => ({ depth: u + v, key: `l${u}-${v}`, el: <Lamp u={u} v={v} lit={lit} /> })),
     { depth: plotCenter(1, 2).reduce((a, b) => a + b), key: 'fountain', el: <Fountain /> },
+    // praça: ponto de ônibus, bancos, banca de jornal e o enfeite do mês
+    { depth: plotStart(1) + plotStart(2), key: 'busstop', el: <BusStop /> },
+    { depth: plotStart(1) + plotStart(2) + 60, key: 'bench1', el: <Bench u={plotStart(1) + 30} v={plotStart(2) + 42} /> },
+    { depth: plotStart(1) + plotStart(2) + PLOT * 1.6, key: 'bench2', el: <Bench u={plotStart(1) + PLOT - 30} v={plotStart(2) + PLOT - 40} /> },
+    { depth: plotStart(1) + plotStart(2) + PLOT, key: 'kiosk', el: <Newsstand u={plotStart(1) + 24} v={plotStart(2) + PLOT - 34} /> },
+    { depth: plotCenter(1, 2).reduce((a, b) => a + b) + 1, key: 'plaza-month', el: <PlazaMonth month={month} /> },
     ...buildings.filter((b) => PLOTS[b.id]).map((b) => ({
       depth: plotCenter(...PLOTS[b.id]).reduce((a, c) => a + c),
       key: b.id,
@@ -626,6 +643,12 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
           <Dog from={[plotStart(1) + 10, plotStart(2) + PLOT - 22]} to={[plotStart(1) + PLOT - 18, plotStart(2) + PLOT - 22]} duration={9} delay={0.6} />
           <Pedestrian from={[roads[1] + ROAD + 6, plotStart(1) + 10]} to={[roads[1] + ROAD + 6, plotStart(1) + PLOT - 10]} color="#F97316" duration={8} delay={2} />
           <Pedestrian from={[plotStart(1) + 14, plotStart(2) + PLOT - 12]} to={[plotStart(1) + PLOT - 14, plotStart(2) + PLOT - 12]} color="#0EA5E9" duration={10} delay={1} />
+          {/* gente com sacola saindo do mercadinho e do banco, ciclista e o ônibus */}
+          <Walker from={[plotStart(0) + 12, roads[1] - 8]} to={[plotStart(0) + PLOT - 12, roads[1] - 8]} color="#EF4E3E" bag="#7DCB55" duration={11} delay={0.5} />
+          <Walker from={[roads[0] + ROAD + 8, plotStart(0) + 12]} to={[roads[0] + ROAD + 8, plotStart(0) + PLOT - 12]} color="#5B8EEB" bag="#F5BC42" duration={10} delay={1.5} />
+          <Walker from={[plotStart(2) + 10, roads[1] + ROAD + 8]} to={[plotStart(2) + PLOT - 10, roads[1] + ROAD + 8]} color="#F06AAE" bag="#FFFFFF" duration={12} delay={3} />
+          <Cyclist lane={roads[0] + ROAD * 0.88} />
+          <Bus />
         </g>
 
         {props.map((p) => <g key={p.key}>{p.el}</g>)}
@@ -635,6 +658,7 @@ export default function CityScene({ buildings, onSelect, interactive = true, mon
         ))}
 
         {weather?.deco && <PlazaDeco kind={weather.deco} />}
+        {month === 1 && <Fireworks />}
         {weather?.tint && <rect x={-FAR} y={-FAR} width={VB_W + 2 * FAR} height={VB_H + 2 * FAR} fill={weather.tint} pointerEvents="none" />}
         {sky.overlay > 0 && <rect x={-FAR} y={-FAR} width={VB_W + 2 * FAR} height={VB_H + 2 * FAR} fill="#0B1638" opacity={sky.overlay} pointerEvents="none" />}
         {lit && lamps.map(([u, v]) => <LampGlow key={`g${u}-${v}`} u={u} v={v} />)}

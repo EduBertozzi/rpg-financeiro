@@ -167,3 +167,9 @@ body {
 /* barra lateral: o conteúdo aberto aparece suave enquanto ela cresce */
 @keyframes sb-open { from { opacity: 0; } to { opacity: 1; } }
 .sb-open { animation: sb-open .22s ease-out both; }
+
+/* mapa: a moeda do banco gira quando há dinheiro investido; a faixa "PAGO" aparece com um pulo */
+@keyframes coin-spin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.12); } }
+.coin-spin { animation: coin-spin 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes paid-pop { from { opacity: 0; transform: scale(.4); } to { opacity: 1; transform: scale(1); } }
+.paid-pop > * { animation: paid-pop .45s cubic-bezier(.2,1.6,.4,1) both; transform-box: fill-box; transform-origin: center; }

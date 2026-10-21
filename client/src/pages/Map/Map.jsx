@@ -145,6 +145,15 @@ export default function Map() {
   const [activeBill, setActiveBill] = useState(null)
   // foi olhar o banco no meio do dilema (volta ao abrir o mapa de novo)
   const [dilemmaAway, setDilemmaAway] = useState(false)
+  // painéis recolhíveis ("A cidade" e o checklist), lembrados neste navegador
+  const [fold, setFold] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('map:fold')) ?? {} } catch { return {} }
+  })
+  const toggleFold = (key) => setFold((f) => {
+    const next = { ...f, [key]: !f[key] }
+    try { localStorage.setItem('map:fold', JSON.stringify(next)) } catch { /* sem storage */ }
+    return next
+  })
   const [bankSide, setBankSide] = useState(false) // banco aberto ao lado da carta do dilema
   // respondeu: o cartão do resultado fica aberto até o jogador fechar
   const [dilemmaHold, setDilemmaHold] = useState(false)
@@ -426,6 +435,9 @@ export default function Map() {
     done: !!b.requiredPrefix && isActionDone(b.requiredPrefix),
     // pontos para gastar: a árvore ganha um selo roxo com o número
     points: b.id === 'university' && currentTurn > 0 ? pointsLeft(character?.skillPoints) : 0,
+    // o banco brilha quando há dinheiro investido; a árvore cresce com as habilidades
+    invested: b.id === 'bank' && ((character?.fixedInvestments ?? []).some((f) => !f.redeemedAt) || (character?.positions ?? []).some((p) => Number(p.quantity) > 0)),
+    skills: b.id === 'university' ? (character?.unlockedSkills ?? []).length : 0,
   }))
   const hasDilemma = dilemmaInfo?.turn === currentTurn && dilemmaInfo.exists
   const answered = Boolean(isActionDone('Dilema'))
@@ -463,11 +475,18 @@ export default function Map() {
       <div className="pointer-events-none relative z-10 flex min-h-screen flex-col justify-between gap-4 p-4 sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex w-full max-w-xs flex-col gap-3">
-            <div className={`pointer-events-auto ${PANEL} px-5 py-4`}>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">Mapa</p>
-              <h2 className="font-toy text-[26px] font-extrabold leading-tight text-[#2457C5]">A cidade</h2>
-              <p className="mt-0.5 hidden text-xs text-[#6B7A62] sm:block">Passe o mouse pela cidade e clique num prédio para entrar.</p>
-            </div>
+            {fold.info ? (
+              <button type="button" onClick={() => toggleFold('info')} className={`pointer-events-auto self-start ${PANEL} flex items-center gap-2 px-4 py-2 font-toy text-[17px] font-extrabold text-[#2457C5] cursor-pointer`} aria-label="Mostrar o painel da cidade">
+                A cidade <Chevron down />
+              </button>
+            ) : (
+              <div className={`pointer-events-auto relative ${PANEL} px-5 py-4`}>
+                <FoldButton onClick={() => toggleFold('info')} label="Recolher o painel da cidade" />
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">Mapa</p>
+                <h2 className="font-toy text-[26px] font-extrabold leading-tight text-[#2457C5]">A cidade</h2>
+                <p className="mt-0.5 hidden text-xs text-[#6B7A62] sm:block">Passe o mouse pela cidade e clique num prédio para entrar.</p>
+              </div>
+            )}
 
           </div>
 
@@ -557,8 +576,14 @@ export default function Map() {
         )}
 
         <div className="flex items-end justify-between gap-4">
-          {!isWaiting && checklist.length > 0 && (
-            <div data-tour="checklist" className={`pointer-events-auto hidden w-64 sm:block ${PANEL} p-4`}>
+          {!isWaiting && checklist.length > 0 && fold.list && (
+            <button type="button" data-tour="checklist" onClick={() => toggleFold('list')} className={`pointer-events-auto hidden items-center gap-2 sm:flex ${PANEL} px-4 py-2 font-toy text-[16px] font-extrabold cursor-pointer`} aria-label="Mostrar o checklist do mês">
+              Checklist <span className={doneCount === checklist.length ? 'text-[#2B8C41]' : 'text-[#C98A12]'}>{doneCount}/{checklist.length}</span> <Chevron />
+            </button>
+          )}
+          {!isWaiting && checklist.length > 0 && !fold.list && (
+            <div data-tour="checklist" className={`pointer-events-auto relative hidden w-64 sm:block ${PANEL} p-4`}>
+              <FoldButton onClick={() => toggleFold('list')} label="Recolher o checklist" down />
               <p className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#8A9680]">
                 Checklist de {monthName}
               </p>
@@ -639,5 +664,23 @@ export default function Map() {
         />
       )}
     </GameLayout>
+  )
+}
+
+// setinha dos painéis recolhíveis
+function Chevron({ down = false }) {
+  return (
+    <svg viewBox="0 0 20 20" className={`h-4 w-4 transition-transform ${down ? '' : 'rotate-180'}`} aria-hidden="true">
+      <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// botão de recolher no canto do painel
+function FoldButton({ onClick, label, down = false }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title="Recolher" className="absolute right-2.5 top-2.5 grid h-7 w-7 place-items-center rounded-full text-[#8A9680] transition-colors hover:bg-[#F1EBDD] hover:text-[#24331F] cursor-pointer">
+      <Chevron down={down} />
+    </button>
   )
 }
