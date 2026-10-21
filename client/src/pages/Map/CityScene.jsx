@@ -16,13 +16,18 @@ import {
 // quarteirões decorativos (CityBlocks) e pela paisagem (Scenery).
 const ART = 270
 const ART_ANCHOR = 0.66
-// prédio central (Universidade) aparece maior e com aura
+// prédio central (a Árvore) com aura. O PNG da árvore tem a base maior e mais
+// baixa que os outros (medido pelo alfa): desenho um pouco menor e o centro da
+// base em 0,698 da altura, para a plataforma caber no quarteirão
 const FEATURED = 'university'
-const artSize = (id) => (id === FEATURED ? ART * 1.22 : ART)
+const ART_SCALE = { university: 0.92 }
+const ANCHOR = { university: 0.698 }
+const artSize = (id) => ART * (ART_SCALE[id] ?? 1)
+const anchorOf = (id) => ANCHOR[id] ?? ART_ANCHOR
 // onde o desenho de cada PNG termina (fração da altura, medido pelo alfa);
 // a etiqueta fica logo abaixo disso, à mesma distância em todos os prédios
-const ART_BOTTOM = { bank: 0.884, leisure: 0.802, university: 0.806, mercadinho: 0.759, utilities: 0.798, internet: 0.786 }
-const labelY = (id, y) => y + artSize(id) * ((ART_BOTTOM[id] ?? 0.8) - ART_ANCHOR) + 30
+const ART_BOTTOM = { bank: 0.884, leisure: 0.802, university: 0.93, mercadinho: 0.759, utilities: 0.798, internet: 0.786 }
+const labelY = (id, y) => y + artSize(id) * ((ART_BOTTOM[id] ?? 0.8) - anchorOf(id)) + 30
 // Área enquadrada na tela: bem fechada nos 6 prédios do jogo; céu e chão vão
 // além dela (overflow visível) e o anel de casas aparece cortado nas bordas.
 const VIEW = { x: 150, y: 60, w: 1300, h: 870 }
@@ -267,7 +272,7 @@ function Building({ b, hovered, setHovered, onSelect, interactive }) {
   const [i, j] = PLOTS[b.id]
   const [x, y] = iso(...plotCenter(i, j))
   const size = artSize(b.id)
-  const imgY = y - size * ART_ANCHOR
+  const imgY = y - size * anchorOf(b.id)
   const pending = b.required && !b.done
 
   const select = () => interactive && onSelect(b)
