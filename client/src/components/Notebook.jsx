@@ -205,6 +205,16 @@ export default function Notebook() {
   const wide = () => window.matchMedia?.('(min-width: 768px)').matches
   const landed = () => setPhase((p) => (p === 'flying' ? (wide() ? 'opening' : 'open') : p))
 
+  // garantia: se a animação não avisar que terminou (aba em segundo plano,
+  // computador lento), o caderno abre do mesmo jeito em ~1 segundo
+  useEffect(() => {
+    if (!open || phase === 'open') return
+    const wideNow = window.matchMedia?.('(min-width: 768px)').matches
+    const next = phase === 'flying' ? (wideNow ? 'opening' : 'open') : 'open'
+    const t = setTimeout(() => setPhase((p) => (p === phase ? next : p)), phase === 'flying' ? 1100 : 1200)
+    return () => clearTimeout(t)
+  }, [open, phase])
+
   const turn = (fn) => {
     sfx.leaf()
     fn()
@@ -262,6 +272,12 @@ export default function Notebook() {
     setChapter(leaf.to)
     setLeaf(null)
   }
+  // mesma garantia para a folha que vira
+  useEffect(() => {
+    if (!leaf) return
+    const t = setTimeout(() => { setChapter(leaf.to); setLeaf(null) }, 1000)
+    return () => clearTimeout(t)
+  }, [leaf])
   const nextDesktop = () => flipTo(Math.min(chapter + 1, CHAPTERS.length - 1))
   const prevDesktop = () => flipTo(Math.max(chapter - 1, 0))
   const nextMobile = () => turn(() => {
