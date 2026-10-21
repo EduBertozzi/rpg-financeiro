@@ -181,9 +181,6 @@ export default function CharacterCreation() {
                       <GiftIcon gift={g.id} size={76} />
                       <span className="font-toy text-[22px] font-extrabold leading-tight">{g.name}</span>
                       <span className="text-[15px] leading-snug text-[#4A5A42]">{g.effect}</span>
-                      <span className="rounded-full px-3 py-1 text-xs font-extrabold" style={{ background: `color-mix(in srgb, ${g.color} 16%, #fff)` }}>
-                        {g.style}
-                      </span>
                     </button>
                   )
                 })}
