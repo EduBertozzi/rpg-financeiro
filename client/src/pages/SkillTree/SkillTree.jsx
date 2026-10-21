@@ -157,16 +157,18 @@ function Points({ free, used, max }) {
 // Folha apontando para cima, com a base em (x, y).
 const leafPath = (x, y, s) => `M${x} ${y} C${x - s * 0.9} ${y - s * 0.4} ${x - s * 0.6} ${y - s * 1.3} ${x} ${y - s * 1.6} C${x + s * 0.6} ${y - s * 1.3} ${x + s * 0.9} ${y - s * 0.4} ${x} ${y}Z`
 
-// Ponto de controle do galho curvo de (x1, y1) até (x2, y2), puxado para fora.
-const bend = ([x1, y1], [x2, y2]) => [(x1 + x2) / 2 + (x2 - x1) * 0.12, (y1 + y2) / 2 + Math.abs(x2 - x1) * 0.18]
-const branchPath = (from, to) => {
-  const [mx, my] = bend(from, to)
-  return `M${from[0]} ${from[1]} Q${mx.toFixed(1)} ${my.toFixed(1)} ${to[0]} ${to[1]}`
-}
-// ponto no meio do galho (t = 0,5 da curva)
-const branchMid = (from, to) => {
-  const [mx, my] = bend(from, to)
-  return [(from[0] + 2 * mx + to[0]) / 4, (from[1] + 2 * my + to[1]) / 4]
+// Galho curvo passando por todos os frutos do caminho (curva suave tipo
+// Catmull-Rom): o trecho i vai do ponto i ao i+1 da cadeia [tronco, nível 1..4].
+const chainOf = (path) => [CORE, ...SPOTS[path]]
+function segment(chain, i) {
+  const p0 = chain[Math.max(i - 1, 0)], p1 = chain[i], p2 = chain[i + 1], p3 = chain[Math.min(i + 2, chain.length - 1)]
+  const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6]
+  const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6]
+  const f = (n) => n.toFixed(1)
+  return {
+    d: `M${f(p1[0])} ${f(p1[1])} C${f(c1[0])} ${f(c1[1])} ${f(c2[0])} ${f(c2[1])} ${f(p2[0])} ${f(p2[1])}`,
+    mid: [(p1[0] + 3 * c1[0] + 3 * c2[0] + p2[0]) / 8, (p1[1] + 3 * c1[1] + 3 * c2[1] + p2[1]) / 8],
+  }
 }
 
 // copa: bolotas de folhas atrás dos galhos (x, y, raio), com um contorno
@@ -203,7 +205,7 @@ function Tree({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, 
         aria-label="Habilidades por caminho"
       >
         <defs>
-          <radialGradient id="tr-leaf" cx=".4" cy=".25" r=".9"><stop offset="0" stopColor="#B4EC86" /><stop offset=".55" stopColor="#7FD05A" /><stop offset="1" stopColor="#56AE45" /></radialGradient>
+          <radialGradient id="tr-leaf" cx=".4" cy=".3" r=".85"><stop offset="0" stopColor="#A6E37A" /><stop offset=".6" stopColor="#7CCB55" /><stop offset="1" stopColor="#5BB14A" /></radialGradient>
           <linearGradient id="tr-trunk" x1="0" x2="1"><stop offset="0" stopColor="#6E4426" /><stop offset=".4" stopColor="#B07A4A" /><stop offset=".7" stopColor="#9A6A3E" /><stop offset="1" stopColor="#5E3A20" /></linearGradient>
           {PATH_ORDER.map((p) => (
             <g key={p}>
@@ -224,9 +226,9 @@ function Tree({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, 
 
         {/* copa (sombra, folhas e brilho, cada camada inteira de uma vez) e tronco */}
         <g className="cz-sway">
-          <g opacity=".5">{CANOPY.map(([x, y, r], i) => <circle key={i} cx={x} cy={y + 16} r={r} fill="#3F8F3A" />)}</g>
-          <g opacity=".62">{CANOPY.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill="url(#tr-leaf)" />)}</g>
-          <g opacity=".22">{CANOPY.filter(([, , r]) => r >= 120).map(([x, y, r], i) => <circle key={i} cx={x - r * 0.2} cy={y - r * 0.3} r={r * 0.55} fill="#E2FBC4" />)}</g>
+          <g>{CANOPY.map(([x, y, r], i) => <circle key={i} cx={x} cy={y + 18} r={r} fill="#3E8A39" />)}</g>
+          <g>{CANOPY.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill="url(#tr-leaf)" />)}</g>
+          <g opacity=".14">{CANOPY.filter(([, , r]) => r >= 150).map(([x, y, r], i) => <circle key={i} cx={x - r * 0.3} cy={y - r * 0.4} r={r * 0.4} fill="#F2FDE2" />)}</g>
           <path
             d={`M${cx - 84} 788 Q${cx - 46} 778 ${cx - 38} 740 C${cx - 32} 712 ${cx - 30} 694 ${cx - 28} ${cy} L${cx + 28} ${cy} C${cx + 30} 694 ${cx + 32} 712 ${cx + 38} 740 Q${cx + 46} 778 ${cx + 84} 788 Z`}
             fill="url(#tr-trunk)"
@@ -239,14 +241,14 @@ function Tree({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, 
         {PATH_ORDER.map((path, pi) => {
           const list = skills.filter((s) => s.path === path).sort((a, b) => a.level - b.level)
           return list.map((s, li) => {
-            const from = li === 0 ? CORE : SPOTS[path][li - 1]
-            const to = SPOTS[path][s.level - 1] ?? CORE
-            const len = Math.ceil(Math.hypot(to[0] - from[0], to[1] - from[1]) * 1.1)
+            const chain = chainOf(path)
+            const from = chain[li]
+            const to = chain[li + 1] ?? CORE
+            const len = Math.ceil(Math.hypot(to[0] - from[0], to[1] - from[1]) * 1.25)
             const style = { '--len': len, '--d': `${(0.9 + li * 0.32 + pi * 0.08).toFixed(2)}s` }
             const on = isOn(s)
             const w = 24 - li * 4
-            const d = branchPath(from, to)
-            const [mx, my] = branchMid(from, to)
+            const { d, mid: [mx, my] } = segment(chain, li)
             const cls = `cz-ln ${s.id === justUnlocked ? 'cz-drawnow' : ''}`
             const side = to[0] < from[0] ? -1 : 1
             return (
@@ -346,7 +348,8 @@ function Tree({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, 
                     )}
                   </g>
                 </g>
-                <g className="cz-lbl" style={d}>
+                <title>{`${s.name} · ${STATUS_TEXT[st]}`}</title>
+                {(on || st === 'ready' || sel) && <g className="cz-lbl" style={d}>
                   <rect
                     x={tag.x} y={tag.y} width={tag.w} height={tag.h} rx="11"
                     fill={st === 'locked' ? '#F6F3EA' : '#FFFDF7'} fillOpacity={st === 'locked' ? 0.82 : 0.96}
@@ -356,7 +359,7 @@ function Tree({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, 
                   <text x={tag.textX} y={tag.textY} fontSize={LABEL_FONT} fontWeight={on || sel || st === 'ready' ? 800 : 700} fill={on ? '#1B2A16' : st === 'locked' ? '#6B7A62' : '#2F3D28'}>
                     {tag.lines.map((line, i) => <tspan key={i} x={tag.textX} dy={i ? tag.line : 0}>{line}</tspan>)}
                   </text>
-                </g>
+                </g>}
               </g>
             )
           })
@@ -366,10 +369,13 @@ function Tree({ skills, statusOf, unlockedIds, selectedId, justUnlocked, intro, 
         {PATH_ORDER.map((path, pi) => {
           const [lx, ly] = SPOTS[path][3]
           const d = { '--d': `${(2 + pi * 0.1).toFixed(2)}s` }
+          const name = PATHS[path].short.toUpperCase()
+          const pw = name.length * 13 + 34
           return (
             <g key={`t-${path}`} className="cz-lbl" style={d}>
-              <text style={halo} x={lx} y={ly - 50} textAnchor="middle" fontSize="15" fontWeight="800" letterSpacing="3" fill={PATHS[path].hex}>{PATHS[path].short.toUpperCase()}</text>
-              <text style={halo} x={lx} y={ly - 34} textAnchor="middle" fontSize="12.5" fontWeight="700" fill="#4A5A42">{PATHS[path].theme}</text>
+              <rect x={lx - pw / 2} y={ly - 84} width={pw} height="32" rx="16" fill={PATHS[path].hex} stroke="#FFFDF7" strokeWidth="3" filter="url(#cz-tag)" />
+              <text x={lx} y={ly - 62} textAnchor="middle" fontSize="17" fontWeight="800" letterSpacing="2" fill="#fff">{name}</text>
+              <text style={halo} x={lx} y={ly - 34} textAnchor="middle" fontSize="14" fontWeight="800" fill="#2F3D28">{PATHS[path].theme}</text>
             </g>
           )
         })}

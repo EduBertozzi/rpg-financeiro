@@ -427,9 +427,9 @@ export default function Map() {
   }))
   const hasDilemma = dilemmaInfo?.turn === currentTurn && dilemmaInfo.exists
   const answered = Boolean(isActionDone('Dilema'))
-  const dilemmaItem = { id: 'dilemma', name: 'Dilema (chega ao encerrar)', route: 'modal_dilemma', required: true, done: answered }
   const tasks = sceneBuildings.filter((b) => b.required)
-  const checklist = [...tasks, ...(hasDilemma ? [dilemmaItem] : [])]
+  // o checklist é só lazer e contas; o dilema chega depois de encerrar
+  const checklist = tasks
   const doneCount = checklist.filter((b) => b.done).length
   const missing = tasks.filter((b) => !b.done).map((b) => (b.id === 'leisure' ? 'Lazer' : b.name))
 
@@ -563,17 +563,11 @@ export default function Map() {
               <p className="font-toy text-[18px] font-extrabold">{doneCount}/{checklist.length} concluídos</p>
               <ul className="mt-3 flex flex-col gap-1.5">
                 {checklist.map((b) => (
-                  <li key={b.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleBuilding(b)}
-                      className="flex w-full items-center gap-2 rounded-lg px-1 py-0.5 text-left text-[13px] font-semibold transition-colors hover:bg-[#F1EBDD] cursor-pointer"
-                    >
+                  <li key={b.id} className="flex w-full items-center gap-2 px-1 py-0.5 text-[13px] font-semibold">
                       <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${b.done ? 'border-[#3DBE5A] bg-[#3DBE5A] text-white' : 'border-[#F2B53A] text-transparent'}`}>
                         <IconCheck className="h-3 w-3" />
                       </span>
                       <span className={b.done ? 'text-[#A9B19E] line-through' : 'text-[#24331F]'}>{b.name}</span>
-                    </button>
                   </li>
                 ))}
               </ul>

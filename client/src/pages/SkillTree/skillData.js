@@ -32,9 +32,9 @@ export const perkOf = (skill) => PERKS[`${skill.path}-${skill.level}`] ?? { desc
 // e um galho para cada caminho.
 export const CORE = [500, 670]
 export const SPOTS = {
-  technical: [[388, 592], [296, 490], [222, 380], [166, 262]],
-  communication: [[500, 550], [500, 442], [500, 332], [500, 216]],
-  management: [[612, 592], [704, 490], [778, 380], [834, 262]],
+  technical: [[404, 590], [298, 498], [236, 404], [212, 282]],
+  communication: [[500, 548], [478, 446], [522, 342], [500, 236]],
+  management: [[596, 590], [702, 498], [764, 404], [788, 282]],
 }
 
 export const STATUS_TEXT = {
