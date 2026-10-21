@@ -363,12 +363,14 @@ export default function GameHeader() {
         onMouseEnter={() => !document.body.dataset.tour && setSidebarExpanded(true)}
         onMouseLeave={() => setSidebarExpanded(false)}
         className={[
-          'fixed left-0 top-0 z-40 h-screen bg-[#FFFDF7] text-[#24331F]',
+          'fixed left-0 top-0 z-40 h-screen overflow-hidden bg-[#FFFDF7] text-[#24331F]',
           'shadow-[6px_0_0_#E2D6BE,12px_0_40px_rgba(36,51,31,0.18)] transition-[width] duration-300 ease-out',
           sidebarExpanded ? 'w-80' : 'w-20',
         ].join(' ')}
       >
-        <div className="relative flex h-full flex-col overflow-hidden">
+        {/* aberta, o conteúdo já tem a largura final (w-80) e só é revelado enquanto
+            a barra cresce: nada fica espremido ou cortado no meio da animação */}
+        <div className={`relative flex h-full flex-col overflow-hidden ${sidebarExpanded ? 'sb-open w-80' : 'w-20'}`}>
           {sidebarExpanded ? (
             <div className="relative shrink-0 bg-[linear-gradient(135deg,var(--theme-primary),color-mix(in_srgb,var(--theme-primary)_65%,var(--theme-secondary)))] px-4 pb-6 pt-4 text-white">
               <div className="flex items-start justify-between gap-3">

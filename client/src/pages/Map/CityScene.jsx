@@ -342,25 +342,37 @@ function Building({ b, hovered, setHovered, onSelect, interactive, lit, month })
 // cima da noite e da chuva (como as plaquinhas), para não ficar apagado.
 function StatusBadge({ b }) {
   const pending = b.required && !b.done
-  if (!pending && !b.done) return null
+  const points = b.points ?? 0 // pontos para gastar na árvore
+  if (!pending && !b.done && !points) return null
   const [i, j] = PLOTS[b.id]
   const [x, y] = iso(...plotCenter(i, j))
-  // à direita e um pouco abaixo do topo: não cobre o nome do prédio de trás
-  const bx = x + 64
-  const top = y - shopTop(b.id) * 0.72
+  // centrado, logo acima do telhado (sem subir até o nome do prédio de trás)
+  const top = y - shopTop(b.id) * 0.8
+  const bounce = pending || points > 0
   return (
     <motion.g
       pointerEvents="none"
-      animate={pending ? { y: [0, -10, 0] } : undefined}
+      animate={bounce ? { y: [0, -8, 0] } : undefined}
       transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
     >
-      <g transform={`translate(${bx} ${top})`}>
-        {pending && <circle r="34" fill="#FFD43B" opacity=".28" />}
-        <path d="M0 26 -10 10 10 10z" fill={pending ? '#E67700' : '#2B8A3E'} />
-        <circle r="24" fill={pending ? '#FFC21A' : '#2FB344'} stroke="#FFFFFF" strokeWidth="4" />
-        {pending
-          ? <text y="10" textAnchor="middle" fontSize="32" fontWeight="900" fill="#5C2A00" fontFamily="'Baloo 2', Outfit, sans-serif">!</text>
-          : <path d="m-10 0 6 6 13-13" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />}
+      <g transform={`translate(${x} ${top})`}>
+        {points > 0 ? (
+          <>
+            <circle r="32" fill="#B197FC" opacity=".3" />
+            <path d="M0 24 -9 9 9 9z" fill="#6538C9" />
+            <circle r="22" fill="#8A5CF6" stroke="#FFFFFF" strokeWidth="4" />
+            <text y="9" textAnchor="middle" fontSize="26" fontWeight="900" fill="#FFFFFF" fontFamily="'Baloo 2', Outfit, sans-serif">{points}</text>
+          </>
+        ) : (
+          <>
+            {pending && <circle r="32" fill="#FFD43B" opacity=".28" />}
+            <path d="M0 24 -9 9 9 9z" fill={pending ? '#E67700' : '#2B8A3E'} />
+            <circle r="22" fill={pending ? '#FFC21A' : '#2FB344'} stroke="#FFFFFF" strokeWidth="4" />
+            {pending
+              ? <text y="10" textAnchor="middle" fontSize="30" fontWeight="900" fill="#5C2A00" fontFamily="'Baloo 2', Outfit, sans-serif">!</text>
+              : <path d="m-9 0 6 6 12-12" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />}
+          </>
+        )}
       </g>
     </motion.g>
   )

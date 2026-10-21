@@ -163,3 +163,7 @@ body {
 /* relógio do mês fixo no canto de cima, em todas as telas do jogo */
 @keyframes clock-hand { to { transform: rotate(360deg); } }
 .clock-hand { transform-box: view-box; transform-origin: 12px 14px; animation: clock-hand 60s steps(60) infinite; }
+
+/* barra lateral: o conteúdo aberto aparece suave enquanto ela cresce */
+@keyframes sb-open { from { opacity: 0; } to { opacity: 1; } }
+.sb-open { animation: sb-open .22s ease-out both; }

@@ -13,7 +13,7 @@ import TurnScene from '../../components/TurnScene'
 import { sfx } from '../../services/sound'
 import Tour from '../../components/Tour'
 import { tourKey } from './tourSteps'
-import { TASK_EVENT } from '../../components/sidebarData'
+import { TASK_EVENT, pointsLeft } from '../../components/sidebarData'
 import { TOUR_EVENT } from '../../components/howToPlaySteps'
 import { refreshStanding, useMonthClock } from '../../components/hudHooks'
 import { FinishMonthModal, MonthClosedCard } from '../../components/MonthEnd'
@@ -424,6 +424,8 @@ export default function Map() {
     name: b.id === 'leisure' && monthName ? `Lazer de ${monthName}` : b.name,
     required: !!b.requiredPrefix && currentTurn > 0,
     done: !!b.requiredPrefix && isActionDone(b.requiredPrefix),
+    // pontos para gastar: a árvore ganha um selo roxo com o número
+    points: b.id === 'university' && currentTurn > 0 ? pointsLeft(character?.skillPoints) : 0,
   }))
   const hasDilemma = dilemmaInfo?.turn === currentTurn && dilemmaInfo.exists
   const answered = Boolean(isActionDone('Dilema'))
