@@ -1,0 +1,57 @@
+{
+  "admin": {
+    "login": 1.5,
+    "panel": 18.7,
+    "newRoom": 19.9,
+    "roomCreated": 27,
+    "playersIn": 32.3,
+    "started": 35.7,
+    "clock": 39.9
+  },
+  "player": {
+    "login": 1.3,
+    "create": 14.1,
+    "pickAvatar": 26.9,
+    "gift": 36.3,
+    "card": 40.7,
+    "januarySummary": 44.8,
+    "tour": 51.1,
+    "timer": 79,
+    "town": 81.7,
+    "leisure": 96.7,
+    "bills": 118.1,
+    "monthClean": 154,
+    "hud": 156.5,
+    "chart": 163.1,
+    "bank": 180.2,
+    "box": 192.3,
+    "stocks": 201.3,
+    "statement": 209.3,
+    "bankDone": 218.9,
+    "coin": 223.6,
+    "close": 228,
+    "dilemma": 241.9,
+    "dilemmaBank": 255.7,
+    "dilemmaResult": 277.8,
+    "waiting": 283.2,
+    "scene": 286.4,
+    "summary": 292,
+    "skills": 306.8,
+    "confetti": 320.1,
+    "treeMap": 330.5,
+    "notebook": 337,
+    "howto": 353.4,
+    "end": 372.1
+  },
+  "finished": {
+    "finished": 4,
+    "scroll": 9,
+    "end": 19.7
+  },
+  "hud": {
+    "start": 5.3,
+    "open": 6.5,
+    "chart": 18.9,
+    "end": 45.1
+  }
+}

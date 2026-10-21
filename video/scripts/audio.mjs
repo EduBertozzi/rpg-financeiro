@@ -4,6 +4,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const SR = 44100
+// duração (s) das músicas: um pouco mais que o tutorial (226,4 s) e o trailer (57,3 s)
+const FULL_DEFAULT = 228
+const SHORT_DEFAULT = 59
 const OUT = path.resolve('public')
 fs.mkdirSync(OUT, { recursive: true })
 
@@ -147,8 +150,13 @@ function song(seconds, { introBars = 2, outroAt } = {}) {
   return buf
 }
 
-writeWav('music-full.wav', song(184, { introBars: 2 }))
-writeWav('music-short.wav', song(52, { introBars: 1 }))
+// duração da música = duração do vídeo (segundos, arredondado para cima) + 1;
+// confira com totalSeconds(FULL/SHORT) de src/plan.jsx depois de regravar.
+// Uso: node scripts/audio.mjs [tutorial] [trailer]
+const FULL_S = Number(process.argv[2]) || FULL_DEFAULT
+const SHORT_S = Number(process.argv[3]) || SHORT_DEFAULT
+writeWav('music-full.wav', song(FULL_S, { introBars: 2 }))
+writeWav('music-short.wav', song(SHORT_S, { introBars: 1 }))
 
 // ─── efeitos (os mesmos do jogo, em versão de vídeo) ─────────────────────────
 const sfx = {

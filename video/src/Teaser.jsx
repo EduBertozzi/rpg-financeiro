@@ -16,18 +16,18 @@ export const TEASER_FRAMES = REVEAL + 110
 
 const MONTHS = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
 const FLASHES = [
-  { src: 'player.webm', t: 20.6, x: 760, y: 330, s: 1.0 },
-  { src: 'player.webm', t: 60.5, x: 960, y: 520, s: 0.95 },
-  { src: 'player.webm', t: 100.4, x: 960, y: 540, s: 0.85 },
-  { src: 'hud.webm', t: 9.0, x: 330, y: 480, s: 1.2, spoiler: true },
-  { src: 'player.webm', t: 115.5, x: 1000, y: 700, s: 1.0 },
-  { src: 'player.webm', t: 126.3, x: 960, y: 540, s: 0.8 },
-  { src: 'player.webm', t: 128.0, x: 960, y: 500, s: 0.9 },
-  { src: 'player.webm', t: 149.6, x: 960, y: 540, s: 0.85, spoiler: true },
-  { src: 'player.webm', t: 156, x: 960, y: 540, s: 0.9 },
-  { src: 'player.webm', t: 168, x: 960, y: 540, s: 0.9 },
-  { src: 'admin.webm', t: 18.5, x: 1300, y: 300, s: 1.0 },
-  { src: 'finished.webm', t: 7.5, x: 960, y: 540, s: 0.85, spoiler: true },
+  { src: 'spoiler-player.webm', t: 20.6, x: 760, y: 330, s: 1.0 },
+  { src: 'spoiler-player.webm', t: 60.5, x: 960, y: 520, s: 0.95 },
+  { src: 'spoiler-player.webm', t: 100.4, x: 960, y: 540, s: 0.85 },
+  { src: 'spoiler-hud.webm', t: 9.0, x: 330, y: 480, s: 1.2, spoiler: true },
+  { src: 'spoiler-player.webm', t: 115.5, x: 1000, y: 700, s: 1.0 },
+  { src: 'spoiler-player.webm', t: 126.3, x: 960, y: 540, s: 0.8 },
+  { src: 'spoiler-player.webm', t: 128.0, x: 960, y: 500, s: 0.9 },
+  { src: 'spoiler-player.webm', t: 149.6, x: 960, y: 540, s: 0.85, spoiler: true },
+  { src: 'spoiler-player.webm', t: 156, x: 960, y: 540, s: 0.9 },
+  { src: 'spoiler-player.webm', t: 168, x: 960, y: 540, s: 0.9 },
+  { src: 'spoiler-admin.webm', t: 18.5, x: 1300, y: 300, s: 1.0 },
+  { src: 'spoiler-finished.webm', t: 7.5, x: 960, y: 540, s: 0.85, spoiler: true },
 ]
 
 const CARD = { x: 90, y: 400, w: 900, head: 190 }
