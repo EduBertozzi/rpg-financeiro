@@ -4,7 +4,7 @@
 // - frugal: 5% de R$ 3.600 de custos fixos × 12 = R$ 2.160
 // - agile: R$ 120 × 12 + 25% de R$ 1.392 de eventos bons esperados = R$ 1.788
 // - smart: estimativa — as duas melhores habilidades de nível 1 o ano todo
-//   (freela R$ 100 + Mercadinho 7,5% de R$ 1.000) × 12 = R$ 2.100
+//   (trabalho extra R$ 100 + Mercadinho 7,5% de R$ 1.000) × 12 = R$ 2.100
 export const GIFTS = [
   {
     id: 'frugal',
@@ -16,7 +16,7 @@ export const GIFTS = [
   {
     id: 'agile',
     name: 'Desenrolado',
-    effect: 'Um freela fixo de R$ 120 por mês, e eventos bons rendem 25% a mais.',
+    effect: 'Um trabalho extra fixo de R$ 120 por mês, e eventos bons rendem 25% a mais.',
     year: 1788,
     color: '#F07A26',
   },

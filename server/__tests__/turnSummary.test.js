@@ -166,7 +166,7 @@ describe('turnSummary — holerite (salário bruto, INSS e IR)', () => {
     const logs = [
       log(6, salaryLine(7000), 7000),
       log(6, 'Bônus salarial: Pensamento Analítico Avançado (+R$ 200.00)', 200),
-      log(6, 'Freela: Fundamentos e Lógica (+R$ 100.00)', 100),
+      log(6, 'Trabalho extra: Fundamentos e Lógica (+R$ 100.00)', 100),
       ...payslipDeductions(payslip(7200)).map((l) => log(6, l.description, l.amount)),
       log(6, 'Aluguel: Casa — Pago (-R$ 2100)', -2100),
       log(6, 'Cheque especial: Juros de 8% sobre R$ 100.00 (-R$ 8.00)', -8),

@@ -100,14 +100,14 @@ describe('Técnico (renda garantida)', () => {
   it('L1 Fundamentos e Lógica: +R$ 100 de freela por mês', () => {
     const p = only('technical', 1)
     expect(p.extraIncome).toBe(100)
-    expect(p.incomes).toEqual([{ label: 'Freela', skill: 'Fundamentos e Lógica', amount: 100 }])
+    expect(p.incomes).toEqual([{ label: 'Trabalho extra', skill: 'Fundamentos e Lógica', amount: 100 }])
     expect(p.salaryBonus).toBe(0)
   })
 
   it('L1 fala em trabalhos extras nos finais de semana (não em freela)', () => {
     const { perkOf } = require('../src/utils/skills')
     expect(perkOf('technical', 1).perk).toBe('+R$ 100 por mês (trabalhos extras nos finais de semana)')
-    expect(perkOf('technical', 1).income).toEqual({ label: 'Freela', amount: 100 })
+    expect(perkOf('technical', 1).income).toEqual({ label: 'Trabalho extra', amount: 100 })
   })
 
   it('L2 Resolução de Problemas: imprevistos de casa 25% mais baratos', () => {
@@ -133,7 +133,7 @@ describe('Técnico (renda garantida)', () => {
     const p = perksOf(all('technical'))
     expect(p.salaryBonus).toBe(200)
     expect(p.extraIncome).toBe(300)
-    expect(p.incomes.map((i) => i.label)).toEqual(['Freela', 'Projeto paralelo'])
+    expect(p.incomes.map((i) => i.label)).toEqual(['Trabalho extra', 'Projeto paralelo'])
     expect(p.repairDiscount).toBe(0.25)
   })
 })
@@ -223,7 +223,7 @@ describe('árvore inteira', () => {
       ],
       extraIncome: 300,
       incomes: [
-        { label: 'Freela', skill: 'Fundamentos e Lógica', amount: 100 },
+        { label: 'Trabalho extra', skill: 'Fundamentos e Lógica', amount: 100 },
         { label: 'Projeto paralelo', skill: 'Inovação e Otimização', amount: 200 },
       ],
       repairDiscount: 0.25,

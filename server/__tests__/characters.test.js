@@ -95,7 +95,7 @@ describe('POST /api/v1/characters', () => {
   it('Desenrolado recebe o freela já em janeiro', async () => {
     await createWith({ ...validBody, gift: 'agile' })
     expect(created().cash).toBe(3483.74) // 5.463,74 + 120 − 2.100
-    expect(janLogs().map((l) => l.description)).toContain('Freela: Desenrolado (+R$ 120.00)')
+    expect(janLogs().map((l) => l.description)).toContain('Trabalho extra: Desenrolado (+R$ 120.00)')
     // o freela do dom não paga INSS nem IR: os descontos são só do salário
     expect(janLogs().find((l) => /^INSS:/.test(l.description)).cashImpact).toBe(-781.51)
     expect(janLogs().find((l) => /^Imposto de Renda/.test(l.description)).cashImpact).toBe(-754.75)

@@ -29,7 +29,7 @@ describe('tabela de dons', () => {
   })
 
   it('agile: freela de R$ 120 e +25% nos eventos positivos', () => {
-    expect(GIFTS.agile.monthlyIncome).toEqual({ label: 'Freela', amount: 120 })
+    expect(GIFTS.agile.monthlyIncome).toEqual({ label: 'Trabalho extra', amount: 120 })
     expect(GIFTS.agile.positiveEventBonus).toBe(0.25)
   })
 
@@ -123,7 +123,7 @@ describe('giftIncome / giftIncomeEntry', () => {
   })
 
   it('agile: linha do extrato no formato das rendas das habilidades', () => {
-    expect(giftIncomeEntry('agile')).toEqual({ label: 'Freela', skill: 'Desenrolado', amount: 120 })
+    expect(giftIncomeEntry('agile')).toEqual({ label: 'Trabalho extra', skill: 'Desenrolado', amount: 120 })
   })
 
   it.each(['frugal', 'smart', ...NEUTRAL])('%p: sem linha', (gift) => {

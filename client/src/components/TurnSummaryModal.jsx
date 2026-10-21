@@ -78,7 +78,7 @@ export default function TurnSummaryModal({ summary, onClose }) {
             {money.salary !== 0 && <Row label={money.inss || money.ir ? 'Salário (bruto)' : 'Salário'} value={money.salary} />}
             {Boolean(money.inss) && <Row label="INSS" value={money.inss} />}
             {Boolean(money.ir) && <Row label="Imposto de Renda na fonte" value={money.ir} />}
-            {money.extras !== 0 && <Row label="Freelas e bônus" value={money.extras} />}
+            {money.extras !== 0 && <Row label="Trabalhos extras e bônus" value={money.extras} />}
             {money.rent !== 0 && <Row label="Aluguel" value={money.rent} />}
             {money.interest !== 0 && <Row label="Juros do cheque especial" value={money.interest} />}
             <div className="mt-1 border-t-2 border-dashed border-[#EFE6D3] pt-2"><Row label="Saldo da virada" value={net} strong /></div>

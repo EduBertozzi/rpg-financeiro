@@ -26,7 +26,7 @@ const MONEY = {
   salary: [SALARY_PREFIX, 'Salário:'],
   inss: [INSS_PREFIX],
   ir: [IR_PREFIX],
-  extras: ['Bônus salarial:', 'Freela:', 'Projeto paralelo:', 'Gestão:'],
+  extras: ['Bônus salarial:', 'Trabalho extra:', 'Freela:', 'Projeto paralelo:', 'Gestão:'], // 'Freela:' = extrato antigo
   rent: ['Aluguel:'],
   interest: ['Cheque especial:'],
 }

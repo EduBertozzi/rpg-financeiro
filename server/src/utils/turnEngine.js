@@ -86,7 +86,7 @@ async function applyFixedCosts(character, turn, perks = perksOf(), { effects = [
   // da TV; na conta cai o líquido, já sem INSS e IR
   const slip = payslip(paidSalary ? SALARY + perks.salaryBonus + fx.raise : 0)
   const salary = slip.net
-  // renda fixa do dom (Desenrolado: freela de R$ 120) entra junto com o salário
+  // renda fixa do dom (Desenrolado: trabalho extra de R$ 120) entra junto com o salário
   const extras = final ? 0 : cents(perks.extraIncome + giftIncome(character.gift))
   const income = cents(salary + extras)
   const giftExtra = final ? null : giftIncomeEntry(character.gift)

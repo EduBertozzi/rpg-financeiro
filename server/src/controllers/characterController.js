@@ -35,7 +35,7 @@ exports.createCharacter = async (req, res) => {
     // O primeiro mês não tem virada: o salário dele (e a renda do dom) entra
     // aqui e o aluguel já sai, igual nos outros meses.
     const costs = startingCosts(gift) // aluguel, mercado, contas e transporte (Mão de Vaca: -5%)
-    const extra = giftIncomeEntry(gift) // Desenrolado: freela
+    const extra = giftIncomeEntry(gift) // Desenrolado: trabalho extra
     const turn = room.status === 'active' ? room.currentTurn : 1
     const rent = Number(costs.housingCost)
     const slip = payslip(SALARY) // cai o líquido: bruto menos INSS e IR

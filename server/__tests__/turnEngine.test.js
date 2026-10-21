@@ -584,8 +584,8 @@ describe('habilidades na virada do mês', () => {
     await processTurn('room-1')
 
     expect(costsUpdate().cash).toBe(4563.74) // 5463,74 + 100 - 1000
-    expect(logStarting('Freela')).toEqual([
-      expect.objectContaining({ turn: 2, cashImpact: 100, description: 'Freela: Fundamentos e Lógica (+R$ 100.00)' }),
+    expect(logStarting('Trabalho extra')).toEqual([
+      expect.objectContaining({ turn: 2, cashImpact: 100, description: 'Trabalho extra: Fundamentos e Lógica (+R$ 100.00)' }),
     ])
   })
 
@@ -636,7 +636,7 @@ describe('habilidades na virada do mês', () => {
     expect(logStarting('Projeto paralelo')).toEqual([
       expect.objectContaining({ cashImpact: 200, description: 'Projeto paralelo: Inovação e Otimização (+R$ 200.00)' }),
     ])
-    expect(logStarting('Freela')).toHaveLength(1)
+    expect(logStarting('Trabalho extra')).toHaveLength(1)
   })
 
   it('o resultado do mês soma salário líquido, bônus e rendas extras', async () => {
@@ -904,8 +904,8 @@ describe('dons na virada do mês', () => {
     setup(agile())
     await processTurn('room-1')
 
-    expect(logStarting('Freela')).toEqual([
-      expect.objectContaining({ characterId: 'char-1', turn: 2, cashImpact: 120, description: 'Freela: Desenrolado (+R$ 120.00)' }),
+    expect(logStarting('Trabalho extra')).toEqual([
+      expect.objectContaining({ characterId: 'char-1', turn: 2, cashImpact: 120, description: 'Trabalho extra: Desenrolado (+R$ 120.00)' }),
     ])
   })
 
@@ -913,7 +913,7 @@ describe('dons na virada do mês', () => {
     setup(agile())
     await processTurn('room-1')
 
-    expect(logs().map((l) => l.description.split(':')[0])).toEqual(['Salário (bruto)', 'Freela', 'INSS', 'Imposto de Renda na fonte', 'Aluguel', 'Nenhum imprevisto'])
+    expect(logs().map((l) => l.description.split(':')[0])).toEqual(['Salário (bruto)', 'Trabalho extra', 'INSS', 'Imposto de Renda na fonte', 'Aluguel', 'Nenhum imprevisto'])
   })
 
   it('Desenrolado: o freela do dom não paga INSS nem IR', async () => {
@@ -928,9 +928,9 @@ describe('dons na virada do mês', () => {
     setup(agile({ unlockedSkills: [skill('technical', 1)] }))
     await processTurn('room-1')
 
-    expect(logStarting('Freela').map((l) => l.description)).toEqual([
-      'Freela: Fundamentos e Lógica (+R$ 100.00)',
-      'Freela: Desenrolado (+R$ 120.00)',
+    expect(logStarting('Trabalho extra').map((l) => l.description)).toEqual([
+      'Trabalho extra: Fundamentos e Lógica (+R$ 100.00)',
+      'Trabalho extra: Desenrolado (+R$ 120.00)',
     ])
     expect(costsUpdate().cash).toBe(4683.74) // 5463,74 + 100 + 120 - 1000
   })
@@ -994,7 +994,7 @@ describe('dons na virada do mês', () => {
     await processTurn('room-1')
 
     expect(costsUpdate().cash).toBe(4463.74)
-    expect(logStarting('Freela')).toEqual([])
+    expect(logStarting('Trabalho extra')).toEqual([])
     expect(logs().map((l) => l.description.split(':')[0])).toEqual(['Salário (bruto)', 'INSS', 'Imposto de Renda na fonte', 'Aluguel', 'Nenhum imprevisto'])
   })
 
@@ -1174,7 +1174,7 @@ describe('consequências dos dilemas na virada', () => {
     expect(costsUpdate().cash).toBe(-780)
     expect(logStarting('Salário')).toEqual([])
     expect(logStarting('Bônus salarial')).toEqual([])
-    expect(logStarting('Freela').map((l) => l.cashImpact)).toEqual([100, 120])
+    expect(logStarting('Trabalho extra').map((l) => l.cashImpact)).toEqual([100, 120])
     expect(logStarting('Sem salário')).toEqual([expect.objectContaining({ cashImpact: 0 })])
   })
 

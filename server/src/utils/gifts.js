@@ -19,8 +19,8 @@ const GIFTS = {
   agile: {
     id: 'agile',
     name: 'Desenrolado',
-    description: 'Freela fixo de R$ 120 por mês e eventos positivos pagam 25% a mais.',
-    monthlyIncome: { label: 'Freela', amount: 120 },
+    description: 'Trabalho extra fixo de R$ 120 por mês e eventos positivos pagam 25% a mais.',
+    monthlyIncome: { label: 'Trabalho extra', amount: 120 },
     positiveEventBonus: 0.25,
   },
   smart: {

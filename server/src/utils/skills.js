@@ -11,7 +11,7 @@ const REDUCED_OVERDRAFT_RATE = 0.04 // cheque especial com Planejamento e Produt
 // cortados pela metade em 20/10/2026 (equilíbrio do dinheiro com o holerite).
 const PERKS = {
   technical: {
-    1: { name: 'Fundamentos e Lógica', perk: '+R$ 100 por mês (trabalhos extras nos finais de semana)', income: { label: 'Freela', amount: 100 } },
+    1: { name: 'Fundamentos e Lógica', perk: '+R$ 100 por mês (trabalhos extras nos finais de semana)', income: { label: 'Trabalho extra', amount: 100 } },
     2: { name: 'Resolução de Problemas', perk: 'Imprevistos de casa 25% mais baratos', repairDiscount: 0.25 },
     3: { name: 'Pensamento Analítico Avançado', perk: 'Salário +R$ 200', salaryBonus: 200 },
     4: { name: 'Inovação e Otimização', perk: '+R$ 200 por mês (projeto paralelo)', income: { label: 'Projeto paralelo', amount: 200 } },
@@ -39,7 +39,7 @@ function perksOf(unlocked = []) {
     salaryBonus: 0,
     salaryBonuses: [], // [{ skill, amount }] — uma linha no extrato para cada
     extraIncome: 0,
-    incomes: [], // [{ label, skill, amount }] — freela, projeto paralelo
+    incomes: [], // [{ label, skill, amount }] — trabalho extra, projeto paralelo
     repairDiscount: 0,
     utilitiesDiscount: 0,
     leisureDiscount: 0,
