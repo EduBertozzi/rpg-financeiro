@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import GameLayout from '../../components/GameLayout'
 import TownBackdrop from '../../components/town/TownBackdrop'
 import { TOY_BUTTON, TOY_CARD, TOY_GHOST } from '../../components/town/toy'
@@ -97,7 +97,7 @@ export default function Finished() {
 
 // Os 3 primeiros sobem em sequência (3º, 2º, 1º); confete quando o 1º chega.
 function Podium({ players }) {
-  const reduce = useReducedMotion()
+  const reduce = false // animação sempre, como no resto do jogo (a tela da Ana tem "reduzir movimento")
   const slots = podiumSlots(players)
   const firstEnter = slots.find((s) => s.place === 1)?.enter ?? slots.length - 1
   return (
